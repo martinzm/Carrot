@@ -234,7 +234,7 @@ BITVAR FillSouthWest(BITVAR pieces, BITVAR iboard, BITVAR init)
 }
 
 // it generates squares OPSIDE king cannot step on, it ignores PINS
-// builds all squares attacked by side 
+// it builds all squares attacked by side 
 
 BITVAR KingAvoidSQ(board const *b, attack_model *a, int side)
 {
@@ -269,3 +269,69 @@ BITVAR KingAvoidSQ(board const *b, attack_model *a, int side)
 	ret |= (attack.maps[KING][b->king[side]]);
 	return ret;
 }
+
+
+inline static int getOneSquare(board const *b, int x, int y, int side, BITVAR *ca, BITVAR *da) {
+	*ca = *da = 0;
+	BITVAR cr, di;
+	if(x<0 || x>7 || y<0 || y>7) return 0;
+	di = BishopAttacks(b, getPos(x,y));
+	cr = RookAttacks(b, getPos(x,y));
+	*da = di & b->colormaps[side] & (b->maps[BISHOP] | b->maps[QUEEN]);
+	*ca = cr & b->colormaps[side] & (b->maps[ROOK] | b->maps[QUEEN]);
+//	printmask(*da ,"di");
+//	printmask(*ca ,"cr");
+return (((*ca) | (*da)) != 0 ? 1:0);
+}
+
+
+// alternate version, in fact only squares around king are important, we can optimize
+BITVAR KingAvoidSQAlt(board const *b, attack_model *a, int side)
+{
+	BITVAR ret=0, ca, da, set4, set3, set2, set1, empty;
+	int kx, ky, from;
+	int opside = Flip(side);
+
+	ky = getRank(b->king[opside]);
+	kx = getFile(b->king[opside]);
+	ClearAll(b->king[opside], opside, KING, b);
+	for(int f=-1;f<=1;f++) {
+		for(int n=-1;n<=1;n++) {
+			if(getOneSquare(b, kx+n, ky+f, side, &ca, &da)) {
+				ret |= NORMM(getPos(kx+n, ky+f));
+			}
+		}
+	}
+
+// optionally deal vwith castling
+	if(b->castle[opside]!=0) {
+		empty = ~b->norm;
+		if(opside==WHITE) {
+			set1 = b->colormaps[BLACK] & (b->maps[QUEEN] | b->maps[ROOK]);
+			set2 = b->colormaps[BLACK] & (b->maps[QUEEN] | b->maps[BISHOP]);
+			ret |= FillSouth(set1, empty, set1)
+				| FillSouthWest(set2, empty, set2)
+				| FillSouthEast(set2, empty, set2);
+		} else {
+			set1 = b->colormaps[WHITE] & (b->maps[QUEEN] | b->maps[ROOK]);
+			set2 = b->colormaps[WHITE] & (b->maps[QUEEN] | b->maps[BISHOP]);
+			ret |= FillNorth(set1, empty, set1)
+				| FillNorthWest(set2, empty, set2)
+				| FillNorthEast(set2, empty, set2);
+		}
+	}
+	set3 = b->colormaps[side] & b->maps[PAWN];
+	ret |= (side == WHITE) ? (((set3 << 9) & 0xfefefefefefefefe) | ((set3 << 7) & 0x7f7f7f7f7f7f7f7f)) :
+							 (((set3 >> 7) & 0xfefefefefefefefe) | ((set3 >> 9) & 0x7f7f7f7f7f7f7f7f));
+	set4 = (b->maps[KNIGHT] & b->colormaps[side]);
+	while (set4) {
+		from = LastOne(set4);
+		ret |= (attack.maps[KNIGHT][from]);
+		ClrLO(set4);
+	}
+// fold in my king as purpose is to cover all squares opside king cannot step on
+	ret |= (attack.maps[KING][b->king[side]]);
+	SetAll(b->king[opside], opside, KING, b);
+	return ret;
+}
+

@@ -33,6 +33,7 @@
 #include <iconv.h>
 
 #include "globals.h"
+#include "inlines.h"
 
 FILE *debugf;
 

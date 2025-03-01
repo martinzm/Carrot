@@ -262,6 +262,7 @@ int handle_position(board *bs, char *str)
 	MOVESTORE m[MAXPLYHIST], mm[MAXPLYHIST];
 	int from;
 	int oldp;
+	UNDO u;
 
 	if (engine_state != STOPPED) {
 		LOGGER_3("UCI: INFO: Not stopped!, E:%d U:%d\n", engine_state, uci_state);
@@ -311,7 +312,7 @@ int handle_position(board *bs, char *str)
 					close_log();
 					abort();
 				}
-				MakeMove(bs, mm[0]);
+				MakeMove(bs, mm[0], &u);
 				a++;
 			}
 			break;
@@ -1039,6 +1040,10 @@ while (uci_state != 0) {
 			}
 			if (!strcmp(tok, "ttst2")) {
 				ttsts_spec(b2);
+				break;
+			}
+			if (!strcmp(tok, "ttstn")) {
+				ttsts_specn(b2);
 				break;
 			}
 			if (!strcmp(tok, "ttstn")) {

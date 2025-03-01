@@ -944,7 +944,7 @@ int parsePVMoves(board *b, attack_model *a, int *ans, char (*bm)[CMTLEN], int le
 					NULL)) {
 					DEB_3(sprintfMove(b, mm[0], b2);)
 					LOGGER_3("Move PV: %s\n",b2);
-					u[f] = MakeMove(b, mm[0]);
+					MakeMove(b, mm[0], u+f);
 					f++;
 					*ans = mm[0];
 					ans++;
@@ -957,7 +957,7 @@ int parsePVMoves(board *b, attack_model *a, int *ans, char (*bm)[CMTLEN], int le
 	*z = f;
 
 	for (; f > 0; f--) {
-		UnMakeMove(b, u[f]);
+		UnMakeMove(b, u+f);
 	}
 	r = 1;
 	return r;
@@ -977,6 +977,7 @@ int parsePVMoves(board *b, attack_model *a, int *ans, char (*bm)[CMTLEN], int le
 unsigned long long int perftLoopX_int(board *b, int d, int side, attack_model *tolev, int incheck)
 {
 	UNDO u;
+	BITVAR r;
 	move_entry move[300], *m, *n;
 	int opside;
 	int tc, cc;
@@ -987,10 +988,11 @@ unsigned long long int perftLoopX_int(board *b, int d, int side, attack_model *t
 		return 1;
 	nodes = 0;
 	opside = (side == WHITE) ? BLACK : WHITE;
-	a = &ATT;
+//	a = &ATT;
+	a = tolev;
 
-	a->ke[b->side] = tolev->ke[b->side];
-	a->att_by_side[opside] = KingAvoidSQ(b, a, opside);
+//	a->ke[b->side] = tolev->ke[b->side];
+//	a->att_by_side[opside] = KingAvoidSQ(b, a, opside);
 
 	n = m = move;
 	if (incheck == 1) {
@@ -1009,13 +1011,16 @@ unsigned long long int perftLoopX_int(board *b, int d, int side, attack_model *t
 		return tc;
 	while (cc < tc) {
 
-		u = MakeMove(b, move[cc].move);
+		MakeMove(b, move[cc].move, &u);
+		r = ChangesToMove(b, a, &u);
+
 		eval_king_checks(b, &(a->ke[opside]), NULL, opside);
 		
 		tnodes = perftLoopX_int(b, d - 1, opside, a,
 			(a->ke[opside].attackers != 0));
 		nodes += tnodes;
-		UnMakeMove(b, u);
+		UnMakeMove(b, &u);
+		r = ChangesToMove(b, a, &u);
 		cc++;
 	}
 	return nodes;
@@ -1059,14 +1064,14 @@ unsigned long long int perftLoopN_int(board *b, int d, int side, attack_model *t
 		if (d != 1) {
 			t2 = b->mindex;
 			mv1= b->mindex_validity;
-			u = MakeMove(b, m->move);
+			MakeMove(b, m->move, &u);
 			t4 = b->mindex;
 			mv2= b->mindex_validity;
 			eval_king_checks(b, &(a->ke[opside]), NULL, opside);
 			tnodes = perftLoopN_int(b, d - 1, opside, a);
 			nodes += tnodes;
 			t5 = b->mindex;
-			UnMakeMove(b, u);
+			UnMakeMove(b, &u);
 			t3 = b->mindex;
 			if (((t2 != t3)&&(mv1==1))||((t4!=t5)&&(mv2==1))) {
 				printBoardNice(b);
@@ -1144,10 +1149,10 @@ unsigned long long int perftLoopN_v(board *b, int d, int side, attack_model *tol
 		n++;
 		if (d != 1) {
 			
-			u = MakeMove(b, m->move);
+			MakeMove(b, m->move, &u);
 			eval_king_checks(b, &(a->ke[opside]), NULL, opside);
 			tnodes = perftLoopN_int(b, d - 1, opside, a);
-			UnMakeMove(b, u);
+			UnMakeMove(b, &u);
 		} else tnodes = 1;
 		nodes += tnodes;
 		if (div) {
@@ -1169,7 +1174,7 @@ unsigned long long int perftLoopX_v(board *b, int d, int side, attack_model *tol
 	struct timespec start, end;
 	unsigned long long int totaltime;
 	char buf[20], fen[100];
-	BITVAR attacks;
+	BITVAR attacks, r;
 
 	if (d == 0)
 		return 1;
@@ -1201,8 +1206,9 @@ unsigned long long int perftLoopX_v(board *b, int d, int side, attack_model *tol
 		return tc;
 	while (cc < tc) {
 		readClock_wall(&start);
-		u = MakeMove(b, move[cc].move);
-		eval_king_checks(b, &(a->ke[opside]), NULL, opside);
+		MakeMove(b, move[cc].move, &u);
+		r = ChangesToMove(b, a, &u);
+//		eval_king_checks(b, &(a->ke[opside]), NULL, opside);
 //		if(div) printBoardNice(b);
 		tnodes = perftLoopX_int(b, d - 1, opside, a,
 			(a->ke[opside].attackers != 0));
@@ -1220,7 +1226,8 @@ unsigned long long int perftLoopX_v(board *b, int d, int side, attack_model *tol
 				tnodes * 1000 / totaltime, fen, d - 1, tnodes);
 			LOGGER_1("%s\t\t%lld\t\t(%lld:%lld.%lld\t%lld tis/sec,\t\t%s perft %d = %lld )\n", buf, tnodes, totaltime/60000000,(totaltime%60000000)/1000000,(totaltime%1000000)/1000, tnodes*1000/totaltime, fen, d-1, tnodes );
 		}
-		UnMakeMove(b, u);
+		UnMakeMove(b, &u);
+		r = ChangesToMove(b, a, &u);
 		cc++;
 	}
 	return nodes;
@@ -2656,6 +2663,7 @@ void see0_test()
 	int result;
 	MOVESTORE move;
 	board b;
+	UNDO u;
 	struct _ui_opt uci_options;
 
 	b.uci_options = &uci_options;
@@ -2672,21 +2680,21 @@ void see0_test()
 
 	setup_FEN_board(&b, fen[0]);
 	move = PackMoveF(E1, E2, ER_PIECE, 0);
-	MakeMove(&b, move);
+	MakeMove(&b, move, &u);
 	printBoardNice(&b);
 	result = SEE0(&b, E2, BLACK, 0);
 	LOGGER_0("SEE0 %d\n", result);
 
 	setup_FEN_board(&b, fen[0]);
 	move = PackMoveF(E1, E3, ER_PIECE, 0);
-	MakeMove(&b, move);
+	MakeMove(&b, move, &u);
 	printBoardNice(&b);
 	result = SEE0(&b, E3, BLACK, 0);
 	LOGGER_0("SEE0 %d\n", result);
 
 	setup_FEN_board(&b, fen[0]);
 	move = PackMoveF(E1, E5, ER_PIECE, 0);
-	MakeMove(&b, move);
+	MakeMove(&b, move, &u);
 	printBoardNice(&b);
 	result = SEE0(&b, E5, BLACK, 0);
 	LOGGER_0("SEE0 %d\n", result);
@@ -3734,7 +3742,7 @@ int driver_move_gen_checker(personality *pers_init, CBACK, void *cdata)
 // generate & make move
 			bm_count=parseEDPMoves(&b, &a, bans, bm, 10);
 			if(bm_count==1) {
-				u=MakeMoveNew(&b, bans[0], pos);
+				MakeMoveNew(&b, bans[0], pos, &u);
 // now prepare bitmaps in old way
 
 			}

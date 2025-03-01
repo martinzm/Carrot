@@ -23,6 +23,7 @@
 #include "movgen.h"
 #include "globals.h"
 #include "utils.h"
+#include "inlines.h"
 
 FILE *ohandle;
 long int orecords;

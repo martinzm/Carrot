@@ -17,6 +17,7 @@
  */
 
 #include "bitmap.h"
+#include "inlines.c"
 #include "evaluate.h"
 #include "hash.h"
 #include "utils.h"
@@ -1354,5 +1355,84 @@ void setup_normal_board(board *b)
 {
 	setup_FEN_board(b,
 		"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+}
+
+void generate_surr_to_pos_vect(BITVAR map[64][64],const att_mov *att){
+
+}
+
+
+BITVAR generate_king_surr_b2(const int x, const int y, const att_mov *att){
+BITVAR r=0;
+	if(x>=0 && x<8 && y>=0 && y<8) {
+		r|= attack.maps[BISHOP][getPos(x,y)]|attack.maps[ROOK][getPos(x,y)];
+	}
+	return r;
+}
+
+// generate king surround to pos super vector
+void generate_king_super2_bitmap(BITVAR ksur[64], const att_mov *att)
+{
+int moves[] = { -1, -1, -1, 0, -1, 1, 0, -1, 0, 1, 1, -1, 1, 0, 1, 1 };
+BITVAR r,t;
+	int x,y;
+	for(x=0; x<8; x++)
+		for(y=0; y<8; y++) {
+			t=0;
+			for(int f=0; f<16; f+=2) t|=generate_king_surr_b2(x+moves[f], y+moves[f+1], att);
+				ksur[getPos(x,y)]=t;
+		}
+}
+
+void generate_king_super1_bitmap(BITVAR ksur[64], const att_mov *att)
+{
+BITVAR r,t;
+	int x,y;
+	for(x=0; x<8; x++)
+		for(y=0; y<8; y++) {
+			t=0;
+			t|=generate_king_surr_b2(x, y, att);
+				ksur[getPos(x,y)]=t;
+		}
+}
+
+void generate_king_surr1_bitmap(BITVAR ksur[64])
+{
+int moves[] = { -1, -1, -1, 0, -1, 1,
+				 0, -1,         0, 1,
+				 1, -1,  1, 0,  1, 1 };
+BITVAR r,t;
+	int x,y, xt, yt;
+	for(x=0; x<8; x++)
+		for(y=0; y<8; y++) {
+			t=0;
+			for(int f=0; f<16; f+=2) {
+				xt=x+moves[f+1];
+				yt=y+moves[f];
+				if(xt>=0 && xt <=7 && yt>=0 && yt<=7) t|=NORMM(getPos(x+moves[f+1], y+moves[f]));
+			}
+			ksur[getPos(x,y)]=t;
+		}
+}
+
+void generate_king_surr2_bitmap(BITVAR ksur[64])
+{
+int moves[] = { -2, -2, -2, -1, -2, 0, -2, 1, -2, 2,
+				-1, -2, -1, -1, -1, 0, -1, 1, -1, 2,
+				 0, -2,  0, -1,         0, 1,  0, 2,
+				 1, -2,  1, -1,  1, 0,  1, 1,  1, 2,
+				 2, -2,  2, -1,  2, 0,  2, 1,  2, 2 };
+BITVAR r,t;
+	int x,y, xt, yt;
+	for(x=0; x<8; x++)
+		for(y=0; y<8; y++) {
+			t=0;
+			for(int f=0; f<48; f+=2) {
+				xt=x+moves[f+1];
+				yt=y+moves[f];
+				if(xt>=0 && xt <=7 && yt>=0 && yt<=7) t|=NORMM(getPos(x+moves[f+1], y+moves[f]));
+			}
+			ksur[getPos(x,y)]=t;
+		}
 }
 

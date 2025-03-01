@@ -104,12 +104,23 @@ int main(int argc, char **argv)
 	generate_uphalf(attack.uphalf, attack);
 	generate_downhalf(attack.downhalf, attack);
 	generate_pawn_surr(attack.pawn_surr, attack);
+	generate_king_surr1_bitmap(attack.surr1);
+	generate_king_surr2_bitmap(attack.surr2);
 
 	initRandom();
 
 	LOGGER_3("INFO: Opening book\n");
 	open_open("book.bin");
 
+	printmask(1, "1");
+	printmask(0-1, "-1");
+	printmask(2, "2");
+	printmask(0-2, "-2");
+	printmask(3, "3");
+	printmask(0-3, "-3");
+
+	printmask(0x101010101010106, "0x0");
+	printmask(0-0x101010101010106, "-0x0");
 #ifdef NTUNING
 	texel_test();
 #else

@@ -30,6 +30,7 @@
 #include "randoms.h"
 //#include "randoms2.h"
 #include <assert.h>
+#include "inlines.h"
 
 kmoves kmove_store[MAXPLY * KMOVES_WIDTH];
 

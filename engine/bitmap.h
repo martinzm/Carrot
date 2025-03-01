@@ -197,48 +197,6 @@ void printmask(BITVAR m, char *s);
 void printmask90(BITVAR m, char *s);
 void printmask45R(BITVAR m, char *s);
 void printmask45L(BITVAR m, char *s);
-BITVAR SetNorm(int pos, BITVAR map);
-BITVAR Set90(int pos, BITVAR map);
-BITVAR Set45R(int pos, BITVAR map);
-BITVAR Set45L(int pos, BITVAR map);
-
-BITVAR ClrNorm(int pos, BITVAR map);
-BITVAR Clr90(int pos, BITVAR map);
-BITVAR Clr45R(int pos, BITVAR map);
-BITVAR Clr45L(int pos, BITVAR map);
-
-BITVAR get45Rvector(BITVAR board, int pos);
-BITVAR get45Lvector(BITVAR board, int pos);
-BITVAR get90Rvector(BITVAR board, int pos);
-BITVAR getnormvector(BITVAR board, int pos);
-
-int get45Rvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2);
-int get45Lvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2);
-int get90Rvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2);
-int getnormvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2);
-
-inline int getRank(int pos)
-{
-	return (pos >> 3) & 7;
-}
-inline int getFile(int pos)
-{
-	return pos & 7;
-}
-inline int getPos(int file, int rank)
-{
-	return (rank * 8 + file) & 63;
-}
-
-inline int BitCount(BITVAR board)
-{
-	return __builtin_popcountll(board);
-}
-
-inline __attribute__((always_inline)) int LastOne(BITVAR board)
-{
-	return __builtin_ctzll((unsigned long long int) board);
-}
 
 int FirstOne(BITVAR board);
 
@@ -266,6 +224,20 @@ int FirstOne(BITVAR board);
 
 #define Max(x,y) ((x) > (y) ? (x) : (y))
 #define Min(x,y) ((x) < (y) ? (x) : (y))
+
+#define MaxN(a,b)             \
+({                           \
+    __typeof__ (a) _aa = (a); \
+    __typeof__ (b) _ba = (b); \
+    _aa > _ba ? _aa : _ba;       \
+})
+
+#define MinN(a,b)             \
+({                           \
+    __typeof__ (a) _ai = (a); \
+    __typeof__ (b) _bi = (b); \
+    _ai < _bi ? _ai : _bi;       \
+})
 
 #define Flip(side) ((side == WHITE) ? BLACK : WHITE)
 
@@ -319,7 +291,12 @@ typedef struct _att_mov {
 	BITVAR rays_int[64][64];
 	BITVAR dirs[64][8];
 	BITVAR rays_dir[64][64];
+	BITVAR surr1[64];
+	BITVAR surr2[64];
+	BITVAR super1[64][64];
+	BITVAR super2[64][64];
 } att_mov;
+
 
 struct _ui_opt {
 //  0 sudden death
@@ -628,6 +605,8 @@ typedef struct _attack_model {
 	hashPawnEntry hpe;
 	hashPawnEntry *hpep;
 	PawnStore *pps;
+// left, right, push, doublepush, ep
+	BITVAR pset[2][5];
 
 	bmv mm[2][32];
 	bmv *mm_idx[2];
@@ -913,17 +892,26 @@ typedef struct {
 	double K;
 } ntuner_global;
 
-void SetAll(int pos, int side, int piece, board *b);
-void ClearAll(int pos, int side, int piece, board *b);
+BITVAR SetNorm(int pos, BITVAR map);
+BITVAR Set90(int pos, BITVAR map);
+BITVAR Set45R(int pos, BITVAR map);
+BITVAR Set45L(int pos, BITVAR map);
 
-void MoveFromTo(int from, int to, int side, int piece, board *b);
+BITVAR ClrNorm(int pos, BITVAR map);
+BITVAR Clr90(int pos, BITVAR map);
+BITVAR Clr45R(int pos, BITVAR map);
+BITVAR Clr45L(int pos, BITVAR map);
+
+BITVAR get45Rvector(BITVAR board, int pos);
+BITVAR get45Lvector(BITVAR board, int pos);
+BITVAR get90Rvector(BITVAR board, int pos);
+//BITVAR getnormvector(BITVAR board, int pos);
+
+int get45Rvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2);
+int get45Lvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2);
+int get90Rvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2);
+//int getnormvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2);
 
 void outbinary(BITVAR m, char *o);
-
-inline int GT_M(board const *b, personality const *p, int s, int pi, int fo)
-{
-	return fo != 0 ? BitCount(b->maps[pi] & b->colormaps[s]) :
-		p->mat_info[b->mindex].m[s][pi];
-}
 
 #endif

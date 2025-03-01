@@ -75,11 +75,11 @@ void generateMovesN(const board *const b, attack_model *a, move_entry **m);
 void generateInCheckMovesN(const board *const b, attack_model *a, move_entry **m, int gen_u);
 void generateQuietCheckMovesN(const board *const b, attack_model *a, move_entry **m);
 int alternateMovGen(board *b, MOVESTORE *filter);
-UNDO MakeMove(board *b, MOVESTORE move);
-UNDO MakeMoveNew(board *b, MOVESTORE move, int *pos);
-UNDO MakeNullMove(board *b);
-void UnMakeMove(board *b, UNDO u);
-void UnMakeNullMove(board *b, UNDO u);
+int MakeMove(board *b, MOVESTORE move, UNDO *ret);
+int MakeMoveNew(board *b, MOVESTORE move, int *pos , UNDO *ret);
+int MakeNullMove(board *b, UNDO *ret);
+void UnMakeMove(board *b, UNDO *u);
+void UnMakeNullMove(board *b, UNDO *u);
 int is_quiet_move(board const * const , attack_model const * const, move_entry const * const);
 
 void printfMove(board *b, MOVESTORE m);
@@ -117,6 +117,8 @@ void mvsfroma2(const board * const, attack_model *, int const, int const, bmv **
 	}\
 };
 
+// board, attack, piece_type, side_to_generate, piece_function, index, dest_squares_set, source_squares_set , pieces_moving_set
+
 #define MVSFROM21(B, A, P, S, F, I, M, L, X) \
 { BITVAR v; v=B->maps[P] & (L);\
   while(v) {\
@@ -135,6 +137,10 @@ void mvsfroma2(const board * const, attack_model *, int const, int const, bmv **
 
 
 
-BITVAR ChangedTo(board *b, int pos, BITVAR map, int side);
+//BITVAR ChangedTo(board *b, int pos, BITVAR map, int side);
+BITVAR ChangedToN(board *b, attack_model *a, UNDO *u);
+BITVAR ChangesToMove(board *b, attack_model *a, UNDO *u);
+
+int eval_king_checks_extN(board const *b, king_eval *ke, personality const *p, int side, int from);
 
 #endif

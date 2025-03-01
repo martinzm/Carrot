@@ -55,6 +55,8 @@ void generate_downhalf(BITVAR map[64], att_mov att);
 void generate_lefthalf(BITVAR map[64], att_mov att);
 void generate_righthalf(BITVAR map[64], att_mov att);
 void generate_pawn_surr(BITVAR map[64], att_mov att);
+void generate_king_surr1_bitmap(BITVAR ksur[64]);
+void generate_king_surr2_bitmap(BITVAR ksur[64]);
 
 void generate_attack_r45R(BITVAR map[64][256], int skip);
 void generate_attack_r45L(BITVAR map[64][256], int skip);
