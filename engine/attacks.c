@@ -303,7 +303,7 @@ BITVAR KingAvoidSQAlt(board const *b, attack_model *a, int side)
 		}
 	}
 
-// optionally deal vwith castling
+// optionally deal with castling
 	if(b->castle[opside]!=0) {
 		empty = ~b->norm;
 		if(opside==WHITE) {

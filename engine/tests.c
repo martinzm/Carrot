@@ -1014,7 +1014,7 @@ unsigned long long int perftLoopX_int(board *b, int d, int side, attack_model *t
 		MakeMove(b, move[cc].move, &u);
 		r = ChangesToMove(b, a, &u);
 
-		eval_king_checks(b, &(a->ke[opside]), NULL, opside);
+//		eval_king_checks(b, &(a->ke[opside]), NULL, opside);
 		
 		tnodes = perftLoopX_int(b, d - 1, opside, a,
 			(a->ke[opside].attackers != 0));

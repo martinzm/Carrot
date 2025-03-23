@@ -171,47 +171,126 @@ BITVAR v;
 	}\
 };
 
-int pawn_set_white(board const *b, king_eval const *ke, BITVAR pset[5]){
-BITVAR epbmp;
+void mvsfromk22(const board *const b, attack_model *a, int side ) {
+BITVAR v;
 
-	pset[0]= (b->norm >> 7) & b->maps[PAWN] & b->colormaps[WHITE] & 0xfefefefefefefefe;
-	pset[1]= (b->norm >> 9) & b->maps[PAWN] & b->colormaps[WHITE] & 0x7f7f7f7f7f7f7f7f;
-	pset[2]= ((~b->norm) >> 8) & b->maps[PAWN] & b->colormaps[WHITE];
-	pset[3]= ((~b->norm) >> 16) & b->maps[PAWN] & b->colormaps[WHITE] & RANK2;
+	int from = b->king[side];
+	v = (attack.maps[KING][from])
+		& (~attack.maps[KING][b->king[Flip(side)]])
+		& (~a->att_by_side[Flip(side)]);
+
+		if (b->castle[side]) {
+			int orank = side == WHITE ? 0:7;
+			if (b->castle[side] & QUEENSIDE) {
+				if ((attack.rays[getPos(2,orank)][getPos(4,orank)]
+					& ((a->att_by_side[Flip(side)]
+						| attack.maps[KING][b->king[Flip(side)]]))) == 0
+					&& ((attack.rays[getPos(1, orank)][getPos(3,orank)] & b->norm) == 0)){
+						v |= NORMM(getPos(2, orank));
+				}
+			}
+			if (b->castle[side] & KINGSIDE) {
+				if ((attack.rays[getPos(4, orank)][getPos(6,orank)]
+					& (a->att_by_side[Flip(side)]
+						| attack.maps[KING][b->king[Flip(side)]])) == 0
+					&& ((attack.rays[getPos(5,orank)][getPos(6,orank)] & b->norm) == 0)) {
+						v |= NORMM(getPos(6, orank));
+				}
+			}
+		}
+		a->mvs[from] = v;
+}
+
+// 0 utok vlevo, 1 utok vpravo, 2 posun vpred, 3 doublepush, 4 ep, 5 pr vlevo, 6 pr vpravo
+// rozdelit na pin a nepin
+int pawn_set_white(board const *b, king_eval const *ke, BITVAR pins, BITVAR *pset){
+BITVAR epbmp, dir, tmp;
+
+// non pins
+	BITVAR pwi = b->maps[PAWN] & b->colormaps[WHITE];
+	BITVAR pww = pwi & (~pins);
+	BITVAR pwb = pwi & pins;
+	BITVAR nbn = b->norm & b->colormaps[BLACK];
+	pset[0]= (nbn >> 7) & pww & 0xfefefefefefefefe;
+	pset[1]= (nbn >> 9) & pww & 0x7f7f7f7f7f7f7f7f;
+	pset[2]= ((~b->norm) >> 8) & pww;
+	pset[3]= ((~b->norm) >> 16) & pset[2] & RANK2;
 	pset[4]= 0;
 	if(b->ep > 0) {
 		epbmp =	(b->ep >0 && (ke->ep_block == 0)) ? attack.ep_mask[b->ep]
-				& b->maps[PAWN] & b->colormaps[WHITE] : 0;
-		pset[4] = b->maps[PAWN] & epbmp & b->colormaps[WHITE];
+				&  pww : 0;
+		pset[4] = pww & epbmp;
+
+		tmp = NORMM(b->ep+8);
+		dir=attack.dirs[b->king[WHITE]][3] | attack.dirs[b->king[WHITE]][7];
+		pset[4] |= ((tmp & dir) >> 7) & pwb & 0xfefefefefefefefe  & dir;
+		dir=attack.dirs[b->king[WHITE]][5] | attack.dirs[b->king[WHITE]][1];
+		pset[4] |= ((tmp & dir) >> 9) & pwb & 0x7f7f7f7f7f7f7f7f & dir;
 	}
+// pins
+	dir=attack.dirs[b->king[WHITE]][3] | attack.dirs[b->king[WHITE]][7];
+	pset[0] |= ((nbn & dir) >> 7) & pwb & 0xfefefefefefefefe  & dir;
+	dir=attack.dirs[b->king[WHITE]][5] | attack.dirs[b->king[WHITE]][1];
+	pset[1] |= ((nbn & dir) >> 9) & pwb & 0x7f7f7f7f7f7f7f7f & dir;
+	dir=attack.dirs[b->king[WHITE]][4] | attack.dirs[b->king[WHITE]][0];
+	pset[2] |= (((~b->norm) & dir) >> 8) & pwb  & dir;
+	pset[3] |= (((~b->norm) & dir) >> 16) & pset[2] & RANK2 & dir;
+	return 0;
 }
 
-int pawn_set_black(board const *b, king_eval const *ke, BITVAR pset[5]){
-BITVAR epbmp;
+int pawn_set_black(board const *b, king_eval const *ke, BITVAR pins, BITVAR *pset){
+BITVAR epbmp, dir, tmp;
 
-	pset[0]= (b->norm << 7) & b->maps[PAWN] & b->colormaps[BLACK] & 0x7f7f7f7f7f7f7f7f;;
-	pset[1]= (b->norm << 9) & b->maps[PAWN] & b->colormaps[BLACK] & 0xfefefefefefefefe;
-	pset[2]= ((~b->norm) << 8) & b->maps[PAWN] & b->colormaps[BLACK];
-	pset[3]= ((~b->norm) << 16) & b->maps[PAWN] & b->colormaps[BLACK] & RANK7;
+	BITVAR pbi = b->maps[PAWN] & b->colormaps[BLACK];
+	BITVAR pbb = pbi & (~pins);
+	BITVAR pbw = pbi & pins;
+	BITVAR nwn = b->norm & b->colormaps[WHITE];
+
+//	printmask(pbi, "pbi");
+//	printmask(pbb, "pbb");
+//	printmask(pbw, "pbw");
+//	printmask(nwn, "nwn");
+	pset[0]= (nwn << 9) & pbb & 0xfefefefefefefefe;
+	pset[1]= (nwn << 7) & pbb & 0x7f7f7f7f7f7f7f7f;
+	pset[2]= ((~b->norm) << 8) & pbb;
+	pset[3]= ((~b->norm) << 16) & pset[2] & RANK7;
 	pset[4]= 0;
 	if(b->ep > 0) {
 		epbmp =	(b->ep >0 && (ke->ep_block == 0)) ? attack.ep_mask[b->ep]
-				& b->maps[PAWN] & b->colormaps[BLACK] : 0;
-		pset[4] = b->maps[PAWN] & epbmp & b->colormaps[BLACK];
+				& pbb : 0;
+		pset[4] = pbb & epbmp;
+		tmp = NORMM(b->ep-8);
+		dir=attack.dirs[b->king[BLACK]][1] | attack.dirs[b->king[BLACK]][5];
+		pset[4] |= ((tmp & dir) << 9) & pbw & 0xfefefefefefefefe & dir;
+		dir=attack.dirs[b->king[BLACK]][3] | attack.dirs[b->king[BLACK]][7];
+		pset[4] |= ((tmp & dir) << 7) & pbw & 0x7f7f7f7f7f7f7f7f & dir;
 	}
+	dir=attack.dirs[b->king[BLACK]][1] | attack.dirs[b->king[BLACK]][5];
+//	printmask(dir, "dir0");
+	pset[0] |= ((nwn & dir) << 9) & pbw & 0xfefefefefefefefe & dir;
+	dir=attack.dirs[b->king[BLACK]][3] | attack.dirs[b->king[BLACK]][7];
+//	printmask(dir, "dir1");
+	pset[1] |= ((nwn & dir) << 7) & pbw & 0x7f7f7f7f7f7f7f7f & dir;
+	dir=attack.dirs[b->king[BLACK]][4] | attack.dirs[b->king[BLACK]][0];
+	pset[2] |= (((~b->norm)&dir) << 8) & pbw & dir;
+	pset[3] |= (((~b->norm)&dir) << 16) & pset[2] & RANK7 & dir;
+
+//	printmask(pset[0], "0");
+//	printmask(pset[1], "1");
+
+	return 0;
 }
-
-
-//int setupAllMoveBitmaps(const board *const b, move_entry
 
 void generateCapturesN2(const board *const b, attack_model *a, move_entry **m, int gen_u)
 {
-	int from, to, epn;
+	int from, to, epn, get_rank;
 	int ptype[] = { QUEEN, ROOK, BISHOP, KNIGHT, PAWN };
-	BITVAR mv, rank, piece, epbmp, pins, tp, tq, kpin, nmf, tt;
+	BITVAR mv, rank, piece, epbmp, pins, tp, tq, kpin, nmf, tt, pmap;
 	bmv mm[64];
 	bmv *ipp,*ib,*in,*ir,*iq,*ik,*ii, *ix, *ipc, *ipa;
 	
+	BITVAR *pset;
+
 	move_entry *move;
 	int ep_add;
 	unsigned char side, opside;
@@ -222,11 +301,15 @@ void generateCapturesN2(const board *const b, attack_model *a, move_entry **m, i
 		side = WHITE;
 		opside = BLACK;
 		ep_add = 8;
+		get_rank = 1;
+		pset = &(a->pset[WHITE]);
 	} else {
 		rank = RANK2;
 		opside = WHITE;
 		side = BLACK;
 		ep_add = -8;
+		get_rank = -1;
+		pset = &(a->pset[BLACK]);
 	}
 
 	pins = ((a->ke[side].cr_pins | a->ke[side].di_pins));
@@ -240,58 +323,76 @@ void generateCapturesN2(const board *const b, attack_model *a, move_entry **m, i
 // generate pawn info
 	a->mm_idx[side]=ii;
 
-		BITVAR pmap = b->maps[PAWN]& b->colormaps[side];
-		while(pmap) {
-			int ppos = LastOne(pmap);
-			a->mvs[ppos]=0;
-			ClrLO(pmap);
-		}
-	
-// generate pawn bitmap attacks non promoting
-	mvsfrompa21(b, a, side, ii, b->colormaps[opside], (~rank)&b->colormaps[side], pins) ;
-	ipa=ii;
-// generate pawn bitmap attacks promoting
-	mvsfrompa21(b, a, side, ii, b->colormaps[opside], rank&b->colormaps[side], pins) ;
-	ipc=ii;
-// generate pawn bitmap moves promoting only
-	mvsfromp21(b, a, side, &ii, ~b->norm, rank&b->colormaps[side], pins) ;
-	ipp=ii;
-// generate king
-   mvsfromk21(b, a, side, &ii);
+//	pmap = b->maps[PAWN]& b->colormaps[side];
+//	while(pmap) {
+//		int ppos = LastOne(pmap);
+//		a->mvs[ppos]=0;
+//		ClrLO(pmap);
+//	}
 
-
-#if 0
-	for(ix=(a->mm[side]); ix<ipa;ix++) {
-//		mv=ix->mv = ((((pins >> (ix->fr))&1)-1)|(ix->mr))&(ix->mm) & b->colormaps[opside];
-//		mv=ix->mv = ix->mm & b->colormaps[opside];
-		mv = ix->mm & b->colormaps[opside];
-		while (mv) {
-			to = LastOne(mv);
-			move->move = PackMove(ix->fr, to, ER_PIECE, 0);
-			move->qorder = move->real_score =
-					b->pers->LVAcap[ix->pi][b->pieces[to] & PIECEMASK];
-			move++;
-			ClrLO(mv);
-		}
+	if(side==WHITE) {
+		pawn_set_white(b, &(a->ke[WHITE]), pins, pset);
+	} else {
+		pawn_set_black(b, &(a->ke[BLACK]), pins, pset);
 	}
-#else
+// generate king
+//   mvsfromk21(b, a, side, &ii);
+   mvsfromk22(b, a, side);
+
+
+// generate pawn bitmap attacks non promoting
+//	mvsfrompa21(b, a, side, ii, b->colormaps[opside], (~rank)&b->colormaps[side], pins) ;
+//	ipa=ii;
+// generate pawn bitmap attacks promoting
+//	mvsfrompa21(b, a, side, ii, b->colormaps[opside], rank&b->colormaps[side], pins) ;
+//	ipc=ii;
+// generate pawn bitmap moves promoting only
+//	mvsfromp21(b, a, side, &ii, ~b->norm, rank&b->colormaps[side], pins) ;
+//	ipp=ii;
+
+// generate piece captures
+
 	for(int f=0; f<4; f++) {
 		int piece = ptype[f];
-		BITVAR pmap = b->maps[piece]& b->colormaps[side];
+		pmap = b->maps[piece]& b->colormaps[side];
 		while(pmap) {
 			int ppos = LastOne(pmap);
 			mv= a->mvs[ppos] & b->colormaps[opside];
-		  while (mv) {
-			to = LastOne(mv);
-			move->move = PackMove(ppos, to, ER_PIECE, 0);
-			move->qorder = move->real_score =
+			while (mv) {
+				to = LastOne(mv);
+				move->move = PackMove(ppos, to, ER_PIECE, 0);
+				move->qorder = move->real_score =
 					b->pers->LVAcap[piece][b->pieces[to] & PIECEMASK];
-			move++;
-			ClrLO(mv);
-		  }
+				move++;
+				ClrLO(mv);
+			}
 		ClrLO(pmap);
 		}
 	}
+
+#if 1
+// pawn attacks non promoting
+		pmap = (pset[0]) & (~rank);
+		while(pmap) {
+			int ppos = LastOne(pmap);
+			to = getPos(getFile(ppos)-1, getRank(ppos)+get_rank);
+			move->move = PackMove(ppos, to, ER_PIECE, 0);
+			move->qorder = move->real_score =
+					b->pers->LVAcap[PAWN][b->pieces[to] & PIECEMASK];
+			move++;
+			ClrLO(pmap);
+		}
+		pmap = (pset[1]) & (~rank);
+		while(pmap) {
+			int ppos = LastOne(pmap);
+			to = getPos(getFile(ppos)+1, getRank(ppos)+get_rank);
+			move->move = PackMove(ppos, to, ER_PIECE, 0);
+			move->qorder = move->real_score =
+					b->pers->LVAcap[PAWN][b->pieces[to] & PIECEMASK];
+			move++;
+			ClrLO(pmap);
+		}
+#else 
 	{
 // pawn attack non promoting
 		BITVAR pmap = b->maps[PAWN]& b->colormaps[side] & (~rank);
@@ -311,33 +412,110 @@ void generateCapturesN2(const board *const b, attack_model *a, move_entry **m, i
 	}
 #endif
 
-#if 0
-// pawn attack promoting
-	for(ix=ipa; ix<ipc;ix++) {
-//		mv=ix->mv = ((((pins >> (ix->fr))&1)-1)|(ix->mr))&(ix->mm);
-//		mv=ix->mv = (ix->mr)&(ix->mm);
-		mv = ix->mm & b->colormaps[opside];
-		while (mv) {
-			to = LastOne(mv);
-			move->move = PackMove(ix->fr, to, QUEEN, 0);
-			move->qorder = move->real_score = b->pers->LVAcap[KING + 1][b->pieces[to] & PIECEMASK];
-			move++;
-			move->move = PackMove(ix->fr, to, KNIGHT, 0);
-			move->qorder = move->real_score = b->pers->LVAcap[KING + 2][b->pieces[to] & PIECEMASK];
-			move++;
+
+#if 1
+// pawn attacks promoting
+		if (gen_u != 0) {
+			pmap = (pset[0]) & (rank);
+			while(pmap) {
+				int ppos = LastOne(pmap);
+				to = getPos(getFile(ppos)-1, getRank(ppos)+get_rank);
+				move->move = PackMove(ppos, to, QUEEN, 0);
+				move->qorder = move->real_score = b->pers->LVAcap[KING + 1][b->pieces[to] & PIECEMASK];
+				move++;
+				move->move = PackMove(ppos, to, KNIGHT, 0);
+				move->qorder = move->real_score = b->pers->LVAcap[KING + 2][b->pieces[to] & PIECEMASK];
+				move++;
 //underpromotion
-			if (gen_u != 0) {
-				move->move = PackMove(ix->fr, to, BISHOP, 0);
+				move->move = PackMove(ppos, to, BISHOP, 0);
 				move->qorder = move->real_score = A_OR2;
 				move++;
-				move->move = PackMove(ix->fr, to, ROOK, 0);
+				move->move = PackMove(ppos, to, ROOK, 0);
 				move->qorder = move->real_score = A_OR2;
 				move++;
+				ClrLO(pmap);
 			}
-			ClrLO(mv);
+			pmap = (pset[1]) & (rank);
+			while(pmap) {
+				int ppos = LastOne(pmap);
+				to = getPos(getFile(ppos)+1, getRank(ppos)+get_rank);
+	  			move->move = PackMove(ppos, to, QUEEN, 0);
+				move->qorder = move->real_score = b->pers->LVAcap[KING + 1][b->pieces[to] & PIECEMASK];
+				move++;
+				move->move = PackMove(ppos, to, KNIGHT, 0);
+				move->qorder = move->real_score = b->pers->LVAcap[KING + 2][b->pieces[to] & PIECEMASK];
+				move++;
+//underpromotion
+				move->move = PackMove(ppos, to, BISHOP, 0);
+				move->qorder = move->real_score = A_OR2;
+				move++;
+				move->move = PackMove(ppos, to, ROOK, 0);
+				move->qorder = move->real_score = A_OR2;
+				move++;
+				ClrLO(pmap);
+			}
+// pawn non attack promoting
+			pmap = (pset[2]) & (rank);
+			while(pmap) {
+				int ppos = LastOne(pmap);
+				to = getPos(getFile(ppos), getRank(ppos)+get_rank);
+				move->move = PackMove(ppos, to, QUEEN, 0);
+				move->qorder = move->real_score = A_QUEEN_PROM;
+				move++;
+				move->move = PackMove(ppos, to, KNIGHT, 0);
+				move->qorder = move->real_score = A_KNIGHT_PROM;
+				move++;
+// underpromotion
+				move->move = PackMove(ppos, to, BISHOP, 0);
+				move->qorder = move->real_score = A_MINOR_PROM + B_OR;
+				move++;
+				move->move = PackMove(ppos, to, ROOK, 0);
+				move->qorder = move->real_score = A_MINOR_PROM + R_OR;
+				move++;
+				ClrLO(pmap);
+			}
+		} else {
+			pmap = (pset[0]) & (rank);
+			while(pmap) {
+				int ppos = LastOne(pmap);
+				to = getPos(getFile(ppos)-1, getRank(ppos)+get_rank);
+				move->move = PackMove(ppos, to, QUEEN, 0);
+				move->qorder = move->real_score = b->pers->LVAcap[KING + 1][b->pieces[to] & PIECEMASK];
+				move++;
+				move->move = PackMove(ppos, to, KNIGHT, 0);
+				move->qorder = move->real_score = b->pers->LVAcap[KING + 2][b->pieces[to] & PIECEMASK];
+				move++;
+				ClrLO(pmap);
+			}
+			pmap = (pset[1]) & (rank);
+			while(pmap) {
+				int ppos = LastOne(pmap);
+				to = getPos(getFile(ppos)+1, getRank(ppos)+get_rank);
+				move->move = PackMove(ppos, to, QUEEN, 0);
+				move->qorder = move->real_score = b->pers->LVAcap[KING + 1][b->pieces[to] & PIECEMASK];
+				move++;
+				move->move = PackMove(ppos, to, KNIGHT, 0);
+				move->qorder = move->real_score = b->pers->LVAcap[KING + 2][b->pieces[to] & PIECEMASK];
+				move++;
+				ClrLO(pmap);
+			}
+// pawn non attack promoting
+			pmap = (pset[2]) & (rank);
+			while(pmap) {
+				int ppos = LastOne(pmap);
+				to = getPos(getFile(ppos), getRank(ppos)+get_rank);
+				move->move = PackMove(ppos, to, QUEEN, 0);
+				move->qorder = move->real_score = A_QUEEN_PROM;
+				move++;
+				move->move = PackMove(ppos, to, KNIGHT, 0);
+				move->qorder = move->real_score = A_KNIGHT_PROM;
+				move++;
+				ClrLO(pmap);
+			}
 		}
-	}
-#else
+#else 
+
+
 	{
 		BITVAR pmap = b->maps[PAWN]& b->colormaps[side] & (rank);
 		if (gen_u != 0) {
@@ -416,9 +594,8 @@ void generateCapturesN2(const board *const b, attack_model *a, move_entry **m, i
 	}
 #endif
 
-
 // ep capture
-#if 1
+#if 0
 	if(b->ep > 0) {
 		epbmp =
 			(b->ep >0 && (a->ke[side].ep_block == 0)) ? attack.ep_mask[b->ep]
@@ -439,48 +616,21 @@ void generateCapturesN2(const board *const b, attack_model *a, move_entry **m, i
 			ClrLO(piece);
 		}
 	} else epbmp = 0;
+#else
+	pmap = (pset[4]);
+	while(pmap) {
+		int ppos = LastOne(pmap);
+		to = getPos(getFile(b->ep), getRank(b->ep) + get_rank);
+			move->move = PackMove(ppos, to, PAWN,0);
+			move->qorder = move->real_score = b->pers->LVAcap[PAWN][PAWN];
+		move++;
+		ClrLO(pmap);
+	}
+
 #endif
 
-#if 0
-// pawn promotions
-	for(ix=ipc; ix<ipp;ix++) {
-		mv=ix->mv = ((((pins >> (ix->fr))&1)-1)|(ix->mr))&(ix->mm);
-//		mv=ix->mv = (ix->mr)&(ix->mm);
-		while (mv) {
-			to = LastOne(mv);
-			move->move = PackMove(ix->fr, to, QUEEN, 0);
-			move->qorder = move->real_score = A_QUEEN_PROM;
-			move++;
-			move->move = PackMove(ix->fr, to, KNIGHT, 0);
-			move->qorder = move->real_score = A_KNIGHT_PROM;
-			move++;
-// underpromotions
-			if (gen_u != 0) {
-				move->move = PackMove(ix->fr, to, BISHOP, 0);
-				move->qorder = move->real_score = A_MINOR_PROM
-					+ B_OR;
-				move++;
-				move->move = PackMove(ix->fr, to, ROOK, 0);
-				move->qorder = move->real_score = A_MINOR_PROM
-					+ R_OR;
-				move++;
-			}
-			ClrLO(mv);
-		}
-	}
-#endif 
-// king 
-/*
-	from = b->king[side];
-	mv = (attack.maps[KING][from])
-		& (~attack.maps[KING][b->king[opside]])
-		& (~a->att_by_side[opside])
-		& (~b->norm);
-
- */
 	from = b->king[side];
 	mv = a->mvs[from] & (b->colormaps[opside]);
-
 	while (mv) {
 		to = LastOne(mv);
 		move->move = PackMove(from, to, ER_PIECE, 0);
@@ -546,10 +696,11 @@ run_in RR[] = { { ER_PIECE, PAWN, 0, BLACK, 0 }, { ER_PIECE | BLACKPIECE, PAWN
 
 void generateMovesN2(const board *const b, attack_model *a, move_entry **m)
 {
-	int from, to;
+	int from, to, get_rank;
 	int ptype[] = { QUEEN, ROOK, BISHOP, KNIGHT, PAWN };
 	BITVAR mv, rank, brank, piece, bran2;
 	BITVAR epbmp, pins, tp, tq, kpin, nmf, tmp, tmp2, tx, tx2, dir;
+	BITVAR *pset, pmap;
 	bmv mm[64];
 	bmv *ip,*ib,*in,*ir,*iq,*ik,*ii, *ix;
 
@@ -566,6 +717,8 @@ void generateMovesN2(const board *const b, attack_model *a, move_entry **m)
 		bran2 = RANK4;
 		orank = 0;
 		ff = 8;
+		get_rank=1;
+		pset = &(a->pset[WHITE]);
 	} else {
 		rank = RANK2;
 		side = BLACK;
@@ -574,42 +727,31 @@ void generateMovesN2(const board *const b, attack_model *a, move_entry **m)
 		bran2 = RANK5;
 		orank = 56;
 		ff = -8;
+		get_rank=-1;
+		pset = &(a->pset[BLACK]);
 	}
 
 	pins = ((a->ke[side].cr_pins | a->ke[side].di_pins));
 
-#if 0
-	for(ix=a->mm[side]; ix<a->mm_idx[side];ix++) {
-//		mv = ix->mv = ((((pins >> (ix->fr))&1)-1)|(ix->mr))&(ix->mm)&(~b->norm);
-		mv = ix->mv = (ix->mm)&(~b->norm);
-		while (mv) {
-			to = LastOne(mv);
-			move->move = PackMove(ix->fr, to, ER_PIECE, 0);
-			move->qorder = move->real_score = b->pers->LVAcap[ix->pi][ER_PIECE];
-			move++;
-			ClrLO(mv);
-		}
-	}
-#else
 	for(int f=0; f<4; f++) {
 		int piece = ptype[f];
-		BITVAR pmap = b->maps[piece]& b->colormaps[side];
+		pmap = b->maps[piece]& b->colormaps[side];
 		while(pmap) {
 			int ppos = LastOne(pmap);
 			mv= a->mvs[ppos] & (~b->norm);
-		  while (mv) {
-			to = LastOne(mv);
-			move->move = PackMove(ppos, to, ER_PIECE, 0);
-			move->qorder = move->real_score = b->pers->LVAcap[piece][ER_PIECE];
-			move++;
-			ClrLO(mv);
-		  }
+			while (mv) {
+				to = LastOne(mv);
+				move->move = PackMove(ppos, to, ER_PIECE, 0);
+				move->qorder = move->real_score = b->pers->LVAcap[piece][ER_PIECE];
+				move++;
+				ClrLO(mv);
+			}
 		ClrLO(pmap);
 		}
 	}
 
-#endif
 
+#if 0
 // pawn moves
 	tmp2=tmp=0;
 	piece = (b->maps[PAWN]) & (b->colormaps[side]) & (~rank);
@@ -652,22 +794,42 @@ void generateMovesN2(const board *const b, attack_model *a, move_entry **m)
 		}
 	}
 	
+#else 
+// pawn push
+		pmap = (pset[2])&(~rank);
+		while(pmap) {
+			int ppos = LastOne(pmap);
+			to = getPos(getFile(ppos), getRank(ppos)+get_rank);
+			move->move = PackMove(ppos, to, ER_PIECE, 0);
+			move->qorder = move->real_score = MV_OR + P_OR;
+			move++;
+			ClrLO(pmap);
+		}
+// dpush
+		pmap = (pset[3]);
+		while(pmap) {
+			int ppos = LastOne(pmap);
+			to = getPos(getFile(ppos), getRank(ppos)+2*get_rank);
+			move->move = PackMove(ppos, to, ER_PIECE, 0);
+			move->qorder = move->real_score = MV_OR + P_OR + 1;
+			move++;
+			ClrLO(pmap);
+		}
+
+#endif
+
+
 // king 
 // !!!!! att_by_side - opside !!!!!
-/*
 	from = b->king[side];
-	mv = (attack.maps[KING][from])
-		& (~attack.maps[KING][b->king[opside]])
-		& (~a->att_by_side[opside])
-		& (~b->norm);
- */
-	from = b->king[side];
+
+#if 0
 	mv = a->mvs[from] & (~b->norm);
 
 	while (mv) {
-			to = LastOne(mv);
-			move->move = PackMove(from, to, ER_PIECE, 0);
-			move->qorder = move->real_score = MV_OR;
+		to = LastOne(mv);
+		move->move = PackMove(from, to, ER_PIECE, 0);
+		move->qorder = move->real_score = MV_OR;
 		move++;
 		ClrLO(mv);
 	}
@@ -698,6 +860,30 @@ void generateMovesN2(const board *const b, attack_model *a, move_entry **m)
 			}
 		}
 	}
+#else
+	mv = a->mvs[from] & (~b->norm) & attack.surr1[from];
+
+	while (mv) {
+		to = LastOne(mv);
+		move->move = PackMove(from, to, ER_PIECE, 0);
+		move->qorder = move->real_score = MV_OR;
+		move++;
+		ClrLO(mv);
+	}
+//incorporate castling
+	mv = a->mvs[from] & (~b->norm) & (~attack.surr1[from]);
+	while (mv) {
+		to = LastOne(mv);
+		move->move = PackMove(from, to, KING, 0);
+		move->qorder = move->real_score = (from>to) ? CS_Q_OR:CS_K_OR ;
+		move++;
+		ClrLO(mv);
+	}
+
+
+#endif
+
+
 	*m = move;
 
 	return;
@@ -1182,6 +1368,7 @@ BITVAR changed, pin[2], t[2];;
 	changed = pin[WHITE]|pin[BLACK];
 // get changes because of move itself
 	changed |= ChangedToN(b, a, u);
+	return changed;
 }
 
 int isMoveValid(board *b, MOVESTORE move, const attack_model *a, int side, tree_store *tree)

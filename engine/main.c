@@ -112,6 +112,7 @@ int main(int argc, char **argv)
 	LOGGER_3("INFO: Opening book\n");
 	open_open("book.bin");
 
+#if 0
 	printmask(1, "1");
 	printmask(0-1, "-1");
 	printmask(2, "2");
@@ -121,6 +122,8 @@ int main(int argc, char **argv)
 
 	printmask(0x101010101010106, "0x0");
 	printmask(0-0x101010101010106, "-0x0");
+#endif
+
 #ifdef NTUNING
 	texel_test();
 #else

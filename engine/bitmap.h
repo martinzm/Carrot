@@ -606,7 +606,7 @@ typedef struct _attack_model {
 	hashPawnEntry *hpep;
 	PawnStore *pps;
 // left, right, push, doublepush, ep
-	BITVAR pset[2][5];
+	BITVAR pset[2][6];
 
 	bmv mm[2][32];
 	bmv *mm_idx[2];
