@@ -1563,7 +1563,6 @@ int eval_king_checks_ext(board const *b, king_eval *ke, personality const *p, in
 // if it can hit king, find nearest piece, blocker?
 // rook/queen
 	ke->cr_pins = ke->cr_attackers = 0;
-//	ke->cr_att_ray = 0;
 
 // iterate attackers
 	while (c2) {
@@ -1582,7 +1581,6 @@ int eval_king_checks_ext(board const *b, king_eval *ke, personality const *p, in
 // 0 means attacked
 			case 0:
 				ke->cr_attackers |= normmark[ff];
-//				ke->cr_att_ray |= attack.rays_dir[ff][from];
 				break;
 			case 2:
 // check ep pin, see below
@@ -1605,7 +1603,6 @@ int eval_king_checks_ext(board const *b, king_eval *ke, personality const *p, in
 
 // bishop/queen
 	ke->di_pins = ke->di_attackers = 0;
-//	ke->di_att_ray = 0;
 
 	while (d2) {
 		ff = LastOne(d2);
@@ -1618,7 +1615,6 @@ int eval_king_checks_ext(board const *b, king_eval *ke, personality const *p, in
 				break;
 			case 0:
 				ke->di_attackers |= normmark[ff];
-//				ke->di_att_ray |= attack.rays_dir[ff][from];
 				break;
 			}
 		}
@@ -1769,7 +1765,6 @@ int eval_king_checks_ext_adapt(board const *b, king_eval *ke, BITVAR filter, int
 // if it can hit king, find nearest piece, blocker?
 // rook/queen
 	k.cr_pins = k.cr_attackers = 0;
-//	k.cr_att_ray = 0;
 
 // iterate attackers
 	while (c2) {
@@ -1788,7 +1783,6 @@ int eval_king_checks_ext_adapt(board const *b, king_eval *ke, BITVAR filter, int
 // 0 means attacked
 			case 0:
 				k.cr_attackers |= normmark[ff];
-//				k.cr_att_ray |= attack.rays_dir[ff][from];
 				break;
 			case 2:
 // check ep pin, see below
@@ -1811,7 +1805,6 @@ int eval_king_checks_ext_adapt(board const *b, king_eval *ke, BITVAR filter, int
 
 // bishop/queen
 	k.di_pins = k.di_attackers = 0;
-//	k.di_att_ray = 0;
 
 	while (d2) {
 		ff = LastOne(d2);
@@ -1824,7 +1817,6 @@ int eval_king_checks_ext_adapt(board const *b, king_eval *ke, BITVAR filter, int
 				break;
 			case 0:
 				k.di_attackers |= normmark[ff];
-//				k.di_att_ray |= attack.rays_dir[ff][from];
 				break;
 			}
 		}
@@ -1845,9 +1837,6 @@ int eval_king_checks_ext_adapt(board const *b, king_eval *ke, BITVAR filter, int
 
 	ke->kn_attackers = (ke->kn_attackers & inv)|k.kn_attackers;
 	ke->pn_attackers = (ke->pn_attackers & inv)|k.pn_attackers;
-
-//	ke->cr_att_ray = (ke->cr_att_ray & inv)|k.cr_att_ray;
-//	ke->di_att_ray = (ke->di_att_ray & inv)|k.di_att_ray;
 
 	ke->attackers = ke->cr_attackers | ke->di_attackers | ke->kn_attackers
 		| ke->pn_attackers;
@@ -1885,7 +1874,6 @@ int eval_ind_attacks(const board *const b, king_eval *ke, personality *p, int si
 
 // rook/queen
 	ke->cr_blocks = ke->cr_attackers = 0;
-//	ke->cr_att_ray = 0;
 
 // iterate endpoints
 	while (c2) {
@@ -1904,7 +1892,6 @@ int eval_ind_attacks(const board *const b, king_eval *ke, personality *p, int si
 
 // bishop/queen
 	ke->di_blocks = ke->di_attackers = 0;
-//	ke->di_att_ray = 0;
 
 	while (d2) {
 		ff = LastOne(d2);
@@ -2998,10 +2985,6 @@ int eval_king2(board const *b, attack_model *a, PawnStore const *ps, int side, p
 
 // king mobility, spocitame vsechna pole kam muj kral muze (tj. krome vlastnich figurek a poli na ktere utoci nepratelsky kral
 // a poli ktera jsou napadena cizi figurou
-//	mv = (attack.maps[KING][from]) & (~b->colormaps[side])
-//		& (~attack.maps[KING][b->king[Flip(side)]]);
-//	mv = mv & (~a->att_by_side[Flip(side)]) & (~a->ke[side].cr_att_ray)
-//		& (~a->ke[side].di_att_ray);
 
 	mv = a->mvs[from];
 	m = a->me[from].pos_att_tot = BitCount(mv);
