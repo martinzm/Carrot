@@ -117,9 +117,19 @@ void mvsfroma2(const board * const, attack_model *, int const, int const, bmv **
 	}\
 };
 
-// board, attack, piece_type, side_to_generate, piece_function, index, dest_squares_set, source_squares_set , pieces_moving_set
+// board, attack, piece_type, side_to_generate, piece_function, index, dest_squares_set, source_squares_set, pieces_moving_set
 
 #define MVSFROM21(B, A, P, S, F, I, M, L, X) \
+{ BITVAR v; v=B->maps[P] & (L);\
+  while(v) {\
+		int fr=LastOne(v);\
+		BITVAR mr = attack.rays_dir[B->king[S]][fr];\
+		(A)->mvs[fr] = ((((X >> fr) &1)-1)|mr) & F(B, fr) & M;\
+		ClrLO(v);\
+	}\
+};
+
+#define MVSFROM21ooo(B, A, P, S, F, I, M, L, X) \
 { BITVAR v; v=B->maps[P] & (L);\
   while(v) {\
 		(I)->fr=LastOne(v);\
@@ -130,7 +140,6 @@ void mvsfroma2(const board * const, attack_model *, int const, int const, bmv **
 		ClrLO(v);\
 	}\
 };
-
 
 
 //		mv=ix->mv = ((((pins >> (ix->fr))&1)-1)|(ix->mr))&(ix->mm) & b->colormaps[opside];

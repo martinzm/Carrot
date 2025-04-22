@@ -129,23 +129,6 @@ int make_mobility_modelN2(const board *const b, attack_model *a, personality con
 	a->pa_at[WHITE] = a->pa_at[BLACK] = a->pa_mo[WHITE] = a->pa_mo[BLACK] = 0;
 	orank = 0;
 
-#if 0
-		x = b->maps[PAWN] & b->colormaps[WHITE];
-		while (x) {
-			from=LastOne(x);
-			nmf = NORMM(from);
-			a->pos_m[PAWN][++(a->pos_c[PAWN])]=from;
-			tmp = (nmf << 8) & (~b->norm);
-			tmm = tmp |= (((tmp&RANK3) << 8) & (~b->norm));
-			tmp |= tma = attack.pawn_att[WHITE][from];
-			q = a->mvs[from] = (pins[WHITE]&nmf) ? tmp&attack.rays_dir[b->king[WHITE]][from] : tmp;
-			a->pa_at[WHITE] |= q&tma;
-			a->pa_mo[WHITE] |= q&tmm;
-			ClrLO(x);
-		}
-
-#else
-
 	x = (~ppins[WHITE])&b->maps[PAWN]&b->colormaps[WHITE];
 	tmi = (x << 8) & (~b->norm);
 	tme = (((tmi&RANK3) << 8) & (~b->norm))|tmi;
@@ -175,12 +158,9 @@ int make_mobility_modelN2(const board *const b, attack_model *a, personality con
 			}
 		ClrLO(x2);
 	}
-		
-#endif
-
 	
 	orank = 56;
-#if 0 
+#if 1
 	x = b->maps[PAWN] & b->colormaps[BLACK];
 	while (x) {
 		from=LastOne(x);
@@ -193,37 +173,6 @@ int make_mobility_modelN2(const board *const b, attack_model *a, personality con
 		a->pa_at[BLACK] |= q&tma;
 		a->pa_mo[BLACK] |= q&tmm;
 		ClrLO(x);
-	}
-#else
-
-	x = (~ppins[BLACK])&b->maps[PAWN]&b->colormaps[BLACK];
-	tmi = (x >> 8) & (~b->norm);
-	tme = (((tmi&RANK6) >> 8) & (~b->norm))|tmi;
-	a->pa_mo[BLACK] = tme;
-	while (x) {
-		from=LastOne(x);
-		a->pos_m[PAWN|BLACKPIECE][++(a->pos_c[PAWN|BLACKPIECE])]=from;
-		a->pa_at[BLACK] |= tma = attack.pawn_att[BLACK][from];
-		a->mvs[from] = (((tmi&tme)|tme) & attack.pawn_move[BLACK][from])|(tma);
-		ClrLO(x);
-	}
-
-	x2=(ppins[BLACK]);
-	tmi = (x2 >> 8) & (~b->norm);
-	tme = (((tmi&RANK6) >> 8) & (~b->norm))|tmi;
-	
-	while (x2) {
-		from=LastOne(x2);
-		a->pos_m[PAWN|BLACKPIECE][++(a->pos_c[PAWN|BLACKPIECE])]=from;
-		if(NORMM(from) & kph[BLACK]) a->pa_mo[BLACK] |= a->mvs[from] 
-			= (((tmi&tme)|tme)& attack.pawn_move[BLACK][from]) 
-			& a->ke[BLACK].cr_all_ray;
-		else {
-			a->pa_at[BLACK] |= tma = attack.pawn_att[BLACK][from]
-			& a->ke[BLACK].di_all_ray;
-			a->mvs[from]=tma;
-			}
-		ClrLO(x2);
 	}
 #endif
 
@@ -245,7 +194,6 @@ int make_mobility_modelN2(const board *const b, attack_model *a, personality con
 			ClrLO(x);
 		}
 	}
-
 
 /* 
  * togo & unsafe variables are need in MAKMOB2 macro
@@ -275,10 +223,6 @@ int make_mobility_modelN2(const board *const b, attack_model *a, personality con
 			& (~b->colormaps[side]);
 		if (b->castle[side]) {
 			if (b->castle[side] & QUEENSIDE) {
-//				printmask(a->att_by_side[Flip(side)],"att");
-//				printmask(attack.rays[2 + orank][4 + orank],"KingMove");
-//				printmask(attack.maps[KING][b->king[Flip(side)]],"OpKing");
-//				printmask((attack.rays[1 + orank][3 + orank] & b->norm), "RookMove");
 				
 				if ((attack.rays[2 + orank][4 + orank]
 					& ((a->att_by_side[Flip(side)]
@@ -286,7 +230,6 @@ int make_mobility_modelN2(const board *const b, attack_model *a, personality con
 					&& ((attack.rays[1 + orank][3 + orank] & b->norm) == 0))
 					{ 
 						a->mvs[from] |= NORMM(2 + orank);
-//						printmask(a->mvs[from],"X");
 					}
 			}
 			

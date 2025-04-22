@@ -974,6 +974,14 @@ int parsePVMoves(board *b, attack_model *a, int *ans, char (*bm)[CMTLEN], int le
  * 	- check board with stored
  */
 
+/*
+ * for new move generation
+ * serialize - generate moves from piece bitmaps
+ * makemove - updates board and collect changes to board
+ * ChangesToMove - identifies what moves bitmaps changed and must be regenerated
+ * regenerate bitmaps for affected pieces
+ */
+
 unsigned long long int perftLoopX_int(board *b, int d, int side, attack_model *tolev, int incheck)
 {
 	UNDO u;
@@ -995,6 +1003,8 @@ unsigned long long int perftLoopX_int(board *b, int d, int side, attack_model *t
 //	a->att_by_side[opside] = KingAvoidSQ(b, a, opside);
 
 	n = m = move;
+
+// serialize
 	if (incheck == 1) {
 //		simple_pre_movegen_n2check(b, a, side);
 		generateInCheckMovesN(b, a, &m, 1);
@@ -1011,7 +1021,9 @@ unsigned long long int perftLoopX_int(board *b, int d, int side, attack_model *t
 		return tc;
 	while (cc < tc) {
 
+// makemove
 		MakeMove(b, move[cc].move, &u);
+// identify changes
 		r = ChangesToMove(b, a, &u);
 
 //		eval_king_checks(b, &(a->ke[opside]), NULL, opside);
@@ -1020,6 +1032,8 @@ unsigned long long int perftLoopX_int(board *b, int d, int side, attack_model *t
 			(a->ke[opside].attackers != 0));
 		nodes += tnodes;
 		UnMakeMove(b, &u);
+
+// identify changes
 		r = ChangesToMove(b, a, &u);
 		cc++;
 	}
