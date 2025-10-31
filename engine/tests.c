@@ -976,11 +976,107 @@ int parsePVMoves(board *b, attack_model *a, int *ans, char (*bm)[CMTLEN], int le
 
 /*
  * for new move generation
- * serialize - generate moves from piece bitmaps
- * makemove - updates board and collect changes to board
- * ChangesToMove - identifies what moves bitmaps changed and must be regenerated
- * regenerate bitmaps for affected pieces
+ * -- all bitmaps for pieces are generated, and att_by_side are are populated
+ * 1.  serialize from bitmaps
+	store attack state
+ * 2.  make move
+ * 3.  changesToMove to identify what needs to be updated because of move, excluding king
+ * 4.  rebuild bitmaps, excluding king
+ * 5.  aggregate bitmaps into att_by_piece / att_by_side
+ * 6.  rebuild king bitmap
+ 
+ * 7.  -- dive in --
+ * 8.  unmake move
+	restore attack state
+ * XXX 9.  changesToMove to identify what needs to be updated because of move. excluding king
+ * XXX 10. rebuild bitmaps, excluding king
+ * XXX 11. aggregate bitmaps into att_by_piece / att_by_side
+ * XXX 12. rebuild king bitmap
+ * 13. -- loop to 1. --
  */
+
+
+/*
+ * na vstupu je reprezentace sachovnice a utoky konzistentni
+ */
+ 
+ 
+int ver_attack_bmp(const board *const b, attack_model *a, attack_model *o)
+{
+int i, FIG[]={ PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING };
+BITVAR x;
+	for(int side=0;side<=1;side++) {
+		for(i=1;i<5;i++){
+			int pc=FIG[i];
+			x = b->maps[pc]&b->colormaps[side];
+			while (x) {
+				int from=LastOne(x);
+//				a->pos_m[pc+side*BLACKPIECE][++(a->pos_c[pc+side*BLACKPIECE])]=from;
+				if(a->mvs[from]!=o->mvs[from]) {
+					printBoardNice(b);
+					LOGGER_0("ATTACKMASKS P:%d, %d\n", pc, from);
+					printmask(a->mvs[from],"a1");
+					printmask(o->mvs[from],"a2");
+				}
+				ClrLO(x);
+			}
+		}
+		if(a->att_by_side[side]!=o->att_by_side[side]) {
+			printBoardNice(b);
+			LOGGER_0("att_by_side, %d\n", side);
+			printmask(a->att_by_side[side],"a1");
+			printmask(o->att_by_side[side],"a2");
+		}
+		for(i=0;i<5;i++){
+			if(a->pset[side][i]!=o->pset[side][i]){
+				printBoardNice(b);
+				LOGGER_0("pset %d,%d\n", side,i);
+				printmask(a->pset[side][i],"a1");
+				printmask(o->pset[side][i],"a2");
+			}
+		}
+	}
+	if(a->pins!=o->pins) {
+		printBoardNice(b);
+		LOGGER_0("PINS\n");
+		printmask(a->pins,"a1");
+		printmask(o->pins,"a2");
+	}
+	return 0;
+}
+
+int ver_attack_bmp2(const board *const b, attack_model *a, attack_model *o)
+{
+
+int i, FIG[]={ PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING };
+BITVAR x;
+	for(int side=0;side<=1;side++) {
+		for(i=5;i<6;i++){
+			int pc=FIG[i];
+			x = b->maps[pc]&b->colormaps[side];
+			while (x) {
+				int from=LastOne(x);
+//				a->pos_m[pc+side*BLACKPIECE][++(a->pos_c[pc+side*BLACKPIECE])]=from;
+				if(a->mvs[from]!=o->mvs[from]) {
+					printBoardNice(b);
+					LOGGER_0("ATTACKMASKS P:%d, %d\n", pc, from);
+					printmask(a->mvs[from],"a1");
+					printmask(o->mvs[from],"a2");
+				}
+				ClrLO(x);
+			}
+		}
+	}
+	for(int side=0;side<=1;side++) {
+		if(a->ke[side].attackers!=o->ke[side].attackers) {
+			printBoardNice(b);
+			LOGGER_0("attackrs\n");
+			printmask(a->ke[side].attackers,"a1");
+			printmask(o->ke[side].attackers,"a2");
+		}
+	}
+	return 0;
+}
 
 unsigned long long int perftLoopX_int(board *b, int d, int side, attack_model *tolev, int incheck)
 {
@@ -990,27 +1086,29 @@ unsigned long long int perftLoopX_int(board *b, int d, int side, attack_model *t
 	int opside;
 	int tc, cc;
 	unsigned long long nodes, tnodes;
-	attack_model *a, ATT;
+	attack_model *a, ATT, OTT;
+	char fen[100], buf[256];
+	int pos[4];
 
 	if (d == 0)
 		return 1;
 	nodes = 0;
-	opside = (side == WHITE) ? BLACK : WHITE;
-//	a = &ATT;
+	opside = Flip(side);
+	a = &ATT;
 	a = tolev;
 
-//	a->ke[b->side] = tolev->ke[b->side];
-//	a->att_by_side[opside] = KingAvoidSQ(b, a, opside);
+//	memcpy(a, tolev, sizeof(attack_model));
+
+// bitmap already prepared
 
 	n = m = move;
 
 // serialize
 	if (incheck == 1) {
-//		simple_pre_movegen_n2check(b, a, side);
-		generateInCheckMovesN(b, a, &m, 1);
+//		LOGGER_0("INCH\n");
+		generateInCheckMovesN2(b, a, &m, 1);
 	} else {
-//		simple_pre_movegen_n2(b, a, side);
-		generateCapturesN2(b, a, &m, 1);
+		generateCapturesN3(b, a, &m, 1);
 		generateMovesN2(b, a, &m);
 	}
 
@@ -1022,19 +1120,38 @@ unsigned long long int perftLoopX_int(board *b, int d, int side, attack_model *t
 	while (cc < tc) {
 
 // makemove
-		MakeMove(b, move[cc].move, &u);
-// identify changes
+		MakeMoveNew(b, move[cc].move, pos, &u);
+// identify changes and update attacks / pins
 		r = ChangesToMove(b, a, &u);
+//		r = FULLBITMAP;
 
-//		eval_king_checks(b, &(a->ke[opside]), NULL, opside);
+// update bitmaps
+
+		generateBitmaps(b, a, r, WHITE);
+		generateBitmaps(b, a, r, BLACK);
 		
+		a->att_by_side[BLACK] = regenerateSQAttacked(b, a, BLACK);
+		a->att_by_side[WHITE] = regenerateSQAttacked(b, a, WHITE);
+
+		mvsfromk22(b, a, side);
+		mvsfromk22(b, a, opside);
 		tnodes = perftLoopX_int(b, d - 1, opside, a,
 			(a->ke[opside].attackers != 0));
 		nodes += tnodes;
 		UnMakeMove(b, &u);
+// restore attack tables
+//		memcpy(a, tolev, sizeof(attack_model));
 
-// identify changes
 		r = ChangesToMove(b, a, &u);
+		generateBitmaps(b, a, r, WHITE);
+		generateBitmaps(b, a, r, BLACK);
+		
+		a->att_by_side[BLACK] = regenerateSQAttacked(b, a, BLACK);
+		a->att_by_side[WHITE] = regenerateSQAttacked(b, a, WHITE);
+
+		mvsfromk22(b, a, side);
+		mvsfromk22(b, a, opside);
+
 		cc++;
 	}
 	return nodes;
@@ -1100,32 +1217,6 @@ unsigned long long int perftLoopN_int(board *b, int d, int side, attack_model *t
 	return nodes;
 }
 
-#if 0
-int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store *tree)
-{
-	MOVESTORE pot;
-	int r;
-	switch (mv->phase) {
-	case INIT:
-		// setup everything
-		mv->lastp = mv->move;
-		mv->next = mv->lastp;
-		mv->badp = mv->bad;
-		mv->exclp = mv->excl;
-		mv->count = 0;
-		mv->phase = PVLINE;
-		mv->quiet = NULL;
-// previous PV move
-	case GENERATE_CAPTURES:
-		mv->next = mv->lastp;
-
-		generateInCheckMovesN(b, a, &(mv->lastp), 1);
-		generateCapturesN2(b, a, &(mv->lastp), 1);
-		generateMovesN2(b, a, &(mv->lastp));
-
-#endif
-
-
 unsigned long long int perftLoopN_v(board *b, int d, int side, attack_model *tolev, int div)
 {
 	UNDO u;
@@ -1138,6 +1229,9 @@ unsigned long long int perftLoopN_v(board *b, int d, int side, attack_model *tol
 	move_entry move[300], *n;
 	char buf[300];
 	BITVAR attacks;
+	struct timespec start, end;
+	unsigned long long int totaltime;
+	char fen[100];
 
 	n = move;
 	if (d == 0)
@@ -1145,6 +1239,8 @@ unsigned long long int perftLoopN_v(board *b, int d, int side, attack_model *tol
 	nodes = 0;
 	opside = (side == WHITE) ? BLACK : WHITE;
 	a = &ATT;
+
+	if(div) printBoardNice(b);
 
 	eval_king_checks(b, &(a->ke[side]), NULL, side);
 	eval_king_checks(b, &(a->ke[opside]), NULL, opside);
@@ -1161,19 +1257,30 @@ unsigned long long int perftLoopN_v(board *b, int d, int side, attack_model *tol
 	while ((getNextMove(b, a, &mvs, 0, side, incheck, &m, NULL) != 0)) {
 		*n = *(m);
 		n++;
-		if (d != 1) {
-			
+		if (d >= 1) {
+			readClock_wall(&start);
 			MakeMove(b, m->move, &u);
 			eval_king_checks(b, &(a->ke[opside]), NULL, opside);
 			tnodes = perftLoopN_int(b, d - 1, opside, a);
+			if (div) {
+//					sprintfMoveSimple(m->move, buf);
+//					printf("XXXXXXXXX %s\t\t%lld\n", buf, tnodes);
+//					LOGGER_0("XXXXXXXXXXXXXX %s\t\t%lld\n", buf, tnodes);
+				sprintfMoveSimple(m->move, buf);
+				writeEPD_FEN(b, fen, 1, "");
+				readClock_wall(&end);
+				totaltime = diffClock(start, end) + 1;
+				printf(
+					"%s\t\t%lld\t\t(%lld:%lld.%lld\t%lld tis/sec,\t\t%s perft %d = %lld )\n",
+					buf, tnodes, totaltime / 60000000,
+					(totaltime % 60000000) / 1000000,
+					(totaltime % 1000000) / 1000,
+					tnodes * 1000 / totaltime, fen, d - 1, tnodes);
+				LOGGER_1("%s\t\t%lld\t\t(%lld:%lld.%lld\t%lld tis/sec,\t\t%s perft %d = %lld )\n", buf, tnodes, totaltime/60000000,(totaltime%60000000)/1000000,(totaltime%1000000)/1000, tnodes*1000/totaltime, fen, d-1, tnodes );
+			}
 			UnMakeMove(b, &u);
 		} else tnodes = 1;
 		nodes += tnodes;
-		if (div) {
-			sprintfMoveSimple(m->move, buf);
-			printf("XXXXXXXXX %s\t\t%lld\n", buf, tnodes);
-			LOGGER_0("XXXXXXXXXXXXXX %s\t\t%lld\n", buf, tnodes);
-		}
 }
 	return nodes;
 }
@@ -1184,7 +1291,7 @@ unsigned long long int perftLoopX_v(board *b, int d, int side, attack_model *tol
 	move_entry move[300], *m, *n;
 	int tc, cc, opside, incheck;
 	unsigned long long nodes, tnodes;
-	attack_model *a, ATT;
+	attack_model *a, ATT, O;
 	struct timespec start, end;
 	unsigned long long int totaltime;
 	char buf[20], fen[100];
@@ -1194,25 +1301,32 @@ unsigned long long int perftLoopX_v(board *b, int d, int side, attack_model *tol
 		return 1;
 
 	nodes = 0;
-	opside = (side == WHITE) ? BLACK : WHITE;
+	opside = Flip(side);
 	a = &ATT;
 
 	if(div) printBoardNice(b);
 
-	eval_king_checks(b, &(a->ke[side]), NULL, side);
-	eval_king_checks(b, &(a->ke[opside]), NULL, opside);
-	attacks = KingAvoidSQ(b, a, opside);
-	a->att_by_side[opside] = attacks;
+	eval_king_checks_extU(b, &(a->ke[WHITE]), 0, b->king[WHITE]);
+	eval_king_checks_extU(b, &(a->ke[BLACK]), 1, b->king[BLACK]);
+//	a->att_by_side[WHITE] = KingAvoidSQ(b, a, WHITE);
+//	a->att_by_side[BLACK] = KingAvoidSQ(b, a, BLACK);
+
+	generateBitmaps(b, a, FULLBITMAP, side);
+	generateBitmaps(b, a, FULLBITMAP, opside);
+	a->att_by_side[BLACK] = regenerateSQAttacked(b, a, BLACK);
+	a->att_by_side[WHITE] = regenerateSQAttacked(b, a, WHITE);
+	mvsfromk22(b, a, side);
+	mvsfromk22(b, a, opside);
 
 	n = m = move;
 	if (a->ke[side].attackers != 0) {
-//		simple_pre_movegen_n2check(b, a, side);
-		generateInCheckMovesN(b, a, &m, 1);
+		generateInCheckMovesN2(b, a, &m, 1);
 	} else {
-//		simple_pre_movegen_n2(b, a, side);
-		generateCapturesN2(b, a, &m, 1);
+		generateCapturesN3(b, a, &m, 1);
 		generateMovesN2(b, a, &m);
 	}
+
+	memcpy(&O, a, sizeof(attack_model));
 
 	tc = (int) (m - n);
 	cc = 0;
@@ -1221,9 +1335,17 @@ unsigned long long int perftLoopX_v(board *b, int d, int side, attack_model *tol
 	while (cc < tc) {
 		readClock_wall(&start);
 		MakeMove(b, move[cc].move, &u);
+		
 		r = ChangesToMove(b, a, &u);
-//		eval_king_checks(b, &(a->ke[opside]), NULL, opside);
-//		if(div) printBoardNice(b);
+//		r = FULLBITMAP;
+
+		generateBitmaps(b, a, r, side);
+		generateBitmaps(b, a, r, opside);
+		a->att_by_side[BLACK] = regenerateSQAttacked(b, a, BLACK);
+		a->att_by_side[WHITE] = regenerateSQAttacked(b, a, WHITE);
+		mvsfromk22(b, a, side);
+		mvsfromk22(b, a, opside);
+		
 		tnodes = perftLoopX_int(b, d - 1, opside, a,
 			(a->ke[opside].attackers != 0));
 		nodes += tnodes;
@@ -1241,7 +1363,8 @@ unsigned long long int perftLoopX_v(board *b, int d, int side, attack_model *tol
 			LOGGER_1("%s\t\t%lld\t\t(%lld:%lld.%lld\t%lld tis/sec,\t\t%s perft %d = %lld )\n", buf, tnodes, totaltime/60000000,(totaltime%60000000)/1000000,(totaltime%1000000)/1000, tnodes*1000/totaltime, fen, d-1, tnodes );
 		}
 		UnMakeMove(b, &u);
-		r = ChangesToMove(b, a, &u);
+		memcpy(a, &O, sizeof(attack_model));
+		
 		cc++;
 	}
 	return nodes;

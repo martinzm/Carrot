@@ -17,7 +17,7 @@
  */
 
 #include "bitmap.h"
-#include "inlines.c"
+#include "inlines.h"
 #include "evaluate.h"
 #include "hash.h"
 #include "utils.h"

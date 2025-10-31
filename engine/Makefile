@@ -31,7 +31,7 @@ ifeq ($(MAKECMDGOALS), normal)
     LDFLAGS += -DDEBUG1 
 endif
 ifeq ($(MAKECMDGOALS), vnormal)
-    CPPFLAGS += -g -Wall -O3 -DDEBUG1 -Finline-functions -Fwhole-program -Winline -Funroll-loops -Wno-unused-variable
+    CPPFLAGS += -g -Wall -O2 -DDEBUG1 -Finline-functions -Fwhole-program -Winline -Funroll-loops -Wno-unused-variable
     LDFLAGS += -DDEBUG1 
 endif
 ifeq ($(MAKECMDGOALS), sedebug)
@@ -47,8 +47,8 @@ ifeq ($(MAKECMDGOALS), prof)
     LDFLAGS += -pg -DDEBUG1
 endif
 ifeq ($(MAKECMDGOALS), perf)
-    CPPFLAGS += -g -Og -DDEBUG1
-    LDFLAGS += -DDEBUG1
+    CPPFLAGS += -g -O2 -DDEBUG1
+    LDFLAGS += -pg -DDEBUG1
 endif
 ifeq ($(MAKECMDGOALS), cov)
     CPPFLAGS += -pg --coverage -Og -DDEBUG1 -Wno-unused-variable -Finline-functions -Winline -Fwhole-program -pedantic -Funroll-loops

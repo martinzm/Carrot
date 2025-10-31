@@ -172,14 +172,31 @@ BITVAR v;
 	}
 }
 
+void mvsfroma21N(const board * const b, attack_model *a, int piece, int side, BITVAR mask, BITVAR lim, BITVAR pins) {
+BITVAR v;
+	v = b->maps[piece] & (lim);
+	while (v) {
+		int fr = LastOne(v); 
+		BITVAR mr = attack.rays_dir[b->king[side]][fr];
+		BITVAR mk = attack.maps[piece][fr] & mask;
+		a->mvs[fr] = ((((pins >> fr) &1)-1)|mr) & mk;
+		a->mvk[fr] = mk;
+		ClrLO(v);
+	}
+}
+
 void mvsfromk22(const board *const b, attack_model *a, int side ) {
 BITVAR v;
 
+// !!!! att_by_side MUSI byt aktualni !!!!
 	int from = b->king[side];
 	v = (attack.maps[KING][from])
 		& (~attack.maps[KING][b->king[Flip(side)]])
 		& (~a->att_by_side[Flip(side)]);
 
+//	printmask(attack.maps[KING][from],"king");
+
+//		printmask(a->att_by_side[side],"att");
 		if (b->castle[side]) {
 			int orank = side == WHITE ? 0:7;
 			if (b->castle[side] & QUEENSIDE) {
@@ -282,7 +299,73 @@ BITVAR epbmp, dir, tmp;
 	return 0;
 }
 
-void generateCapturesN2(const board *const b, attack_model *a, move_entry **m, int gen_u)
+BITVAR regenerateSQAttacked(const board *const b, attack_model *a, int side){
+int opside;
+BITVAR att=0, pmap;
+	int ptype[] = { QUEEN, ROOK, BISHOP, KNIGHT, PAWN };
+
+//	opside=Flip(side);
+	for(int f=0; f<4; f++) {
+		int piece = ptype[f];
+		pmap = b->maps[piece]& b->colormaps[side];
+		while(pmap) {
+			int ppos = LastOne(pmap);
+			att|=a->mvk[ppos];
+			ClrLO(pmap);
+		}
+	}
+	if(side==WHITE) {
+		BITVAR pi = b->maps[PAWN] & b->colormaps[WHITE];
+		att|=(pi << 9) & 0xfefefefefefefefe;
+		att|=(pi << 7) & 0x7f7f7f7f7f7f7f7f;
+	} else {
+		BITVAR pi = b->maps[PAWN] & b->colormaps[BLACK];
+		att|=(pi >> 7) & 0xfefefefefefefefe;
+		att|=(pi >> 9) & 0x7f7f7f7f7f7f7f7f;
+	}
+return att|a->ke[Flip(side)].att_vec;
+}
+
+
+int generateBitmaps(const board *const b, attack_model *a, BITVAR upd, int side)
+{
+BITVAR *pset, pins, t;
+unsigned char opside;
+
+	if (side == WHITE) {
+		opside = BLACK;
+		pset = (a->pset[WHITE]);
+	} else {
+		opside = WHITE;
+		pset = (a->pset[BLACK]);
+	}
+
+	pins = ((a->ke[side].cr_pins | a->ke[side].di_pins));
+	t = b->colormaps[side] & upd;
+
+// generate bitmaps for all moves 
+	MVSFROM21(b, a, QUEEN, side, QueenAttacks, 0, FULLBITMAP, t, pins) ;
+	MVSFROM21(b, a, ROOK, side, RookAttacks, 0, FULLBITMAP, t, pins) ;
+	MVSFROM21(b, a, BISHOP, side, BishopAttacks, 0, FULLBITMAP, t, pins) ;
+	mvsfroma21N(b, a, KNIGHT, side, FULLBITMAP, t, pins) ;
+// generate pawn info
+
+//	if(t & b->maps[PAWN]) {
+		if(side==WHITE) {
+			pawn_set_white(b, &(a->ke[WHITE]), pins, pset);
+		} else {
+			pawn_set_black(b, &(a->ke[BLACK]), pins, pset);
+		}
+//	}
+// generate king
+// !!!! !!!!
+// tady nekde se musi aktualizovat utoky na okoli krale, treba aktualizovat utoky druhe strany
+//	mvsfromk22(b, a, side);
+return 0;
+}
+
+// serialize captures
+void generateCapturesN3(const board *const b, attack_model *a, move_entry **m, int gen_u)
 {
 	int from, to, epn, get_rank;
 	int ptype[] = { QUEEN, ROOK, BISHOP, KNIGHT, PAWN };
@@ -312,25 +395,8 @@ void generateCapturesN2(const board *const b, attack_model *a, move_entry **m, i
 		get_rank = -1;
 		pset = (a->pset[BLACK]);
 	}
-
-	pins = ((a->ke[side].cr_pins | a->ke[side].di_pins));
-
-// generate all moves 
-	ii=(a->mm[side]);
-	MVSFROM21(b, a, QUEEN, side, QueenAttacks,ii, FULLBITMAP, b->colormaps[side], pins) ;
-	MVSFROM21(b, a, ROOK, side, RookAttacks, ii, FULLBITMAP, b->colormaps[side], pins) ;
-	MVSFROM21(b, a, BISHOP, side, BishopAttacks, ii, FULLBITMAP, b->colormaps[side], pins) ;
-	mvsfroma21(b, a, KNIGHT, side, &ii, FULLBITMAP, b->colormaps[side], pins) ;
-// generate pawn info
-	a->mm_idx[side]=ii;
-
-	if(side==WHITE) {
-		pawn_set_white(b, &(a->ke[WHITE]), pins, pset);
-	} else {
-		pawn_set_black(b, &(a->ke[BLACK]), pins, pset);
-	}
-// generate king
-   mvsfromk22(b, a, side);
+// !!!! bitmap generations should be moved outside
+//	generateBitmaps(b, a, b->colormaps[side], b->side);
 
 // generate piece captures
 
@@ -399,7 +465,7 @@ void generateCapturesN2(const board *const b, attack_model *a, move_entry **m, i
 			while(pmap) {
 				int ppos = LastOne(pmap);
 				to = getPos(getFile(ppos)+1, getRank(ppos)+get_rank);
-	  			move->move = PackMove(ppos, to, QUEEN, 0);
+				move->move = PackMove(ppos, to, QUEEN, 0);
 				move->qorder = move->real_score = b->pers->LVAcap[KING + 1][b->pieces[to] & PIECEMASK];
 				move++;
 				move->move = PackMove(ppos, to, KNIGHT, 0);
@@ -485,6 +551,7 @@ void generateCapturesN2(const board *const b, attack_model *a, move_entry **m, i
 		ClrLO(pmap);
 	}
 
+// !!!! king should be moved into separate function
 	from = b->king[side];
 	mv = a->mvs[from] & (b->colormaps[opside]);
 	while (mv) {
@@ -496,6 +563,16 @@ void generateCapturesN2(const board *const b, attack_model *a, move_entry **m, i
 		ClrLO(mv);
 	}
 	*m = move;
+}
+
+// serialize captures
+void generateCapturesN2(const board *const b, attack_model *a, move_entry **m, int gen_u)
+{
+	generateBitmaps(b, a, b->colormaps[b->side], b->side);
+//	a->att_by_side[WHITE] = KingAvoidSQAlt(b, a, WHITE);
+//	a->att_by_side[BLACK] = KingAvoidSQAlt(b, a, BLACK);
+	mvsfromk22(b, a, b->side);
+	generateCapturesN3(b, a, m, gen_u);
 }
 
 #if 1
@@ -550,6 +627,7 @@ run_in RR[] = { { ER_PIECE, PAWN, 0, BLACK, 0 }, { ER_PIECE | BLACKPIECE, PAWN
 		TP = attack.pawn_att[SI][FR] & (~BO->norm);\
 		RES = ((PIN & TQ) ? TP&attack.rays_dir[BO->king[SI]][FR] : TP);
 
+// serialize all non captures, moves bitmaps already generated
 void generateMovesN2(const board *const b, attack_model *a, move_entry **m)
 {
 	int from, to, get_rank;
@@ -881,7 +959,7 @@ void generateQuietCheckMovesN(const board *const b, attack_model *a, move_entry 
 }
 
 // find whose moves are affected by change at pos
-BITVAR ChangedTo(board *b, int pos, BITVAR map, int side)
+BITVAR OLDChangedTo(board *b, int pos, BITVAR map, int side)
 {
 BITVAR ret, rb, rw;
 BITVAR king;
@@ -921,33 +999,9 @@ int ks, ko;
 	king = attack.maps[KING][b->king[Flip(side)]];
 	if(king & ret & map) ret |= NORMM(b->king[Flip(side)]);
 
-#if 0
-// change migth affect PINS
-	square at pos becomes empty than piece in direction from king to pos, behind the pos might become pinned
-// indirectly affected
- // crude tests
-	kbo1 = attack.maps[KING][b->king[side]];
-	kbo2 = attack.maps[KING][b->king[Flip(side)]];
-
-	ko  = ( s[0]&b->colormaps[side] ) && ( d[0]&kbo2 );
-	ko |= ( s[1]&b->colormaps[side] ) && ( d[1]&kbo2 );
-	ko |= ( s[2]&b->colormaps[side] ) && ( d[2]&kbo2 );
-	ko |= ( s[3]&b->colormaps[side] ) && ( d[3]&kbo2 );
-
-	ks  = ( s[0]&b->colormaps[Flip(side)] ) && ( d[0]&kbo1 );
-	ks |= ( s[1]&b->colormaps[Flip(side)] ) && ( d[1]&kbo1 );
-	ks |= ( s[2]&b->colormaps[Flip(side)] ) && ( d[2]&kbo1 );
-	ks |= ( s[3]&b->colormaps[Flip(side)] ) && ( d[3]&kbo1 );
-
-	if(ko) ret |= NORMM(b->king[Flip(side)]);
-	if(ks) ret |= NORMM(b->king[side]);
-#endif 
-
 // castling change not detected
 	return ret;
 }
-
-
 
 /*
 	changes to bitmaps representing moves
@@ -1003,18 +1057,12 @@ int ks, ko;
 	int8_t whereCa; //where capture took place == -1 => no capture
  */
 
-
 void getChanges(board *b, int pos, BITVAR v[4], BITVAR w[4], BITVAR s[4], BITVAR *pp){
 BITVAR rw,rb, t;
 
 // attack vectors
-//	getnormvector2(b->norm, pos, &v[0], &w[0]);
-//	get90Rvector2(b->norm, pos, &v[1], &w[1]);
-//	get45Rvector2(b->r45R, pos, &v[2], &w[2]);
-//	get45Lvector2(b->r45L, pos, &v[3], &w[3]);
-
 	v[0]=getnormvector(b->norm, pos);
-	v[1]=get90Rvector(b->norm, pos);
+	v[1]=get90Rvector(b->r90R, pos);
 	v[2]=get45Rvector(b->r45R, pos);
 	v[3]=get45Lvector(b->r45L, pos);
 
@@ -1036,11 +1084,10 @@ BITVAR rw,rb, t;
 	*pp |= ((((rb>>8)&b->maps[WHITE]) | ((rw<<8)&b->maps[BLACK])))&b->maps[PAWN];
 }
 
-
 /*
  * identify pieces that needs to update their moves/bitmaps
  *
-   working with board after move, UNDO containing pieces/position before & after move
+ * working with board after move, UNDO containing pieces/position before & after move
  */
 
 BITVAR ChangedToN(board *b, attack_model *a, UNDO *u)
@@ -1094,8 +1141,6 @@ int ks, ko;
 // check king
 // either something (of its side) moved in its surrounding squares
 // or some attack to surrounding squares changed
-//	king = attack.maps[KING][b->king[Flip(side)]];
-//	if(king & ret & map) rr |= NORMM(b->king[Flip(side)]);
 // directly affected
 	if(attack.surr1[b->king[WHITE]] & ch & b->colormaps[WHITE]){
 		tps|=NORMM(b->king[WHITE]);
@@ -1118,7 +1163,7 @@ int eval_king_checks_extU(board const *b, king_eval *ke, int side, int from)
 {
 	BITVAR cr2, di2, c2, d2, c, d, c3, d3, c2s, d2s;
 	BITVAR rw,rb, t, pin[8], pins;
-	BITVAR v[4], w[4], s[4], z[4], x[4], u[8], aa, bb, ps, pz, pzz, pq;
+	BITVAR v[4], w[4], s[4], z[4], x[4], u[8], aa, bb, ps, pz, pzz, pq, pp;
 	int dircfr[] = { 2, 6, 0, 4, 1, 5, 3, 7 };
 	int dirf[] = { 1, 2, 0, 3, 1, 2, 0, 3 };
 	int dil[] = { ROOK, ROOK, BISHOP, BISHOP };
@@ -1140,48 +1185,49 @@ int eval_king_checks_extU(board const *b, king_eval *ke, int side, int from)
 
 	ke->cr_blocker_ray=v[0]|v[1];
 	ke->di_blocker_ray=v[2]|v[3];
+	ke->att_vec=0;
 
-	pq=ps=pz=0;
+// and store vectors where king is already attacked
+//
+	pp=pq=ps=pz=0;
 	BITVAR dd = (b->maps[ROOK] | b->maps[QUEEN]) & b->colormaps[o];
 	for(int f=0;f<2;f++){
-// vectored attackers
+// vectored attackers, vectors
 		ps |= (v[f]);
+		if(v[f]&dd) ke->att_vec|=(v[f] & ~dd);
 // potential distant attackers
 		pz |= (w[f] ^ v[f]) & dd;
 	}
 
+// a piece at end of vector
 	pq |= ps & b->norm;
-	ps &= dd;
-	ke->cr_attackers = ps;
+	ke->cr_attackers = ps & dd;
+	pp |= pq ^ ke->cr_attackers;
 
+	ps=0;
 	dd = (b->maps[BISHOP] | b->maps[QUEEN]) & b->colormaps[o];
 	for(int f=2;f<4;f++){
 		ps |= (v[f]);
+		if(v[f]&dd) ke->att_vec|=(v[f] & ~dd);
 		pz |= (w[f] ^ v[f]) & dd;
 	}
 	pq |= ps & b->norm;
-	ps &= dd;
+
+	pp |= ps ^ ke->di_attackers;
+	ke->di_attackers = ps & dd;
 
 	ke->cr_all_ray = attack.maps[ROOK][from];
 	ke->di_all_ray = attack.maps[BISHOP][from];
 
-	ke->di_attackers = ps & ke->di_all_ray;
-
 	pins=0;
-	pzz=pq ^ ps;
 	while (pz) {
 		ff = LastOne(pz);
-		pins |= pzz & (attack.rays_dir[from][ff]);
+		pins |= pp & (attack.rays_dir[from][ff]);
 		ClrLO(pz);
 	}
 
 	ke->cr_pins=pins & ke->cr_all_ray;
 	ke->di_pins=pins ^ ke->cr_pins;
-
-// check ep pin, see below special case handling
-//	printmask(epbmp, "ep");
-//	printmask(attack.rays_dir[from][b->ep], "from ep");
-//	printmask(attack.rank[from], "rank ep");
 
 	/*
 	 * check for ep pin situation - white king on 5th rank, white pawn on the same rank pinned with horizontal attack
@@ -1192,11 +1238,10 @@ int eval_king_checks_extU(board const *b, king_eval *ke, int side, int from)
 	if (epbmp!=0) 
 	  if ((attack.rays_dir[from][b->ep] & attack.rank[from])!=0) {
 		c2 = c2s = (b->maps[ROOK] | b->maps[QUEEN]) & (b->colormaps[o]) & attack.rays_dir[from][b->ep];
-//		printmask(c2, "c2/c2s");
 
 		while (c2) {
 			ff = LastOne(c2);
-    		cr2 = attack.rays_int[from][ff];
+			cr2 = attack.rays_int[from][ff];
 			c3 = cr2 & b->norm;
 			if (((cr2 & c2s) == 0) && (c3 == (c3 & b->maps[PAWN]))) {
 					if ((BitCount(c3 & b->maps[PAWN])==2) && ((c3 & (epbmp | normmark[b->ep]) & b->maps[PAWN]) == c3)) ke->ep_block = c3;
@@ -1214,7 +1259,6 @@ int eval_king_checks_extU(board const *b, king_eval *ke, int side, int from)
 	ke->attackers = ke->cr_attackers | ke->di_attackers | ke->kn_attackers
 		| ke->pn_attackers;
 
-//	printmask(ke->attackers, "att");
 	return 0;
 }
 
@@ -1231,32 +1275,32 @@ BITVAR ChangesToMove(board *b, attack_model *a, UNDO *u)
 {
 
 king_eval kk[2];
-BITVAR changed, pin[2], t[2];;
+BITVAR changed, pin[2], t[2];
 
 	kk[WHITE].cr_pins = a->ke[WHITE].cr_pins;
 	kk[WHITE].di_pins = a->ke[WHITE].di_pins;
 	kk[BLACK].cr_pins = a->ke[BLACK].cr_pins;
 	kk[BLACK].di_pins = a->ke[BLACK].di_pins;
 
-// get attackers blockers
+// get attackers/blockers
 	eval_king_checks_extU(b, &(a->ke[WHITE]), 0, b->king[WHITE]);
 	eval_king_checks_extU(b, &(a->ke[BLACK]), 1, b->king[BLACK]);
-	a->att_by_side[WHITE] = KingAvoidSQAlt(b, a, WHITE);
-	a->att_by_side[BLACK] = KingAvoidSQAlt(b, a, BLACK);
-//	t[WHITE] = KingAvoidSQ(b, a, WHITE);
-//	t[BLACK] = KingAvoidSQ(b, a, BLACK);
-//	if((t[WHITE]^a->att_by_side[WHITE])&attack.surr1[b->king[BLACK]]){
-//		printBoardNice(b);
-//		printmask(t[WHITE], "t w");
-//		printmask(a->att_by_side[WHITE], "att w");
-//		printmask(attack.surr1[b->king[BLACK]], "surr b");
-//	}
 
 // get changes in PINS/BLOCKERS 
 	pin[0]=(a->ke[WHITE].cr_pins ^ kk[WHITE].cr_pins) | (a->ke[WHITE].di_pins ^ kk[WHITE].di_pins);
 	pin[1]=(a->ke[BLACK].cr_pins ^ kk[BLACK].cr_pins) | (a->ke[BLACK].di_pins ^ kk[BLACK].di_pins);
 
+//	pin[0]=(a->ke[WHITE].cr_pins ^ kk[WHITE].cr_pins) | (a->ke[WHITE].di_pins ^ kk[WHITE].di_pins) | a->ke[WHITE].cr_pins | a->ke[WHITE].di_pins ;
+//	pin[1]=(a->ke[BLACK].cr_pins ^ kk[BLACK].cr_pins) | (a->ke[BLACK].di_pins ^ kk[BLACK].di_pins) | a->ke[BLACK].cr_pins | a->ke[BLACK].di_pins;
+
 	changed = pin[WHITE]|pin[BLACK];
+
+// get squares apposing king cannot step on. att_by_side[WHITE] - squares BLACK king cannot go to.
+//!!!!!!!!!!!!!! - velmi narocne a bude realizovano jinak po vygenerovani bitmap vsech figur
+//	a->att_by_side[WHITE] = KingAvoidSQAlt(b, a, WHITE);
+//	a->att_by_side[BLACK] = KingAvoidSQAlt(b, a, BLACK);
+//	a->att_by_side[WHITE] = regenerateSQAttacked(b, a, WHITE);
+//	a->att_by_side[BLACK] = regenerateSQAttacked(b, a, BLACK);
 // get changes because of move itself
 	changed |= ChangedToN(b, a, u);
 	return changed;
@@ -1331,7 +1375,7 @@ int isMoveValid(board *b, MOVESTORE move, const attack_model *a, int side, tree_
 			return 0;
 		}
 		if (path2
-			& (a->att_by_side[opside] | a->att_by_side[opside]
+			& (a->att_by_side[opside]
 				| attack.maps[KING][b->king[opside]])) {
 			return 0;
 		}
@@ -1829,7 +1873,7 @@ int pos[4];
 	UnMakeMoveNew(b, u, pos);
 }
 
-void generateInCheckMovesN(const board *const b, attack_model *a, move_entry **m, int gen_u)
+void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **m, int gen_u)
 {
 	int from, to, ff, orank;
 	BITVAR mv, rank, brank, bran2, piece, epbmp, pins, tmp, tmp1, tmp2, tmp3, tx2, nmf, kpin, tx, x, all, pmap;
@@ -1869,32 +1913,11 @@ void generateInCheckMovesN(const board *const b, attack_model *a, move_entry **m
 
 	pins = ((a->ke[side].cr_pins | a->ke[side].di_pins));
 
-// generate all moves 
-	ii=(a->mm[side]);
-	MVSFROM21(b, a, QUEEN, side, QueenAttacks,ii, FULLBITMAP, b->colormaps[side], pins) ;
-	MVSFROM21(b, a, ROOK, side, RookAttacks, ii, FULLBITMAP, b->colormaps[side], pins) ;
-	MVSFROM21(b, a, BISHOP, side, BishopAttacks, ii, FULLBITMAP, b->colormaps[side], pins) ;
-	mvsfroma21(b, a, KNIGHT, side, &ii, FULLBITMAP, b->colormaps[side], pins) ;
-// generate pawn info
-	a->mm_idx[side]=ii;
-
-	if(side==WHITE) {
-		pawn_set_white(b, &(a->ke[WHITE]), pins, pset);
-	} else {
-		pawn_set_black(b, &(a->ke[BLACK]), pins, pset);
-	}
-// generate king
-   mvsfromk22(b, a, side);
-
 	if (BitCount(a->ke[side].attackers) == 1) {
 		attacker = a->ke[side].attackers;
 		int att = LastOne(attacker);
 		all = (attack.rays_int[b->king[side]][att]);
 // capture single attacker
-
-//printmask(all, "akk");
-//printmask(attacker, "acc");
-//printmask(a->ke[side].attackers, "ac");
 
 		for(int f=0; f<4; f++) {
 			int piece = ptype[f];
@@ -2135,6 +2158,13 @@ void generateInCheckMovesN(const board *const b, attack_model *a, move_entry **m
 	*m = move;
 }
 
+
+void generateInCheckMovesN(const board *const b, attack_model *a, move_entry **m, int gen_u)
+{
+	generateBitmaps(b, a, b->colormaps[b->side], b->side);
+	mvsfromk22(b, a, b->side);
+	generateInCheckMovesN2(b, a, m, gen_u);
+}
 
 int alternateMovGen(board *b, MOVESTORE *filter)
 {

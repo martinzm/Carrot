@@ -47,7 +47,7 @@ void timed2_remis(int time, int depth, int max);
 void see_test();
 void see0_test();
 
-void texel_test();
+//void texel_test();
 void timed2Test_x(char*, int, int, int);
 
 int computeMATIdx(board *b);

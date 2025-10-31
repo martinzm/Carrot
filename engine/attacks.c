@@ -270,7 +270,6 @@ BITVAR KingAvoidSQ(board const *b, attack_model *a, int side)
 	return ret;
 }
 
-
 inline static int getOneSquare(board const *b, int x, int y, int side, BITVAR *ca, BITVAR *da) {
 	*ca = *da = 0;
 	BITVAR cr, di;
@@ -335,3 +334,71 @@ BITVAR KingAvoidSQAlt(board const *b, attack_model *a, int side)
 	return ret;
 }
 
+
+/*
+typedef struct _att_incr {
+// number of pieces of type|side
+	int pos_c[(ER_PIECE | BLACKPIECE) + 1];
+// position at board of [piece of type|side][0..pos_c[piece of type|side]]
+	int pos_m[(ER_PIECE | BLACKPIECE) + 1][10];
+// bitmap of attacks of piece type|side
+	BITVAR bit_pc[(ER_PIECE | BLACKPIECE) + 1];
+// bitmap of attacks of side
+	BITVAR bit_sd[2];
+// bitmaps of individual piece attacks are in attack_model mvs
+
+} attack_incremental;
+*/
+
+
+#if 0
+int setup_attack_index(const board *const b, attack_model *a)
+{
+
+int i, FIG[]={ PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING };
+BITVAR x;
+	for(int side=0;side<=1;side++) {
+		for(i=0;i<6;i++){
+			int pc=FIG[i];
+			a->pos_c[pc+side*BLACKPIECE]=-1;
+			x = b->maps[pc]&b->colormaps[side];
+			while (x) {
+				int from=LastOne(x);
+				a->pos_m[pc+side*BLACKPIECE][++(a->pos_c[pc+side*BLACKPIECE])]=from;
+				ClrLO(x);
+			}
+		}
+	}
+	return 0;
+}
+
+int attackMoveFromTo(const board *b, attack_model *a, int from, int to, int side, int piece)
+{
+// get proper piece
+int i;
+	for(i=a->pos_c[piece+side*BLACKPIECE];i<=0;i--){
+		if(a->pos_m[piece+side*BLACKPIECE][i]==from) break;
+	}
+	assert(i>=0);
+	a->pos_m[piece+side*BLACKPIECE][i]=to;
+return 1;
+}
+
+int attackRemovePiece(const board *b, attack_model *a, int from, int side, int piece)
+{
+int i;
+	for(i=a->pos_c[piece+side*BLACKPIECE];i<=0;i--){
+		if(a->pos_m[piece+side*BLACKPIECE][i]==from) break;
+	}
+	assert(i>=0);
+	if(i<a->pos_c[piece+side*BLACKPIECE]) a->pos_m[piece+side*BLACKPIECE][i]=a->pos_m[piece+side*BLACKPIECE][a->pos_c[piece+side*BLACKPIECE]];
+	a->pos_c[piece+side*BLACKPIECE]--;
+return 1;
+}
+
+int attackAddPiece(const board *b, attack_model *a, int from, int side, int piece)
+{
+    a->pos_m[piece+side*BLACKPIECE][++(a->pos_c[piece+side*BLACKPIECE])]=from;
+return 1;
+}
+#endif

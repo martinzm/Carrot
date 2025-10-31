@@ -99,10 +99,13 @@ int simple_pre_movegen_n2check(const board * constb, attack_model *a, int side);
 int getNextCheckin(board*, attack_model*, move_cont*, int, int, int, move_entry**, tree_store*);
 
 void generateCapturesN2(const board *const b, attack_model *a, move_entry **m, int gen_u);
+void generateCapturesN3(const board *const b, attack_model *a, move_entry **m, int gen_u);
 void generateMovesN2(const board *const b, attack_model *a, move_entry **m);
 void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **m, int gen_u);
 void mvsfrom2(const board * const, int const, int const, FuncAttacks, bmv **, BITVAR const, BITVAR const);
 void mvsfroma2(const board * const, attack_model *, int const, int const, bmv **, BITVAR const, BITVAR const);
+int generateBitmaps(const board *const, attack_model *, BITVAR, int);
+void mvsfromk22(const board *const, attack_model *, int);
 
 
 // board, attack, piece_type, side_to_generate, piece_function, index, dest_squares_set, pieces_moving_set
@@ -117,17 +120,24 @@ void mvsfroma2(const board * const, attack_model *, int const, int const, bmv **
 	}\
 };
 
-// board, attack, piece_type, side_to_generate, piece_function, index, dest_squares_set, source_squares_set, pieces_moving_set
+// board, attack, piece_type, side_to_generate, piece_function, index, dest_squares_set, source_squares_set, pins
 
 #define MVSFROM21(B, A, P, S, F, I, M, L, X) \
 { BITVAR v; v=B->maps[P] & (L);\
   while(v) {\
 		int fr=LastOne(v);\
 		BITVAR mr = attack.rays_dir[B->king[S]][fr];\
-		(A)->mvs[fr] = ((((X >> fr) &1)-1)|mr) & F(B, fr) & M;\
+		BITVAR mk = F(B, fr) & M;\
+		(A)->mvs[fr] = ((((X >> fr) &1)-1)|mr) & mk;\
+		(A)->mvk[fr] = mk;\
 		ClrLO(v);\
 	}\
 };
+
+/*
+		if(fr==57) { LOGGER_0("P:%d, S:%d,\n", P, S); printmask(mr,"mr"); printmask(X>>fr,"x>>fr"); printmask(((((X >> fr) &1)-1)|mr),"!!!"); printmask((A)->mvs[fr],"MVS");}
+		 { LOGGER_0("P:%d, S:%d, f:%o,\n", P, S, fr); printmask(mr,"mr"); printmask(X>>fr,"x>>fr"); printmask(((((X >> fr) &1)-1)|mr),"!!!"); printmask((A)->mvs[fr],"MVS");}
+*/
 
 #define MVSFROM21ooo(B, A, P, S, F, I, M, L, X) \
 { BITVAR v; v=B->maps[P] & (L);\
@@ -151,5 +161,7 @@ BITVAR ChangedToN(board *b, attack_model *a, UNDO *u);
 BITVAR ChangesToMove(board *b, attack_model *a, UNDO *u);
 
 int eval_king_checks_extN(board const *b, king_eval *ke, personality const *p, int side, int from);
+int eval_king_checks_extU(board const *b, king_eval *ke, int side, int from);
+BITVAR regenerateSQAttacked(const board *const , attack_model *, int);
 
 #endif

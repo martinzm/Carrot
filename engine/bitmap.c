@@ -378,14 +378,14 @@ BITVAR get90Rvector(BITVAR board, int pos)
 	return attack.attack_r90R[pos][(board >> att90[pos]) & 0xff];
 }
 
-BITVAR getnormvectorX(BITVAR board, int pos)
+BITVAR getnormvector(BITVAR board, int pos)
 {
-uint32_t pp;
+//uint32_t pp;
 // get vector
 
-	pp = attnorm[pos];
+//	pp = attnorm[pos];
 //	return attck.attack_norm[pos][(board >> attnorm[pos]) & masknorm[pos]];
-	return attack.attack_norm[pos][(board >> pp) & 0xff];
+	return attack.attack_norm[pos][(board >> attnorm[pos]) & 0xff];
 }
 
 int get45Rvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2)
@@ -412,7 +412,7 @@ int get90Rvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2)
 	return 0;
 }
 
-int getnormvector2X(BITVAR board, int pos, BITVAR *d1, BITVAR *d2)
+int getnormvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2)
 {
 	BITVAR t = (board >> attnorm[pos]) & masknorm[pos];
 	*d1 = attack.attack_norm[pos][t];
@@ -446,7 +446,7 @@ int getRankX(int pos)
 	return ind90[pos];
 }
 
-void SetAllX(int pos, int side, int piece, board *b)
+void SetAll(int pos, int side, int piece, board *b)
 {
 	b->norm = SetNorm(pos, b->norm);
 	b->r45L = Set45L(pos, b->r45L);
@@ -457,7 +457,7 @@ void SetAllX(int pos, int side, int piece, board *b)
 	b->pieces[pos] = (int8_t)(piece + BLACKPIECE * side);
 }
 
-void ClearAllX(int pos, int side, int piece, board *b)
+void ClearAll(int pos, int side, int piece, board *b)
 {
 	b->norm = ClrNorm(pos, b->norm);
 	b->r45L = Clr45L(pos, b->r45L);
@@ -468,7 +468,7 @@ void ClearAllX(int pos, int side, int piece, board *b)
 	b->pieces[pos] = ER_PIECE;
 }
 
-void MoveFromToX(int from, int to, int side, int piece, board *b)
+void MoveFromTo(int from, int to, int side, int piece, board *b)
 {
 	BITVAR x;
 	x = normmark[from] | normmark[to];

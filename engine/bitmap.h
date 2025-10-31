@@ -436,7 +436,7 @@ typedef struct _king_eval {
 	BITVAR pn_pot_att_pos;
 	BITVAR attackers;
 //	BITVAR blocker_ray[64];
-	BITVAR attacker_ray[64];
+	BITVAR att_vec;
 	BITVAR ep_block;
 
 } king_eval;
@@ -579,37 +579,59 @@ typedef struct _hashPawnEntry {
 	uint8_t age;  //
 } hashPawnEntry;
 
+typedef struct _att_incr {
+// number of pieces of type|side
+	int pos_c[(ER_PIECE | BLACKPIECE) + 1];
+// position at board of [piece of type|side][0..pos_c[piece of type|side]]
+	int pos_m[(ER_PIECE | BLACKPIECE) + 1][10];
+// bitmap of attacks of piece type|side
+	BITVAR bit_pc[(ER_PIECE | BLACKPIECE) + 1];
+// bitmap of attacks of side
+	BITVAR bit_sd[2];
+// bitmaps of individual piece attacks are in attack_model mvs
+
+} attack_incremental;
+
 typedef struct _attack_model {
+	BITVAR mvs[64];  // bitmapy jednotlivych figur
+	BITVAR mvk[64];  // bitmapy jednotlivych figur
+// left, right, push, doublepush, ep
+	BITVAR pset[2][6];
+	BITVAR att_by_side[ER_SIDE];
+	BITVAR pins;
+	king_eval ke[ER_SIDE];
+
+	hashPawnEntry hpe;
+	hashPawnEntry *hpep;
+	PawnStore *pps;
+
+//	uint8_t bcount[64];
+// number of pieces of type|side
+	int pos_c[(ER_PIECE | BLACKPIECE) + 1];
+// position at board of [piece of type|side][0..pos_c[piece of type|side]]
+	int pos_m[(ER_PIECE | BLACKPIECE) + 1][10];
+// bitmap of attacks of piece type|side
+//	BITVAR bit_pc[(ER_PIECE | BLACKPIECE) + 1];
+// bitmap of attacks of side
+//	BITVAR bit_sd[2];
+// bitmaps of individual piece attacks are in attack_model mvs
+
 // faze - tapered eval
 	int phase;
-	int pad1;
-	BITVAR mvs[64];  // bitmapy jednotlivych figur
-	uint8_t bcount[64];
-// number of attacks from square
-	int pos_c[(ER_PIECE | BLACKPIECE) + 1];
-	int pos_m[(ER_PIECE | BLACKPIECE) + 1][10];
+	score_type sc;
+
+//	bmv mm[2][32];
+//	bmv *mm_idx[2];
+
+// pawn attack moves
+	BITVAR pa_at[ER_SIDE];
+	BITVAR pa_mo[ER_SIDE];
 
 	mob_eval me[64];
 	sqr_eval sq[64];
 	sqr_eval specs[ER_SIDE][ER_PIECE];
 	sqr_eval scc[64];
-	king_eval ke[ER_SIDE];
-// pawn attack moves
-	BITVAR pa_at[ER_SIDE];
-	BITVAR pa_mo[ER_SIDE];
-	BITVAR att_by_side[ER_SIDE];
-	score_type sc;
 
-	BITVAR pins;
-
-	hashPawnEntry hpe;
-	hashPawnEntry *hpep;
-	PawnStore *pps;
-// left, right, push, doublepush, ep
-	BITVAR pset[2][6];
-
-	bmv mm[2][32];
-	bmv *mm_idx[2];
 } attack_model;
 
 typedef struct _hashPawnEntry_e {
@@ -697,8 +719,8 @@ typedef struct _bit_board {
 	BITVAR positions[MAXPLYHIST + 1];  // vzdy je ulozena pozice pred tahem. Tj. na 1 je pozice po tahu 0. Na pozici 0 je ulozena inicialni stav
 	BITVAR posnorm[MAXPLYHIST + 1];
 #else
-		BITVAR positions[MAXPLYHIST + 1];
-		BITVAR posnorm[MAXPLYHIST + 1];
+	BITVAR positions[MAXPLYHIST + 1];
+	BITVAR posnorm[MAXPLYHIST + 1];
 #endif
 	BITVAR key;  // hash key
 	BITVAR pawnkey;  // pawn hash key
@@ -905,13 +927,45 @@ BITVAR Clr45L(int pos, BITVAR map);
 BITVAR get45Rvector(BITVAR board, int pos);
 BITVAR get45Lvector(BITVAR board, int pos);
 BITVAR get90Rvector(BITVAR board, int pos);
-//BITVAR getnormvector(BITVAR board, int pos);
+BITVAR getnormvector(BITVAR board, int pos);
 
 int get45Rvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2);
 int get45Lvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2);
 int get90Rvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2);
-//int getnormvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2);
+int getnormvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2);
 
 void outbinary(BITVAR m, char *o);
+inline int getRank(int pos)
+{
+       return (pos >> 3) & 7;
+}
+inline int getFile(int pos)
+{
+       return pos & 7;
+}
+inline int getPos(int file, int rank)
+{
+       return (rank * 8 + file) & 63;
+}
+
+inline int BitCount(BITVAR board)
+{
+       return __builtin_popcountll(board);
+}
+
+inline __attribute__((always_inline)) int LastOne(BITVAR board)
+{
+       return __builtin_ctzll((unsigned long long int) board);
+}
+
+void SetAll(int pos, int side, int piece, board *b);
+void ClearAll(int pos, int side, int piece, board *b);
+void MoveFromTo(int from, int to, int side, int piece, board *b);
+inline int GT_M(board const *b, personality const *p, int s, int pi, int fo)
+{
+       return fo != 0 ? BitCount(b->maps[pi] & b->colormaps[s]) :
+               p->mat_info[b->mindex].m[s][pi];
+}
+
 
 #endif

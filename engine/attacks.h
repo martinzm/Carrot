@@ -22,6 +22,24 @@
 #include "inlines.h"
 #include "bitmap.h"
 #include "globals.h"
+static inline BITVAR RookAttacks(board const *b, int pos)
+{
+       return getnormvector(b->norm, pos) | get90Rvector(b->r90R, pos);
+}
+static inline BITVAR BishopAttacks(board const *b, int pos)
+{
+       return get45Rvector(b->r45R, pos) | get45Lvector(b->r45L, pos);
+}
+static inline BITVAR QueenAttacks(board const *b, int pos)
+{
+       return getnormvector(b->norm, pos) | get90Rvector(b->r90R, pos)
+                       | get45Rvector(b->r45R, pos) | get45Lvector(b->r45L, pos);
+}
+
+static inline BITVAR KnightAttacks(board const *b, int pos) {
+       return (attack.maps[KNIGHT][pos] & b->maps[KNIGHT]);
+}
+
 
 BITVAR DiagAttacks_2(board *b, int pos);
 BITVAR NormAttacks_2(board *b, int pos);
@@ -40,5 +58,10 @@ BITVAR FillSouthWest(BITVAR, BITVAR, BITVAR);
 
 BITVAR KingAvoidSQ(board const*, attack_model*, int);
 BITVAR KingAvoidSQAlt(board const*, attack_model*, int);
+
+int setup_attack_index(const board *const, attack_model *);
+int attackMoveFromTo(const board *, attack_model *, int, int, int, int);
+int attackRemovePiece(const board *, attack_model *, int, int, int);
+int attackAddPiece(const board *, attack_model *, int, int, int);
 
 #endif

@@ -1462,6 +1462,9 @@ int IterativeSearchN(board *b, int alfa, int beta, int depth, int side, int star
 	b->p_pv.line[ply].move = NA_MOVE;  //???
 
 	att = &ATT;
+	// !!!!
+//	setup_attack_index(b, att);
+	// !!!!
 	att->phase = eval_phase(b, b->pers);
 	att->att_by_side[opside] = KingAvoidSQ(b, att, opside);
 	eval_king_checks_all(b, att);
