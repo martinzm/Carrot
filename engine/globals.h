@@ -38,12 +38,10 @@ extern unsigned char ind45L[];
 extern unsigned char ind90[];
 extern unsigned char indnorm[];
 
-extern BITVAR nnormmark[64];
 extern BITVAR nmark90[64];
 extern BITVAR nmark45R[64];
 extern BITVAR nmark45L[64];
 
-extern BITVAR normmark[];
 extern att_mov attack;
 
 /*

@@ -297,7 +297,6 @@ typedef struct _att_mov {
 	BITVAR super2[64][64];
 } att_mov;
 
-
 struct _ui_opt {
 //  0 sudden death
 	int movestogo;
@@ -914,21 +913,6 @@ typedef struct {
 	double K;
 } ntuner_global;
 
-BITVAR SetNorm(int pos, BITVAR map);
-BITVAR Set90(int pos, BITVAR map);
-BITVAR Set45R(int pos, BITVAR map);
-BITVAR Set45L(int pos, BITVAR map);
-
-BITVAR ClrNorm(int pos, BITVAR map);
-BITVAR Clr90(int pos, BITVAR map);
-BITVAR Clr45R(int pos, BITVAR map);
-BITVAR Clr45L(int pos, BITVAR map);
-
-BITVAR get45Rvector(BITVAR board, int pos);
-BITVAR get45Lvector(BITVAR board, int pos);
-BITVAR get90Rvector(BITVAR board, int pos);
-BITVAR getnormvector(BITVAR board, int pos);
-
 int get45Rvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2);
 int get45Lvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2);
 int get90Rvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2);
@@ -958,14 +942,16 @@ inline __attribute__((always_inline)) int LastOne(BITVAR board)
        return __builtin_ctzll((unsigned long long int) board);
 }
 
+#if 0
 void SetAll(int pos, int side, int piece, board *b);
 void ClearAll(int pos, int side, int piece, board *b);
 void MoveFromTo(int from, int to, int side, int piece, board *b);
+#endif 
+
 inline int GT_M(board const *b, personality const *p, int s, int pi, int fo)
 {
        return fo != 0 ? BitCount(b->maps[pi] & b->colormaps[s]) :
                p->mat_info[b->mindex].m[s][pi];
 }
-
 
 #endif

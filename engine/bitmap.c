@@ -19,6 +19,7 @@
 #include "bitmap.h"
 #include "utils.h"
 #include "globals.h"
+#include "inlines.h"
 
 
 /*
@@ -317,6 +318,7 @@ void printmask45L(BITVAR m, char *s)
 
 }
 
+#if 0
 BITVAR SetNorm(int pos, BITVAR map)
 {
 	return (map | normmark[pos]);
@@ -387,6 +389,7 @@ BITVAR getnormvector(BITVAR board, int pos)
 //	return attck.attack_norm[pos][(board >> attnorm[pos]) & masknorm[pos]];
 	return attack.attack_norm[pos][(board >> attnorm[pos]) & 0xff];
 }
+#endif
 
 int get45Rvector2(BITVAR board, int pos, BITVAR *d1, BITVAR *d2)
 {
@@ -446,6 +449,7 @@ int getRankX(int pos)
 	return ind90[pos];
 }
 
+#if 0
 void SetAll(int pos, int side, int piece, board *b)
 {
 	b->norm = SetNorm(pos, b->norm);
@@ -483,4 +487,4 @@ void MoveFromTo(int from, int to, int side, int piece, board *b)
 	b->pieces[from] = ER_PIECE;
 	b->pieces[to] = (int8_t)(piece + side * BLACKPIECE);
 }
-
+#endif

@@ -809,7 +809,7 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
  * incheck I'm incheck before makemove
  * aftermcheck - has makemove delivered check?
  */
- #if 1
+#if 1
 		if (incheck) {
 			eval_king_checks(b, &(att->ke[side]), NULL, side);
 			incheck2 = att->ke[side].attackers != 0;

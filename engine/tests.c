@@ -1097,15 +1097,18 @@ unsigned long long int perftLoopX_int(board *b, int d, int side, attack_model *t
 	a = &ATT;
 	a = tolev;
 
-//	memcpy(a, tolev, sizeof(attack_model));
-
-// bitmap already prepared
+/*
+	all set up, consistent with state of board
+	all bitmaps for move generation 
+	pins, attackers, all attacked squares/not safe for king,
+	
+	ready to serialize moves / generate moves to try
+*/
 
 	n = m = move;
 
-// serialize
+// serialize all moves for a situation
 	if (incheck == 1) {
-//		LOGGER_0("INCH\n");
 		generateInCheckMovesN2(b, a, &m, 1);
 	} else {
 		generateCapturesN3(b, a, &m, 1);
@@ -1119,36 +1122,45 @@ unsigned long long int perftLoopX_int(board *b, int d, int side, attack_model *t
 		return tc;
 	while (cc < tc) {
 
-// makemove
+// make move/update board representation
 		MakeMoveNew(b, move[cc].move, pos, &u);
 // identify changes and update attacks / pins
 		r = ChangesToMove(b, a, &u);
-//		r = FULLBITMAP;
 
 // update bitmaps
-
 		generateBitmaps(b, a, r, WHITE);
 		generateBitmaps(b, a, r, BLACK);
-		
+
+// regenerate attacked / king not allowed squares
 		a->att_by_side[BLACK] = regenerateSQAttacked(b, a, BLACK);
 		a->att_by_side[WHITE] = regenerateSQAttacked(b, a, WHITE);
 
+// update king moves bitmaps
 		mvsfromk22(b, a, side);
 		mvsfromk22(b, a, opside);
+
+// iterateta deeper
 		tnodes = perftLoopX_int(b, d - 1, opside, a,
 			(a->ke[opside].attackers != 0));
 		nodes += tnodes;
+		
+// restore position on board
 		UnMakeMove(b, &u);
-// restore attack tables
-//		memcpy(a, tolev, sizeof(attack_model));
-
+		
+// restore attack tables, 
+// alternative approach is to store and restore variable "a" via memcpy, but this is faster
+// find chages
 		r = ChangesToMove(b, a, &u);
+
+// regenerate bitmaps
 		generateBitmaps(b, a, r, WHITE);
 		generateBitmaps(b, a, r, BLACK);
-		
+
+// regenerate attacked squares
 		a->att_by_side[BLACK] = regenerateSQAttacked(b, a, BLACK);
 		a->att_by_side[WHITE] = regenerateSQAttacked(b, a, WHITE);
 
+// regenerate king bitmaps
 		mvsfromk22(b, a, side);
 		mvsfromk22(b, a, opside);
 
@@ -1296,6 +1308,7 @@ unsigned long long int perftLoopX_v(board *b, int d, int side, attack_model *tol
 	unsigned long long int totaltime;
 	char buf[20], fen[100];
 	BITVAR attacks, r;
+	int pos[4];
 
 	if (d == 0)
 		return 1;
@@ -1308,8 +1321,6 @@ unsigned long long int perftLoopX_v(board *b, int d, int side, attack_model *tol
 
 	eval_king_checks_extU(b, &(a->ke[WHITE]), 0, b->king[WHITE]);
 	eval_king_checks_extU(b, &(a->ke[BLACK]), 1, b->king[BLACK]);
-//	a->att_by_side[WHITE] = KingAvoidSQ(b, a, WHITE);
-//	a->att_by_side[BLACK] = KingAvoidSQ(b, a, BLACK);
 
 	generateBitmaps(b, a, FULLBITMAP, side);
 	generateBitmaps(b, a, FULLBITMAP, opside);
@@ -1326,18 +1337,15 @@ unsigned long long int perftLoopX_v(board *b, int d, int side, attack_model *tol
 		generateMovesN2(b, a, &m);
 	}
 
-	memcpy(&O, a, sizeof(attack_model));
-
 	tc = (int) (m - n);
 	cc = 0;
 	if ((d == 1) & (div == 0))
 		return tc;
 	while (cc < tc) {
 		readClock_wall(&start);
-		MakeMove(b, move[cc].move, &u);
+		MakeMoveNew(b, move[cc].move, pos, &u);
 		
 		r = ChangesToMove(b, a, &u);
-//		r = FULLBITMAP;
 
 		generateBitmaps(b, a, r, side);
 		generateBitmaps(b, a, r, opside);
@@ -1363,7 +1371,16 @@ unsigned long long int perftLoopX_v(board *b, int d, int side, attack_model *tol
 			LOGGER_1("%s\t\t%lld\t\t(%lld:%lld.%lld\t%lld tis/sec,\t\t%s perft %d = %lld )\n", buf, tnodes, totaltime/60000000,(totaltime%60000000)/1000000,(totaltime%1000000)/1000, tnodes*1000/totaltime, fen, d-1, tnodes );
 		}
 		UnMakeMove(b, &u);
-		memcpy(a, &O, sizeof(attack_model));
+
+		r = ChangesToMove(b, a, &u);
+		generateBitmaps(b, a, r, WHITE);
+		generateBitmaps(b, a, r, BLACK);
+		
+		a->att_by_side[BLACK] = regenerateSQAttacked(b, a, BLACK);
+		a->att_by_side[WHITE] = regenerateSQAttacked(b, a, WHITE);
+
+		mvsfromk22(b, a, side);
+		mvsfromk22(b, a, opside);
 		
 		cc++;
 	}

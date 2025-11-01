@@ -24,13 +24,7 @@
 #include "utils.h"
 #include <assert.h>
 #include "evaluate.h"
-
-#if 0
-extern inline BITVAR KnightAttacks(board const *b, int pos)
-{
-	return (attack.maps[KNIGHT][pos] & b->maps[KNIGHT]);
-}
-#endif
+#include "inlines.h"
 
 // generate bitmap containing all pieces attacking this square
 BITVAR AttackedTo(board *b, int pos)
@@ -48,7 +42,6 @@ BITVAR ret;
 
 	return ret;
 }
-
 
 BITVAR DiagAttacks_2(board *b, int pos)
 {
@@ -334,7 +327,6 @@ BITVAR KingAvoidSQAlt(board const *b, attack_model *a, int side)
 	return ret;
 }
 
-
 /*
 typedef struct _att_incr {
 // number of pieces of type|side
@@ -349,7 +341,6 @@ typedef struct _att_incr {
 
 } attack_incremental;
 */
-
 
 #if 0
 int setup_attack_index(const board *const b, attack_model *a)

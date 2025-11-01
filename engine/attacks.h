@@ -22,6 +22,8 @@
 #include "inlines.h"
 #include "bitmap.h"
 #include "globals.h"
+
+#if 0
 static inline BITVAR RookAttacks(board const *b, int pos)
 {
        return getnormvector(b->norm, pos) | get90Rvector(b->r90R, pos);
@@ -39,7 +41,7 @@ static inline BITVAR QueenAttacks(board const *b, int pos)
 static inline BITVAR KnightAttacks(board const *b, int pos) {
        return (attack.maps[KNIGHT][pos] & b->maps[KNIGHT]);
 }
-
+#endif
 
 BITVAR DiagAttacks_2(board *b, int pos);
 BITVAR NormAttacks_2(board *b, int pos);
