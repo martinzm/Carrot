@@ -923,7 +923,7 @@ int parsePVMoves(board *b, attack_model *a, int *ans, char (*bm)[CMTLEN], int le
 	UNDO u[256];
 	attack_model att;
 	MOVESTORE mm[2];
-	int f, r, *z, n;
+	int f, r, *z, n, pos[4];
 
 	DEB_3(char b2[256];)
 
@@ -944,7 +944,7 @@ int parsePVMoves(board *b, attack_model *a, int *ans, char (*bm)[CMTLEN], int le
 					NULL)) {
 					DEB_3(sprintfMove(b, mm[0], b2);)
 					LOGGER_3("Move PV: %s\n",b2);
-					MakeMove(b, mm[0], u+f);
+					MakeMoveNew(b, mm[0], pos, u+f);
 					f++;
 					*ans = mm[0];
 					ans++;
@@ -957,7 +957,7 @@ int parsePVMoves(board *b, attack_model *a, int *ans, char (*bm)[CMTLEN], int le
 	*z = f;
 
 	for (; f > 0; f--) {
-		UnMakeMove(b, u+f);
+		UnMakeMoveNew(b, u+f, pos);
 	}
 	r = 1;
 	return r;
@@ -1145,7 +1145,7 @@ unsigned long long int perftLoopX_int(board *b, int d, int side, attack_model *t
 		nodes += tnodes;
 		
 // restore position on board
-		UnMakeMove(b, &u);
+		UnMakeMoveNew(b, &u, pos);
 		
 // restore attack tables, 
 // alternative approach is to store and restore variable "a" via memcpy, but this is faster
@@ -1172,14 +1172,13 @@ unsigned long long int perftLoopX_int(board *b, int d, int side, attack_model *t
 unsigned long long int perftLoopN_int(board *b, int d, int side, attack_model *tolev)
 {
 	UNDO u;
-	int opside, incheck, t2, t3, t4, t5, mv1, mv2;
+	int opside, incheck, t2, t3, t4, t5, mv1, mv2, pos[4];
 
 	unsigned long long nodes, tnodes;
 	attack_model *a, ATT;
 	move_cont mvs;
 	move_entry *m;
 	move_entry move[300], *n;
-
 	char b2[256];
 
 	if (d == 0)
@@ -1207,14 +1206,14 @@ unsigned long long int perftLoopN_int(board *b, int d, int side, attack_model *t
 		if (d != 1) {
 			t2 = b->mindex;
 			mv1= b->mindex_validity;
-			MakeMove(b, m->move, &u);
+			MakeMoveNew(b, m->move, pos, &u);
 			t4 = b->mindex;
 			mv2= b->mindex_validity;
 			eval_king_checks(b, &(a->ke[opside]), NULL, opside);
 			tnodes = perftLoopN_int(b, d - 1, opside, a);
 			nodes += tnodes;
 			t5 = b->mindex;
-			UnMakeMove(b, &u);
+			UnMakeMoveNew(b, &u, pos);
 			t3 = b->mindex;
 			if (((t2 != t3)&&(mv1==1))||((t4!=t5)&&(mv2==1))) {
 				printBoardNice(b);
@@ -1232,7 +1231,7 @@ unsigned long long int perftLoopN_int(board *b, int d, int side, attack_model *t
 unsigned long long int perftLoopN_v(board *b, int d, int side, attack_model *tolev, int div)
 {
 	UNDO u;
-	int opside, incheck;
+	int opside, incheck, pos[4];
 
 	unsigned long long nodes, tnodes;
 	attack_model *a, ATT;
@@ -1271,7 +1270,7 @@ unsigned long long int perftLoopN_v(board *b, int d, int side, attack_model *tol
 		n++;
 		if (d >= 1) {
 			readClock_wall(&start);
-			MakeMove(b, m->move, &u);
+			MakeMoveNew(b, m->move, pos, &u);
 			eval_king_checks(b, &(a->ke[opside]), NULL, opside);
 			tnodes = perftLoopN_int(b, d - 1, opside, a);
 			if (div) {
@@ -1290,7 +1289,7 @@ unsigned long long int perftLoopN_v(board *b, int d, int side, attack_model *tol
 					tnodes * 1000 / totaltime, fen, d - 1, tnodes);
 				LOGGER_1("%s\t\t%lld\t\t(%lld:%lld.%lld\t%lld tis/sec,\t\t%s perft %d = %lld )\n", buf, tnodes, totaltime/60000000,(totaltime%60000000)/1000000,(totaltime%1000000)/1000, tnodes*1000/totaltime, fen, d-1, tnodes );
 			}
-			UnMakeMove(b, &u);
+			UnMakeMoveNew(b, &u, pos);
 		} else tnodes = 1;
 		nodes += tnodes;
 }
@@ -1370,7 +1369,7 @@ unsigned long long int perftLoopX_v(board *b, int d, int side, attack_model *tol
 				tnodes * 1000 / totaltime, fen, d - 1, tnodes);
 			LOGGER_1("%s\t\t%lld\t\t(%lld:%lld.%lld\t%lld tis/sec,\t\t%s perft %d = %lld )\n", buf, tnodes, totaltime/60000000,(totaltime%60000000)/1000000,(totaltime%1000000)/1000, tnodes*1000/totaltime, fen, d-1, tnodes );
 		}
-		UnMakeMove(b, &u);
+		UnMakeMoveNew(b, &u, pos);
 
 		r = ChangesToMove(b, a, &u);
 		generateBitmaps(b, a, r, WHITE);
@@ -2814,7 +2813,7 @@ void keyTest_def(void)
 
 void see0_test()
 {
-	int result;
+	int result, pos[4];
 	MOVESTORE move;
 	board b;
 	UNDO u;
@@ -2834,21 +2833,21 @@ void see0_test()
 
 	setup_FEN_board(&b, fen[0]);
 	move = PackMoveF(E1, E2, ER_PIECE, 0);
-	MakeMove(&b, move, &u);
+	MakeMoveNew(&b, move, pos, &u);
 	printBoardNice(&b);
 	result = SEE0(&b, E2, BLACK, 0);
 	LOGGER_0("SEE0 %d\n", result);
 
 	setup_FEN_board(&b, fen[0]);
 	move = PackMoveF(E1, E3, ER_PIECE, 0);
-	MakeMove(&b, move, &u);
+	MakeMoveNew(&b, move, pos, &u);
 	printBoardNice(&b);
 	result = SEE0(&b, E3, BLACK, 0);
 	LOGGER_0("SEE0 %d\n", result);
 
 	setup_FEN_board(&b, fen[0]);
 	move = PackMoveF(E1, E5, ER_PIECE, 0);
-	MakeMove(&b, move, &u);
+	MakeMoveNew(&b, move, pos, &u);
 	printBoardNice(&b);
 	result = SEE0(&b, E5, BLACK, 0);
 	LOGGER_0("SEE0 %d\n", result);

@@ -1719,7 +1719,7 @@ int MakeNullMove(board *b, UNDO *ret)
 //	UNDO ret;
 	int8_t opside;
 
-	opside = (b->side == WHITE) ? BLACK : WHITE;
+	opside = Flip(b->side);
 
 	ret->move = NULL_MOVE;
 	ret->side = b->side;
@@ -2213,7 +2213,7 @@ void ScoreNormal(board *b, move_cont *mv, int side)
 	move_entry *t;
 	int fromPos, ToPos, piece, opside, dist;
 
-	opside = side == WHITE ? BLACK : WHITE;
+	opside = Flip(side);
 	for (t = mv->lastp - 1; t > mv->next; t--) {
 		fromPos = UnPackFrom(t->move);
 		ToPos = UnPackTo(t->move);

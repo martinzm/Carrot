@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <pthread.h>
+#include "tuner.h"
 
 //#define NUM_THREADS 1
 #define INPUT_BUFFER_SIZE 16384
@@ -260,7 +261,7 @@ int handle_position(board *bs, char *str)
 	char *tok, *b2, bb[100];
 	int i, a;
 	MOVESTORE m[MAXPLYHIST], mm[MAXPLYHIST];
-	int from;
+	int from, pos[4];
 	int oldp;
 	UNDO u;
 
@@ -312,7 +313,7 @@ int handle_position(board *bs, char *str)
 					close_log();
 					abort();
 				}
-				MakeMove(bs, mm[0], &u);
+				MakeMoveNew(bs, mm[0], pos, &u);
 				a++;
 			}
 			break;

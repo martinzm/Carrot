@@ -126,7 +126,7 @@ void installHashPV(tree_line *pv, board *b, int depth, struct _statistics *s)
 void sprintfPV(tree_store *tree, int depth, char *buff)
 {
 	UNDO u[MAXPLY + 1];
-	int f, mi, ply, l;
+	int f, mi, ply, l, pos[4];
 	char b2[1024];
 
 	buff[0] = '\0';
@@ -151,8 +151,8 @@ void sprintfPV(tree_store *tree, int depth, char *buff)
 			strcat(buff, b2);
 			if (tree->tree[0][f + 1].move != MATE_M)
 				strcat(buff, " ");
-			MakeMove(&(tree->tree_board),
-				tree->tree[0][f].move, u+f);
+			MakeMoveNew(&(tree->tree_board),
+				tree->tree[0][f].move, pos, u+f);
 			l = 1;
 			break;
 		}
@@ -162,7 +162,7 @@ void sprintfPV(tree_store *tree, int depth, char *buff)
 		f--;
 	f--;
 	while (f >= 0) {
-		UnMakeMove(&(tree->tree_board), u+f);
+		UnMakeMoveNew(&(tree->tree_board), u+f, pos);
 		f--;
 	}
 
@@ -585,13 +585,14 @@ int position_quality(board *b, attack_model *a, int alfa, int beta, int depth, i
  *
  */
 
-int QuiesceCheckN(board *b, int talfa, int tbeta, int depth, int ply, int side, tree_store *tree, int checks, const attack_model *tolev)
+int QuiesceCheckN(board *b, int talfa, int tbeta, int depth, int ply, int side, tree_store *tree, int checks, attack_model *att)
 {
 	move_cont mvs;
-	attack_model ATT, *att;
 
 	move_entry *m, mdum = { MATE_M, 0, 0 - GenerateMATESCORE(ply) }, *mb;
 	int opside = Flip(side);
+	int pos[4];
+	BITVAR rr;
 
 	UNDO u;
 	DEB_SE(char b2[256];)
@@ -614,14 +615,7 @@ int QuiesceCheckN(board *b, int talfa, int tbeta, int depth, int ply, int side, 
 			return tbeta;
 	}
 	
-	att = &ATT;
 	mb = &mdum;
-
-// eval_king_check of side is done on level above, we just copying it
-	att->ke[side] = tolev->ke[side];
-
-// generating attacks from opposite to be sure not to move King to check
-	att->att_by_side[opside] = KingAvoidSQ(b, att, opside);
 
 	LOGGER_SE("%*d, *C , QCQC, amove ch:?, depth %d, talfa %d, tbeta %d, best %d\n", 2+ply, ply, depth, talfa, tbeta, mb->real_score);
 
@@ -639,14 +633,18 @@ int QuiesceCheckN(board *b, int talfa, int tbeta, int depth, int ply, int side, 
 #endif
 
 		tree->tree[ply][ply].move = m->move;
-		MakeMove(b, m->move, &u);
-
-		eval_king_checks(b, &(att->ke[opside]), NULL, opside);
+		MakeMoveNew(b, m->move, pos, &u);
+		rr = ChangesToMove(b, att, &u);
+		generateBitmaps(b, att, rr, side);
+		generateBitmaps(b, att, rr, opside);
+		att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+		att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+		mvsfromk22(b, att, side);
+		mvsfromk22(b, att, opside);
 		if (isInCheck_Eval(b, att, opside)) {
 			tree->tree[ply][ply].move |= CHECKFLAG;
 			aftermovecheck = 1;
 		}
-
 		DEB_SE(
 				sprintfMoveSimple(m->move, b2);
 				LOGGER_0("%*d, +C , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d, actph %d\n", 2+ply, ply, b2, aftermovecheck, depth, talfa, tbeta, mb->real_score, mvs.actph);
@@ -662,7 +660,15 @@ int QuiesceCheckN(board *b, int talfa, int tbeta, int depth, int ply, int side, 
 			else 
 				m->real_score = -QuiesceNew(b, -tbeta, -talfa, depth - 1, ply + 1, opside, tree, 0, att);
 
-		UnMakeMove(b, &u);
+		UnMakeMoveNew(b, &u, pos);
+		rr = ChangesToMove(b, att, &u);
+		generateBitmaps(b, att, rr, side);
+		generateBitmaps(b, att, rr, opside);
+		att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+		att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+		mvsfromk22(b, att, side);
+		mvsfromk22(b, att, opside);
+
 		LOGGER_SE("%*d, -C , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d, val %d\n", 2+ply, ply, b2, aftermovecheck, depth, talfa, tbeta, mb->real_score, m->real_score);
 		if (m->real_score >= tbeta) {
 			if (m == mvs.move)
@@ -690,21 +696,22 @@ int QuiesceCheckN(board *b, int talfa, int tbeta, int depth, int ply, int side, 
 	} else
 		b->stats->failnorm++;
 
-	ESTOP:
+ESTOP:
 	b->stats->qmovestested += mvs.count;
 	b->stats->qpossiblemoves += ((mvs.lastp - mvs.move));
 
 	return mb->real_score;
 }
 
-int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store *tree, int checks, const attack_model *tolev)
+int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store *tree, int checks, attack_model *att)
 {
 	move_cont mvs;
 	move_entry *m, mdum = { MATE_M, 0, 0 - GenerateMATESCORE(ply) }, *mb;
-	attack_model *att, ATT;
 
 	int opside, scr, fullrun;
 	int incheck, talfa, tbeta, gmr, aftermcheck;
+	int pos[4];
+	BITVAR rr;
 	UNDO u;
 	DEB_SE( char b2[256]; )
 //	char b3[256];
@@ -733,13 +740,8 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 
 	opside = Flip(side);
 	mb = &mdum;
-	att = &ATT;
-
-// copy PINs, attacks at my king 
-	att->ke[side] = tolev->ke[side];
 
 // opside attacked squares
-	att->att_by_side[opside] = KingAvoidSQ(b, att, opside);
 	incheck = (UnPackCheck(tree->tree[ply-1][ply-1].move) != 0);
 
 	if ((checks > 0) && (is_draw(b, att, b->pers) > 0) && (!incheck)) {
@@ -771,7 +773,6 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 // check for king capture & for incheck solution
 // find if any move hits other king
 //	if (fullrun == 0)
-		att->att_by_side[side] = KingAvoidSQ(b, att, side);
 	if (att->att_by_side[side] & normmark[b->king[opside]])
 // i have captured king!
 		return -gmr;
@@ -785,8 +786,15 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 
 		tree->tree[ply][ply].move = m->move;
 
-		MakeMove(b, m->move, &u);
-		eval_king_checks(b, &(att->ke[opside]), NULL, opside);
+		MakeMoveNew(b, m->move, pos, &u);
+		rr = ChangesToMove(b, att, &u);
+		generateBitmaps(b, att, rr, side);
+		generateBitmaps(b, att, rr, opside);
+		att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+		att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+		mvsfromk22(b, att, side);
+		mvsfromk22(b, att, opside);
+
 		if (isInCheck_Eval(b, att, opside)) {
 			tree->tree[ply][ply].move |= CHECKFLAG;
 			aftermcheck = 1;
@@ -811,10 +819,17 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
  */
 #if 1
 		if (incheck) {
-			eval_king_checks(b, &(att->ke[side]), NULL, side);
 			incheck2 = att->ke[side].attackers != 0;
 			if ((incheck2 != 0)) {
-				UnMakeMove(b, &u);
+				UnMakeMoveNew(b, &u, pos);
+				rr = ChangesToMove(b, att, &u);
+				generateBitmaps(b, att, rr, side);
+				generateBitmaps(b, att, rr, opside);
+				att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+				att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+				mvsfromk22(b, att, side);
+				mvsfromk22(b, att, opside);
+
 				LOGGER_SE("%*d, -Q2 , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d, val %d\n", 2+ply, ply, b2, aftermcheck, depth, talfa, tbeta, mb->real_score, m->real_score);
 				continue;
 			}
@@ -831,7 +846,14 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 				m->real_score = -QuiesceNew(b, -tbeta, -talfa, depth - 1, ply + 1, opside, tree, checks - 1, att);
 			else
 				m->real_score = -QuiesceNew(b, -tbeta, -talfa, depth - 1, ply + 1, opside, tree, 0, att);
-		UnMakeMove(b, &u);
+		UnMakeMoveNew(b, &u, pos);
+		rr = ChangesToMove(b, att, &u);
+		generateBitmaps(b, att, rr, side);
+		generateBitmaps(b, att, rr, opside);
+		att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+		att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+		mvsfromk22(b, att, side);
+		mvsfromk22(b, att, opside);
 
 		LOGGER_SE("%*d, -Q , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d, val %d\n", 2+ply, ply, b2, aftermcheck, depth, talfa, tbeta, mb->real_score, m->real_score);
 		if (m->real_score >= tbeta) {
@@ -865,19 +887,33 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 //			L0("---\n");
 //			sprintfMoveSimple(m->move, b3);
 //			L0("Qcheck MOVE %s\n", b3);
-			MakeMove(b, m->move, &u);
+			MakeMoveNew(b, m->move, pos, &u);
+			rr = ChangesToMove(b, att, &u);
+			generateBitmaps(b, att, rr, side);
+			generateBitmaps(b, att, rr, opside);
+			att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+			att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+			mvsfromk22(b, att, side);
+			mvsfromk22(b, att, opside);
 
 DEB_SE(
 			sprintfMoveSimple(m->move, b2);
 		LOGGER_0("%*d, +G , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d\n", 2+ply, ply, b2, 1, depth, talfa, tbeta, mb->real_score);
 )
 
-			eval_king_checks(b, &(att->ke[opside]), NULL, opside);
 			tree->tree[ply][ply].move|=CHECKFLAG;
 			tree->tree[ply][ply+1].move=NA_MOVE;
 			m->real_score = -QuiesceCheckN(b, -tbeta, -talfa, depth-1, ply+1, opside, tree, checks-1, att);
 //			L0("+++\n");
-			UnMakeMove(b, &u);
+			UnMakeMoveNew(b, &u, pos);
+			rr = ChangesToMove(b, att, &u);
+			generateBitmaps(b, att, rr, side);
+			generateBitmaps(b, att, rr, opside);
+			att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+			att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+			mvsfromk22(b, att, side);
+			mvsfromk22(b, att, opside);
+
 			LOGGER_SE("%*d, -G , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d, val %d\n", 2+ply, ply, b2, 1, depth, talfa, tbeta, mb->real_score, m->real_score);
 			if(m->real_score>=tbeta) {
 				b->stats->qcutoffs++;
@@ -990,11 +1026,12 @@ int SearchMoveNew(board *b, int talfa, int tbeta, int ttbeta, int depth, int ply
  * - val - hodnota prave spocitaneho tahu
  */
 
-int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store *tree, int nulls, const attack_model *tolev)
+int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store *tree, int nulls, attack_model *att)
 // depth - jak hluboko mam jit, 0 znamena pouze evaluaci pozice, zadne dalsi pultahy
 // ply - jak jsem hluboko, 0 jsem v root pozici
 {
 	int qual;
+	int pos[4];
 	move_entry *m, mdum = { MATE_M, 0, 0 - GenerateMATESCORE(ply) }, *mb, *mn,
 			mt;
 	move_cont mvs;
@@ -1006,11 +1043,10 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 	int reduce_o, extend_o;
 	unsigned long long nodes_stat, null_stat;
 	hashEntry hash;
-	BITVAR pld;
+	BITVAR pld, rr;
 	DEB_SE( char b2[256];)
 
 	UNDO u;
-	attack_model *att, ATT;
 
 	b->stats->nodes++;
 	b->stats->positionsvisited++;
@@ -1021,7 +1057,8 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 		if(update_status(b)!=0) {
 			return 0;
 		}
-	} LOGGER_SE("%*d, *S , EEEE, amove ch:X, depth %d, talfa %d, tbeta %d,incheck ?\n", 2+ply, ply, depth, alfa, beta);
+	} 
+	LOGGER_SE("%*d, *S , EEEE, amove ch:X, depth %d, talfa %d, tbeta %d,incheck ?\n", 2+ply, ply, depth, alfa, beta);
 
 // mate distance pruning
 	gmr = -mb->real_score;
@@ -1046,13 +1083,6 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 
 	incheck = (UnPackCheck(tree->tree[ply-1][ply-1].move) != 0);
 	opside = Flip(side);
-	att = &ATT;
-
-// copy analysis of attacks at my king including PINs, checks that was done ply above
-	att->ke[b->side] = tolev->ke[b->side];
-	
-// create map of squares attacked by opside
-	att->att_by_side[opside] = KingAvoidSQ(b, att, opside);
 
 	if ((is_draw(b, att, b->pers) > 0) && (!incheck)) {
 		mb->move = tree->tree[ply][ply].move = DRAW_M;
@@ -1265,12 +1295,20 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 		extend = extend_o;
 		reduce = reduce_o;
 		tree->tree[ply][ply].move = m->move;
-		MakeMove(b, m->move, &u);
+		MakeMoveNew(b, m->move, pos, &u);
 // makemove switches board sides, b->side changes during makemove, now b->side==opside
 
 // analyse attacks on king of side to move, incl PINs
 // is side to move in check, remember it and extend depth by one
-		eval_king_checks(b, &(att->ke[opside]), NULL, opside);
+
+		rr = ChangesToMove(b, att, &u);
+		generateBitmaps(b, att, rr, side);
+		generateBitmaps(b, att, rr, opside);
+		att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+		att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+		mvsfromk22(b, att, side);
+		mvsfromk22(b, att, opside);
+
 		if (isInCheck_Eval(b, att, opside)) {
 // idea from Crafty - extend only SAFE moves
 		if (b->pers->check_extension > 0) {
@@ -1301,7 +1339,7 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 
 // check for LMP conditions based on depth
 // !extended !incheck !isPV !first_move use_lmp move mvs.actph >= NORMAL !MATEd
-// 
+//
 
 
 // setup LMR reductions
@@ -1321,7 +1359,15 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 
 		m->real_score = SearchMoveNew(b, talfa, tbeta, ttbeta, depth,
 			ply, extend, reduce, side, tree, nulls, att);
-		UnMakeMove(b, &u);
+		UnMakeMoveNew(b, &u, pos);
+		rr = ChangesToMove(b, att, &u);
+		generateBitmaps(b, att, rr, side);
+		generateBitmaps(b, att, rr, opside);
+		att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+		att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+		mvsfromk22(b, att, side);
+		mvsfromk22(b, att, opside);
+
 		if (b->search_abort != 0)
 			goto ABFINISH;
 
@@ -1399,11 +1445,11 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 		if ((b->hs != NULL) && (depth > 0))
 			storeHash(b->hs, &hash, side, ply, depth, b->norm, b->stats);
 	}
-	ABFINISH:
+ABFINISH:
 
 	b->stats->movestested += mvs.count;
 	b->stats->possiblemoves += ((mvs.lastp - mvs.move));
-	ABFINISH2: LOGGER_4("count %d, score %d\n", mvs.count, mb->real_score);
+ABFINISH2: LOGGER_4("count %d, score %d\n", mvs.count, mb->real_score);
 	return mb->real_score;
 }
 
@@ -1420,6 +1466,7 @@ int IterativeSearchN(board *b, int alfa, int beta, int depth, int side, int star
 	int ply = 0;
 	int changes;
 	int alow, ahigh;
+	int pos[4];
 	int aspdiff[]={500, 1000, 10000, 100000, 1000000, iINFINITY};
 
 	int cc, v, xcc, old_score, old_score_count;
@@ -1435,6 +1482,7 @@ int IterativeSearchN(board *b, int alfa, int beta, int depth, int side, int star
 	hashEntry hash;
 	char b2[256];
 
+	BITVAR rr;
 	UNDO u;
 	attack_model *att, ATT;
 	unsigned long long tstart, ebfnodesold, tnow;
@@ -1444,7 +1492,7 @@ int IterativeSearchN(board *b, int alfa, int beta, int depth, int side, int star
 	b->bestmove = NA_MOVE;
 	b->bestscore = best;
 	bestmove = hashmove = NA_MOVE;
-	opside = (side == WHITE) ? BLACK : WHITE;
+	opside = Flip(side);
 	copyBoard(b, &(tree->tree_board));
 
 	b->run.iter_start = b->run.time_start;
@@ -1466,8 +1514,16 @@ int IterativeSearchN(board *b, int alfa, int beta, int depth, int side, int star
 //	setup_attack_index(b, att);
 	// !!!!
 	att->phase = eval_phase(b, b->pers);
-	att->att_by_side[opside] = KingAvoidSQ(b, att, opside);
-	eval_king_checks_all(b, att);
+
+	eval_king_checks_extU(b, &(att->ke[WHITE]), 0, b->king[WHITE]);
+	eval_king_checks_extU(b, &(att->ke[BLACK]), 1, b->king[BLACK]);
+
+	generateBitmaps(b, att, FULLBITMAP, side);
+	generateBitmaps(b, att, FULLBITMAP, opside);
+	att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+	att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+	mvsfromk22(b, att, side);
+	mvsfromk22(b, att, opside);
 
 	// is opposite side in check ?
 	if (isInCheck_Eval(b, att, opside) != 0) {
@@ -1498,6 +1554,7 @@ int IterativeSearchN(board *b, int alfa, int beta, int depth, int side, int star
 		generateCapturesN2(b, att, &(mvs.lastp), 1);
 		generateMovesN2(b, att, &(mvs.lastp));
 	}
+
 	b->max_idx_root = mvs.lastp - mvs.move;
 	if (b->max_idx_root == 1) {
 		tree->tree[ply][ply].move = mvs.move[0].move;
@@ -1526,11 +1583,20 @@ int IterativeSearchN(board *b, int alfa, int beta, int depth, int side, int star
 	talfa=alfa;
 	tbeta=beta;
 #if 1
+// initial sort redo!
 	b->depth_run = 1;
 	if (!incheck)
 		while (cc < b->max_idx_root) {
-			MakeMove(b, mvs.move[cc].move, &u);
-			eval_king_checks(b, &(att->ke[b->side]), NULL, b->side);
+			MakeMoveNew(b, mvs.move[cc].move, pos, &u);
+
+			rr = ChangesToMove(b, att, &u);
+			generateBitmaps(b, att, rr, side);
+			generateBitmaps(b, att, rr, opside);
+			att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+			att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+			mvsfromk22(b, att, side);
+			mvsfromk22(b, att, opside);
+
 			if (isInCheck_Eval(b, att, b->side)) {
 				extend += b->pers->check_extension;
 				mvs.move[cc].move |= CHECKFLAG;
@@ -1539,7 +1605,15 @@ int IterativeSearchN(board *b, int alfa, int beta, int depth, int side, int star
 			v = -QuiesceNew(b, -tbeta, -talfa, 0, 1, opside, tree,
 				0, att);
 			mvs.move[cc].qorder = v;
-			UnMakeMove(b, &u);
+			UnMakeMoveNew(b, &u, pos);
+
+			rr = ChangesToMove(b, att, &u);
+			generateBitmaps(b, att, rr, side);
+			generateBitmaps(b, att, rr, opside);
+			att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+			att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+			mvsfromk22(b, att, side);
+			mvsfromk22(b, att, opside);
 			cc++;
 		}
 #endif
@@ -1600,7 +1674,7 @@ int IterativeSearchN(board *b, int alfa, int beta, int depth, int side, int star
 		
 		xcc = -1;
 		alow=ahigh=0;
-		eval_king_checks(b, &(att->ke[b->side]), NULL, b->side);
+//		eval_king_checks(b, &(att->ke[b->side]), NULL, b->side);
 
 // aspiration entry point within depth
 rerun:
@@ -1635,8 +1709,16 @@ rerun:
 			tree->tree[ply][ply].move = mvs.move[cc].move;
 			mvs.move[cc].real_score = 0;
 			
-			MakeMove(b, mvs.move[cc].move, &u);
-			eval_king_checks(b, &(att->ke[b->side]), NULL, b->side);
+// change
+			MakeMoveNew(b, mvs.move[cc].move, pos, &u);
+			rr = ChangesToMove(b, att, &u);
+			generateBitmaps(b, att, rr, side);
+			generateBitmaps(b, att, rr, opside);
+			att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+			att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+			mvsfromk22(b, att, side);
+			mvsfromk22(b, att, opside);
+// change
 			aftermovecheck = 0;
 			if (isInCheck_Eval(b, att, b->side)) {
 				tree->tree[ply][ply].move |= CHECKFLAG;
@@ -1708,14 +1790,31 @@ rerun:
 						}
 					} else if ((cc == 0)&&(b->pers->use_aspiration !=0)) {
 						xcc = -1;
-						UnMakeMove(b, &u);
+						UnMakeMoveNew(b, &u, pos);
+						rr = ChangesToMove(b, att, &u);
+						generateBitmaps(b, att, rr, WHITE);
+						generateBitmaps(b, att, rr, BLACK);
+						att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+						att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+						mvsfromk22(b, att, side);
+						mvsfromk22(b, att, opside);
 						break;
 					}
 				}
 				cc++;
 			}
-			UnMakeMove(b, &u);
+// change
+			UnMakeMoveNew(b, &u, pos);
+			rr = ChangesToMove(b, att, &u);
+			generateBitmaps(b, att, rr, WHITE);
+			generateBitmaps(b, att, rr, BLACK);
+			att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+			att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+			mvsfromk22(b, att, side);
+			mvsfromk22(b, att, opside);
+// change
 		}
+		
 	tree->tree[ply][ply].move = bestmove;
 	tree->tree[ply][ply].score = best;
 

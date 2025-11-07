@@ -79,6 +79,7 @@ int MakeMove(board *b, MOVESTORE move, UNDO *ret);
 int MakeMoveNew(board *b, MOVESTORE move, int *pos , UNDO *ret);
 int MakeNullMove(board *b, UNDO *ret);
 void UnMakeMove(board *b, UNDO *u);
+void UnMakeMoveNew(board *b, UNDO *u, int *pos);
 void UnMakeNullMove(board *b, UNDO *u);
 int is_quiet_move(board const * const , attack_model const * const, move_entry const * const);
 
