@@ -1,0 +1,67 @@
+hledani:
+- nastaveni pozice
+- tah strana 1
+- tah strana 2
+- (opakovani)...
+- evaluace pozice
+
+tah:
+-- mit
+  - aktualni reprezentaci sachovnice
+  - mit aktualni bitmapy tahu vsech figur
+    - mit aktualni utoky na krale a jeho okoli
+loop:
+- vybrat figuru a tah
+- udelat tah
+  - aktualizovat reprezentaci sachovnice
+  - aktualizovat bitmapy strany co tahla
+  - aktualizovat bitmapy strany na tahu
+- prohodit strany
+- interace hloubeji
+- vratit vse do stavu pred tahem
+  - vratit reprezentaci sachovnice
+  - vratit bitmapy strany co tahla
+  - vratit zpet stranu na tahu
+- prohodit strany
+loop
+
+
+
+--- setup na uplnem pocatku ---
+--- generovani utocniku, pinu...
+	eval_king_checks_extU(b, &(att->ke[WHITE]), 0, b->king[WHITE]);
+	eval_king_checks_extU(b, &(att->ke[BLACK]), 1, b->king[BLACK]);
+
+--- vygenerovani novych bitmap ---
+	generateBitmaps(b, att, FULLBITMAP, side);
+	generateBitmaps(b, att, FULLBITMAP, opside);
+
+--- generovani vsech poli, na ktere dana strana utoci
+	att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+	att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+	
+--- generovani bitmap pro krale
+	mvsfromk22(b, att, side);
+	mvsfromk22(b, att, opside);
+--- konec ----
+
+
+--- generovani zmen po tahu---
+--- generovani utocniku, pinu...
+
+--- identifikace zmen, generovani utocniku, pinu ---
+	rr = ChangesToMove(b, att, &u);
+
+--- vygenerovani zmenenych bitmap ---
+	generateBitmaps(b, att, rr, side);
+	generateBitmaps(b, att, rr, opside);
+
+--- pregenerovani vsech poli, na ktere dana strana utoci
+	att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+	att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+
+--- generovani bitmap pro krale
+	mvsfromk22(b, att, side);
+	mvsfromk22(b, att, opside);
+--- konec ----
+
