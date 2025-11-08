@@ -595,7 +595,7 @@ typedef struct _attack_model {
 	BITVAR mvs[64];  // bitmapy jednotlivych figur
 	BITVAR mvk[64];  // bitmapy jednotlivych figur
 // left, right, push, doublepush, ep
-	BITVAR pset[2][6];
+	BITVAR pset[2][7];
 	BITVAR att_by_side[ER_SIDE];
 	BITVAR pins;
 	king_eval ke[ER_SIDE];

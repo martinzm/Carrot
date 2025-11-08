@@ -98,6 +98,38 @@ int PSQSearch(int from, int to, int piece, int side, int phase, personality *p)
 		}
 #endif
 
+BITVAR regeneratePieceIdx(const board *const b, attack_model *a, int side){
+int opside, black;
+BITVAR pmap;
+
+	int ptype[] = { QUEEN, ROOK, BISHOP, KNIGHT, PAWN };
+
+	a->pos_c[PAWN]=a->pos_c[KNIGHT]=a->pos_c[BISHOP]=a->pos_c[ROOK]=a->pos_c[QUEEN]=a->pos_c[KING]=-1;
+	a->pos_c[PAWN+BLACKPIECE]=a->pos_c[KNIGHT+BLACKPIECE]=a->pos_c[BISHOP+BLACKPIECE]
+		=a->pos_c[ROOK+BLACKPIECE]=a->pos_c[QUEEN+BLACKPIECE]=a->pos_c[KING+BLACKPIECE]
+		=a->pos_c[ER_PIECE]=-1;
+
+	black=0;
+	for(int side=0;side<=1;side++){
+		for(int f=0; f<4; f++) {
+			int piece = ptype[f];
+			pmap = b->maps[piece]& b->colormaps[side];
+			while(pmap) {
+				int ppos = LastOne(pmap);
+				a->pos_c[piece+black]++;
+				a->pos_m[piece+black][a->pos_c[piece+black]]=ppos;
+				ClrLO(pmap);
+			}
+		}
+		black=BLACKPIECE;
+	}
+return 0;
+}
+
+/*
+ * at entry to the function, pins, attackers are known, all bitmaps for moves are generated
+ */
+
 int make_mobility_modelN2(const board *const b, attack_model *a, personality const *p, stacker *st)
 {
 	int from, epn, opside, orank;
@@ -195,10 +227,10 @@ int make_mobility_modelN2(const board *const b, attack_model *a, personality con
 		}
 	}
 
-/* 
- * togo & unsafe variables are need in MAKMOB2 macro
+/*
+ * togo & unsafe variables are needed in MAKMOB2 macro
  */
- 
+
 	togo[WHITE]   = ~(b->colormaps[WHITE] | a->pa_at[BLACK]);
 	togo[BLACK]   = ~(b->colormaps[BLACK] | a->pa_at[WHITE]);
 	unsafe[WHITE] = a->pa_at[BLACK];

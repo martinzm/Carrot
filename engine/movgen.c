@@ -216,7 +216,7 @@ BITVAR v;
 		a->mvs[from] = v;
 }
 
-// 0 utok vlevo, 1 utok vpravo, 2 posun vpred, 3 doublepush, 4 ep, 5 pr vlevo, 6 pr vpravo
+// 0 utok vlevo, 1 utok vpravo, 2 posun vpred, 3 doublepush, 4 ep, 5 pot utok vlevo, 6 pot utok vpravo
 // rozdelit na pin a nepin
 int pawn_set_white(board const *b, king_eval const *ke, BITVAR pins, BITVAR *pset){
 BITVAR epbmp, dir, tmp;
@@ -226,6 +226,10 @@ BITVAR epbmp, dir, tmp;
 	BITVAR pww = pwi & (~pins);
 	BITVAR pwb = pwi & pins;
 	BITVAR nbn = b->norm & b->colormaps[BLACK];
+
+	BITVAR pi = b->maps[PAWN] & b->colormaps[WHITE];
+	pset[5]= (pwi << 9) & 0xfefefefefefefefe;
+	pset[6]= (pwi << 7) & 0x7f7f7f7f7f7f7f7f;
 	pset[0]= (nbn >> 7) & pww & 0xfefefefefefefefe;
 	pset[1]= (nbn >> 9) & pww & 0x7f7f7f7f7f7f7f7f;
 	pset[2]= ((~b->norm) >> 8) & pww;
@@ -261,6 +265,9 @@ BITVAR epbmp, dir, tmp;
 	BITVAR pbw = pbi & pins;
 	BITVAR nwn = b->norm & b->colormaps[WHITE];
 
+	BITVAR pi = b->maps[PAWN] & b->colormaps[BLACK];
+	pset[5]= (pbi >> 7) & 0xfefefefefefefefe;
+	pset[6]= (pbi >> 9) & 0x7f7f7f7f7f7f7f7f;
 	pset[0]= (nwn << 9) & pbb & 0xfefefefefefefefe;
 	pset[1]= (nwn << 7) & pbb & 0x7f7f7f7f7f7f7f7f;
 	pset[2]= ((~b->norm) << 8) & pbb;
@@ -312,7 +319,6 @@ BITVAR att=0, pmap;
 	}
 return att|a->ke[Flip(side)].att_vec;
 }
-
 
 int generateBitmaps(const board *const b, attack_model *a, BITVAR upd, int side)
 {
