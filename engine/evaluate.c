@@ -98,7 +98,7 @@ int PSQSearch(int from, int to, int piece, int side, int phase, personality *p)
 		}
 #endif
 
-BITVAR regeneratePieceIdx(const board *const b, attack_model *a, int side){
+BITVAR regeneratePieceIdx(const board *const b, attack_model *a){
 int opside, black;
 BITVAR pmap;
 
@@ -134,98 +134,50 @@ int make_mobility_modelN2(const board *const b, attack_model *a, personality con
 {
 	int from, epn, opside, orank;
 	BITVAR x, x2, q, pins[2], ppins[2], epbmp, tmp, kpin, nmf, tmq, t2[ER_PIECE], tmm, tma, tmi, tme, cy, dy;
-	BITVAR togo[2], unsafe[2];
+	BITVAR togo[2], unsafe[2], dir;
 	BITVAR np[ER_PIECE + 1];
 	BITVAR pi[ER_PIECE + 1];
 	BITVAR kpd[2], kph[2];
-	int tt[8],f,ff, pp, piece, side, m, m2 ;
+	int tt[8],f,ff, pp, piece, side, m, m2, black ;
 
 	bmv mm[64];
 	bmv *ip,*ib,*in,*ir,*iq,*ik,*ii, *ix;
 
-	a->pos_c[PAWN]=a->pos_c[KNIGHT]=a->pos_c[BISHOP]=a->pos_c[ROOK]=a->pos_c[QUEEN]=a->pos_c[KING]=-1;
-	a->pos_c[PAWN+BLACKPIECE]=a->pos_c[KNIGHT+BLACKPIECE]=a->pos_c[BISHOP+BLACKPIECE]
-		=a->pos_c[ROOK+BLACKPIECE]=a->pos_c[QUEEN+BLACKPIECE]=a->pos_c[KING+BLACKPIECE]
-		=a->pos_c[ER_PIECE]=-1;
+	regeneratePieceIdx(b, a);
 
-	kpd[WHITE] = a->ke[WHITE].di_pins & b->maps[PAWN] & b->colormaps[WHITE];
-	kph[WHITE] = a->ke[WHITE].cr_pins & b->maps[PAWN] & b->colormaps[WHITE];
-	ppins[WHITE] = (kpd[WHITE]|kph[WHITE]);
+	a->pa_at[WHITE] = a->pa_at[BLACK] = 0;
+	orank = 0;
+// setup pawn attacked squares, for unsafe mobility calculation
+
+// 0 utok vlevo, 1 utok vpravo, 2 posun vpred, 3 doublepush, 4 ep, 5 pot utok vlevo, 6 pot utok vpravo
+// rozdelit na pin a nepin
+
 	pins[WHITE] = ((a->ke[WHITE].cr_pins | a->ke[WHITE].di_pins));
-
-	kpd[BLACK] = a->ke[BLACK].di_pins & b->maps[PAWN] & b->colormaps[BLACK];
-	kph[BLACK] = a->ke[BLACK].cr_pins & b->maps[PAWN] & b->colormaps[BLACK];
-	ppins[BLACK] = (kpd[BLACK]|kph[BLACK]);
 	pins[BLACK] = ((a->ke[BLACK].cr_pins | a->ke[BLACK].di_pins));
 
-	a->pa_at[WHITE] = a->pa_at[BLACK] = a->pa_mo[WHITE] = a->pa_mo[BLACK] = 0;
-	orank = 0;
+	BITVAR pwi = b->maps[PAWN] & b->colormaps[WHITE];
+	BITVAR pww = pwi & (~pins[WHITE]);
+	BITVAR pwb = pwi & pins[WHITE];
 
-	x = (~ppins[WHITE])&b->maps[PAWN]&b->colormaps[WHITE];
-	tmi = (x << 8) & (~b->norm);
-	tme = (((tmi&RANK3) << 8) & (~b->norm))|tmi;
-	a->pa_mo[WHITE] = tme;
-	while (x) {
-		from=LastOne(x);
-		a->pa_at[WHITE] |= tma = attack.pawn_att[WHITE][from];
-		a->mvs[from] = (((tmi&tme)|tme) & attack.pawn_move[WHITE][from])|(tma);
-		a->pos_c[PAWN]++;
-		a->pos_m[PAWN][a->pos_c[PAWN]]=from;
-		ClrLO(x);
-	}
+	a->pa_at[WHITE] = (pww << 9) & 0xfefefefefefefefe;
+	a->pa_at[WHITE]	|= (pww << 7) & 0x7f7f7f7f7f7f7f7f;
 
-	x2=(ppins[WHITE]);
-	tmi = (x2 << 8) & (~b->norm);
-	tme = (((tmi&RANK3) << 8) & (~b->norm))|tmi;
-	while (x2) {
-		from=LastOne(x2);
-		a->pos_m[PAWN][++(a->pos_c[PAWN])]=from;
-		if(NORMM(from) & kph[WHITE]) a->pa_mo[WHITE] |= a->mvs[from]
-			= (((tmi&tme)|tme)& attack.pawn_move[WHITE][from]) 
-			& a->ke[WHITE].cr_all_ray;
-		else { 
-			a->pa_at[WHITE] |= tma = attack.pawn_att[WHITE][from] 
-			& a->ke[WHITE].di_all_ray;
-			a->mvs[from]=tma;
-			}
-		ClrLO(x2);
-	}
-	
-	orank = 56;
-#if 1
-	x = b->maps[PAWN] & b->colormaps[BLACK];
-	while (x) {
-		from=LastOne(x);
-		nmf  = NORMM(from);
-		a->pos_m[PAWN+BLACKPIECE][++(a->pos_c[PAWN+BLACKPIECE])]=from;
-		tmp = (nmf >> 8) & (~b->norm);
-		tmm = tmp |= (((tmp&RANK6) >> 8) & (~b->norm));
-		tmp |= tma = attack.pawn_att[BLACK][from];
-		q = a->mvs[from] = (pins[BLACK]&nmf) ? tmp&attack.rays_dir[b->king[BLACK]][from] : tmp;
-		a->pa_at[BLACK] |= q&tma;
-		a->pa_mo[BLACK] |= q&tmm;
-		ClrLO(x);
-	}
-#endif
+	dir=attack.dirs[b->king[WHITE]][3] | attack.dirs[b->king[WHITE]][7];
+	a->pa_at[WHITE] |= ((pwb & dir) << 9) & 0xfefefefefefefefe & dir;
+	dir=attack.dirs[b->king[WHITE]][5] | attack.dirs[b->king[WHITE]][1];
+	a->pa_at[WHITE] |= ((pwb & dir) << 7) & 0x7f7f7f7f7f7f7f7f & dir;
 
-	if(b->ep != 0) {
-		epbmp =
-			(b->ep != 0 && (a->ke[b->side].ep_block == 0)) ? attack.ep_mask[b->ep]
-				& b->maps[PAWN] & b->colormaps[b->side] : 0;
-	x = b->maps[PAWN] & epbmp & b->colormaps[b->side];
-		while (x) {
-			epn = b->side == WHITE ? 1 : -1;
-			from = LastOne(x);
-			nmf = NORMM(from);
-			kpin = (nmf & pins[b->side]) ? attack.rays_dir[b->king[b->side]][from] : FULLBITMAP;
-			if (NORMM(getPos(getFile(b->ep), getRank(b->ep) + epn)) & kpin) {
-				q = a->mvs[from] |= NORMM(b->ep);
-				a->pa_at[b->side] |= q;
-				a->pa_mo[b->side] |= a->mvs[from] & (~q);
-			}
-			ClrLO(x);
-		}
-	}
+	BITVAR pbi = b->maps[PAWN] & b->colormaps[BLACK];
+	BITVAR pbb = pbi & (~pins[BLACK]);
+	BITVAR pbw = pbi & pins[BLACK];
+
+	a->pa_at[BLACK] = (pbb >> 7) & 0xfefefefefefefefe;
+	a->pa_at[BLACK] |= (pbb >> 9) & 0x7f7f7f7f7f7f7f7f;
+
+	dir=attack.dirs[b->king[BLACK]][1] | attack.dirs[b->king[BLACK]][5];
+	a->pa_at[BLACK] |= ((pbw & dir) >> 7) & 0xfefefefefefefefe & dir;
+	dir=attack.dirs[b->king[BLACK]][3] | attack.dirs[b->king[BLACK]][7];
+	a->pa_at[BLACK] |= ((pbw & dir) >> 9) & 0x7f7f7f7f7f7f7f7f & dir;
 
 /*
  * togo & unsafe variables are needed in MAKMOB2 macro
@@ -243,62 +195,20 @@ int make_mobility_modelN2(const board *const b, attack_model *a, personality con
 	togo[WHITE] |= ((unsafe[WHITE] & b->colormaps[WHITE])*(p->mobility_unsafe == 1));
 	togo[BLACK] |= ((unsafe[BLACK] & b->colormaps[BLACK])*(p->mobility_unsafe == 1));
 
-// kings
+	int ptype[] = { QUEEN, ROOK, BISHOP, KNIGHT, PAWN };
 
-	for(side=0;side<=1;side++) {
-		from = b->king[side];
-		orank = side == WHITE ? A1 : A8;
-		a->pos_m[KING+side*BLACKPIECE][++(a->pos_c[KING+side*BLACKPIECE])]=from;
-		a->mvs[from] = (attack.maps[KING][from])
-			& (~attack.maps[KING][b->king[Flip(side)]])
-			& (~a->att_by_side[Flip(side)])
-			& (~b->colormaps[side]);
-		if (b->castle[side]) {
-			if (b->castle[side] & QUEENSIDE) {
-				
-				if ((attack.rays[2 + orank][4 + orank]
-					& ((a->att_by_side[Flip(side)]
-						| attack.maps[KING][b->king[Flip(side)]]))) == 0
-					&& ((attack.rays[1 + orank][3 + orank] & b->norm) == 0))
-					{ 
-						a->mvs[from] |= NORMM(2 + orank);
-					}
-			}
-			
-			if (b->castle[side] & KINGSIDE) {
-				if ((attack.rays[4 + orank][6 + orank]
-					& (a->att_by_side[Flip(side)]
-						| attack.maps[KING][b->king[Flip(side)]])) == 0
-					&& ((attack.rays[F1 + orank][G1 + orank] & b->norm) == 0))
-					a->mvs[from] |= NORMM(6 + orank);
+	black=0;
+	for(int side=0;side<=1;side++){
+		for(int f=0; f<4; f++) {
+			int piece = ptype[f];
+			BITVAR pmap = b->maps[piece]& b->colormaps[side];
+			while(pmap) {
+				int ppos = LastOne(pmap);
+					MAKEMOB2(a->mvs[ppos], piece, side, ppos, st);
+				ClrLO(pmap);
 			}
 		}
-	}
-
-	side=WHITE;
-	ii=mm;
-	MVSFROM2(b, a, QUEEN, side, QueenAttacks, ii, FULLBITMAP, b->colormaps[side]);
-	MVSFROM2(b, a, ROOK, side, RookAttacks, ii, FULLBITMAP, b->colormaps[side]) ;
-	MVSFROM2(b, a, BISHOP, side, BishopAttacks, ii, FULLBITMAP, b->colormaps[side]) ;
-	mvsfroma2(b, a, KNIGHT, side, &ii, FULLBITMAP, b->colormaps[side]) ;
-
-	for(ix=mm; ix<ii;ix++) {
-		x = a->mvs[ix->fr] = ((((pins[WHITE] >> (ix->fr))&1)-1)|(ix->mr))&(ix->mm);
-		MAKEMOB2(x, ix->pi, WHITE, ix->fr, st);
-		a->pos_m[ix->pi][++a->pos_c[ix->pi]] = ix->fr;
-	}
-
-	side=BLACK;
-	ii=mm;
-	MVSFROM2(b, a, QUEEN, side, QueenAttacks, ii, FULLBITMAP, b->colormaps[side]);
-	MVSFROM2(b, a, ROOK, side, RookAttacks, ii, FULLBITMAP, b->colormaps[side]) ;
-	MVSFROM2(b, a, BISHOP, side, BishopAttacks, ii, FULLBITMAP, b->colormaps[side]) ;
-	mvsfroma2(b, a, KNIGHT, side, &ii, FULLBITMAP, b->colormaps[side]) ;
-
-	for(ix=mm; ix<ii;ix++) {
-		x = a->mvs[ix->fr] = ((((pins[BLACK] >> (ix->fr))&1)-1)|(ix->mr))&(ix->mm);
-		MAKEMOB2(x, ix->pi, BLACK, ix->fr, st);
-		a->pos_m[ix->pi+BLACKPIECE][++a->pos_c[ix->pi+BLACKPIECE]] = ix->fr;
+		black=BLACKPIECE;
 	}
 	return 0;
 }
@@ -1951,6 +1861,7 @@ int is_draw(board *b, attack_model *a, personality *p)
 		i -= 2;
 	}
 	if (count >= 3) {
+//	    L0("dr3");
 		ret = 3;
 	}
 	return ret;
@@ -3818,11 +3729,11 @@ int MVVLVA_gen(int table[ER_PIECE + 2][ER_PIECE+1], _values Values)
 	for (vic = PAWN; vic < ER_PIECE; vic++) {
 		for (att = PAWN; att < ER_PIECE; att++) {
 // all values inserted are positive!
-			if (vic == att) {
-				table[att][vic] = A_OR + (7 * v[att] - v[att]) * 2;
-			} else if (vic > att) {
+			if (vic == att) { // A_OR + 6*v[att]*2 , 12-60 (72)
+				table[att][vic] = A_OR + (7 * v[att] - v[att]) * 2 ;
+			} else if (vic > att) { // A_OR + (7*6-1)*2-(7*2-1)*2, 82-26
 				table[att][vic] = A_OR + (7 * v[vic] - v[att]) * 2;
-			} else if (vic < att) {
+			} else if (vic < att) { // A_OR2 + (7*1-6)*2-(7*5-6)*2, 2-58
 				table[att][vic] = A_OR2 + (7 * v[vic] - v[att]) * 2;
 			}
 		}

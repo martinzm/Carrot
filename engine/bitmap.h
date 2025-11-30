@@ -113,6 +113,9 @@ typedef struct _move_entry {
 	long int qorder;
 	int real_score;
 	int phase;
+	int state;
+	long long nodes;
+	int ord;
 } move_entry;
 
 #define KMOVES_WIDTH 2
@@ -124,13 +127,13 @@ typedef struct _kmoves {
 
 typedef struct _move_cont {
 	int phase;
-	int actph;
+//	int actph;
 	int count;
 	int tcnt;
 	int lpcheck;
 	move_entry *next;  // points at end of moves already offered, starts at move
 			   // it includes even moves that were considered but failed validity and/or were skipped then
-	move_entry *badp;	// points at end of bad moves, starts at bad
+	move_entry *badp;  // points at end of bad moves, starts at bad
 	move_entry *exclp; // points at end of excluded moves list, starts at excl
 	move_entry *lastp; // points at end of list of all moves generated, starts at move
 	move_entry *quiet; // points to first quiet move or null
@@ -142,7 +145,7 @@ typedef struct _move_cont {
 	move_entry killer4;
 
 	move_entry move[300];
-	move_entry bad[300];
+	move_entry bad [300];
 	move_entry excl[300];
 } move_cont;
 
@@ -339,6 +342,7 @@ typedef struct _meval_t {
  */
 
 typedef int _general_option;
+typedef int _general_option_8[8];
 typedef int _gamestage[ER_GAMESTAGE];
 typedef int _values[ER_GAMESTAGE][ER_PIECE + 1];
 typedef int _dvalues[ER_PIECE][PAWNS_TOT];
@@ -592,8 +596,8 @@ typedef struct _att_incr {
 } attack_incremental;
 
 typedef struct _attack_model {
-	BITVAR mvs[64];  // bitmapy jednotlivych figur
-	BITVAR mvk[64];  // bitmapy jednotlivych figur
+	BITVAR mvs[64];  // bitmaps for movegen/where piece can capture
+	BITVAR mvk[64];  // bitmaps of squares opposing king cannot go
 // left, right, push, doublepush, ep
 	BITVAR pset[2][7];
 	BITVAR att_by_side[ER_SIDE];
@@ -707,6 +711,7 @@ typedef struct _bit_board {
 	int8_t side;  // side to move
 	int8_t castle[ER_SIDE];  // castling possibility // 0 no, 1 - queenside, 2 - kingside, 3 - both, +4 - non castl
 	int8_t king[ER_SIDE];  // king position, 
+
 	int16_t move;  //  plies... starts at 0 - ply/move to make
 	int16_t rule50move;  // ukazatel na posledni pozici, ktera vznikla branim nebo tahem pescem
 	int16_t gamestage;

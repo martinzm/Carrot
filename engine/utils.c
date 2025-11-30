@@ -320,19 +320,31 @@ void log_divider(char *s)
 	}
 }
 
-void dump_moves(board *b, move_entry *m, int count, int ply, char *cmt)
+void dump_moves(board *b, move_cont *mc, int count, int ply, char *cmt)
 {
 	char b2[2048];
 	int i;
+	move_entry *m;
+	m= mc->move;
 
 	LOGGER_0("MOV_DUMP: * Start *\n");
 	if (cmt != NULL)
 		LOGGER_0("MOV_DUMP: Comments %s\n", cmt);
-	for (i = 0; i < count; i++) {
+	i=0;
+	while(m<mc->lastp) {
 		sprintfMove(b, m->move, b2);
-		LOGGER_0("%*d, MVD , %d: %s %d, %d, %X\n", 2 + ply, ply, i, b2,
-			m->qorder, m->real_score, m->move);
+		LOGGER_0("%*d, MVD , %d: %s, iord: %d, rscore: %d, ford %d, phase: %d, state: %d, nodes: %lld\n", 2 + ply, ply, i, b2,
+			m->qorder, m->real_score, m->ord, m->phase, m->state, m->nodes);
 		m++;
+		i++;
+	}
+	m=mc->bad;
+	while(m<mc->badp) {
+		sprintfMove(b, m->move, b2);
+		LOGGER_0("%*d, BAD , %d: %s, iord: %d, rscore: %d, ford %d, phase: %d, state: %d, nodes: %lld\n", 2 + ply, ply, i, b2,
+			m->qorder, m->real_score, m->ord, m->phase, m->state, m->nodes);
+		m++;
+		i++;
 	}
 	LOGGER_0("MOV_DUMP: ** END **\n");
 }

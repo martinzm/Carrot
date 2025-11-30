@@ -744,7 +744,7 @@ int updateHHTable2(board *b, hhTable *hh, move_entry *m, int cutoff, int side, i
 	fromPos = UnPackFrom(m[cutoff].move);
 	toPos = UnPackTo(m[cutoff].move);
 	piece = b->pieces[fromPos] & PIECEMASK;
-	hh->val[side][piece][toPos] += 32*bonus - hh->val[side][piece][toPos] * abs(bonus)/512;
+	hh->val[side][piece][toPos] += 32*bonus - hh->val[side][piece][toPos] * abs(bonus)/400;
 	return 0;
 }
 

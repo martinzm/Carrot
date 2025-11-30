@@ -113,6 +113,21 @@ int parse_basic_value(xmlDocPtr doc, xmlNodePtr cur, int *st)
 	return r;
 }
 
+int parse_basic_value_n(xmlDocPtr doc, xmlNodePtr cur, int n, int *st){
+	wchar_t ww[256];
+	int r=-1;
+  
+	xmlChar *s;
+	s = xmlNodeGetContent(cur);
+	if (s != NULL) {
+		UTF8toWchar(s, ww, sizeof(wchar_t) * 256);
+		r=valuetointW(ww, st, n);
+		xmlFree(s);
+	}
+	return r;
+}
+
+
 int parse_value(xmlDocPtr doc, xmlNodePtr cur, int *bb, int max, int *st)
 {
 	int r=-1;
@@ -426,6 +441,12 @@ int params_init_values(_values *x, int s_r, int *i)
 	return 0;
 }
 
+int params_init_general_option_8(_general_option_8 *x, int s_r, int *i)
+{
+	for(int n=0; n<8;n++) (*x)[n]=i[n];
+	return 0;
+}
+
 int params_map_values(_values *x, int s_r, int *i)
 {
 	setup_value(x, i, ER_PIECE, 0);
@@ -443,12 +464,34 @@ int params_load_values(xmlDocPtr doc, xmlNodePtr cur, int *st, int s_r, _values 
 	return 0;
 }
 
+int params_load_general_option_8(xmlDocPtr doc, xmlNodePtr cur, int *st, int s_r, _general_option_8 *o)
+{
+	int val[256];
+	int count;
+	int r=parse_basic_value_n(doc, cur, 8, val);
+	if(r>=8) for(int i=0;i<8;i++) (*o)[i]=val[i];
+	else L0("General_option_8 load problem\n");
+	return 0;
+}
+
+int params_out_general_option_8(char *x, _general_option_8 *i)
+{
+	int f;
+	char buf[512], b2[512];
+	sprintf(buf, "PERS: %s ", x);
+	for (f = 0; f < 8; f++) {
+		sprintf(b2, "depth[%i]:%i,\t", f,(*i)[f]);
+	}
+	LOGGER_0("%s\n", b2);
+	return 0;
+}
+
 int params_out_values(char *x, _values *i)
 {
 	int f;
 	char buf[512], b2[512];
 	sprintf(buf, "PERS: %s ", x);
-	for (f = 0; f < ER_GAMESTAGE; f++) {
+	for (f = 0; f < 8; f++) {
 		sprintf(b2, "PERS: VAL[%i]:%i, %i, %i, %i, %i, %i\t", f,
 			(*i)[f][PAWN], (*i)[f][KNIGHT], (*i)[f][BISHOP],
 			(*i)[f][ROOK], (*i)[f][QUEEN], (*i)[f][KING]);
@@ -487,6 +530,34 @@ int params_write_values(xmlNodePtr parent, char *name, int s_r, _values *i)
 		cur = xmlNewTextChild(parent, NULL, n8, b8);
 		xmlNewProp(cur, (xmlChar*) "gamestage", b82);
 	}
+	return 0;
+}
+
+int params_write_general_option_8(xmlNodePtr parent, char *name, int s_r, _general_option_8 *i)
+{
+	int f, n;
+	char buf[512], b2[128];
+	xmlNodePtr cur;
+
+	wchar_t bw[1024];
+	xmlChar b8[512], b82[256], n8[256];
+
+	swprintf(bw, 999, L"%s", name);
+	WchartoUTF8(bw, n8, 256);
+
+		buf[0] = '\0';
+		for (n = 0; n < 7; n++) {
+			sprintf(b2, "%d,", (*i)[n]);
+			strcat(buf, b2);
+		}
+		sprintf(b2, "%d", (*i)[7]);
+		strcat(buf, b2);
+
+		swprintf(bw, 999, L"%s", buf);
+		WchartoUTF8(bw, b8, 256);
+
+//		cur = xmlNewTextChild(parent, NULL, n8, b8);
+		xmlNewTextChild(parent, NULL, n8, b8);
 	return 0;
 }
 

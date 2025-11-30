@@ -127,7 +127,7 @@ int parse_cmd_line_check_sec(int argc, char *argv[]);
 int UTF8toWchar(unsigned char *in, wchar_t *out, size_t oll);
 int WchartoUTF8(wchar_t *in, unsigned char *out, size_t oll);
 void log_divider(char *s);
-void dump_moves(board *b, move_entry *m, int count, int ply, char *cmt);
+void dump_moves(board *b, move_cont *mc, int count, int ply, char *cmt);
 int copyStats(struct _statistics *source, struct _statistics *dest);
 
 int compareBoardSilent(board *source, board *dest);

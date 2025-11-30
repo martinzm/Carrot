@@ -47,6 +47,7 @@ MLINE(LMR_start_move, LMR_start_move, _general_option, 0, 4)\
 MLINE(LMR_remain_depth, LMR_remain_depth, _general_option, 0, 3)\
 MLINE(LMR_prog_start_move, LMR_prog_start_move, _general_option, 0, 6)\
 MLINE(LMR_prog_mod, LMR_prog_mod, _general_option, 0, 3)\
+MLINE(LMR_sim, LMR_sim, _general_option, 0, 0)\
 MLINE(IID_remain_depth, IID_remain_depth, _general_option, 0, 4)\
 MLINE(quiesce_phase_limit, quiesce_phase_limit, _general_option, 0, 30)\
 MLINE(quiesce_phase_bonus, quiesce_phase_bonus, _general_option, 0, 2000)\
@@ -72,6 +73,8 @@ MLINE(eval_BIAS, eval_BIAS, _general_option, 0, 0)\
 MLINE(eval_BIAS_e, eval_BIAS_e, _general_option, 0, 0)\
 MLINE(move_tempo, move_tempo, _gamestage, 0, M_P(100,0) ) \
 MLINE(futility_depth, futility_depth, _general_option, 0, 2)\
+MLINE(futility_cut, futility_cut, _general_option_8, 0, M_P(100,200,300,400,500,600,700,800))\
+MLINE(futility_sim, futility_sim, _general_option, 0, 0)\
 MLINE(mobility_protect, mobility_protect, _general_option, 0, 1)\
 MLINE(mobility_unsafe, mobility_unsafe, _general_option, 0, 0)\
 MLINE(bishopboth, bishopboth, _gamestage, 0, M_P(500,500) ) \

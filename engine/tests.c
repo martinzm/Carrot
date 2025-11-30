@@ -1248,7 +1248,7 @@ unsigned long long int perftLoopN_v(board *b, int d, int side, attack_model *tol
 	if (d == 0)
 		return 1;
 	nodes = 0;
-	opside = (side == WHITE) ? BLACK : WHITE;
+	opside = Flip(side);
 	a = &ATT;
 
 	if(div) printBoardNice(b);
@@ -3292,10 +3292,16 @@ int driver_eval_checker(int max, personality *pers_init, CBACK, void *cdata)
 			setup_FEN_board(&b, fen);
 			printBoardNice(&b);
 
-			a.att_by_side[WHITE] = KingAvoidSQ(&b, &a, WHITE);
-			a.att_by_side[BLACK] = KingAvoidSQ(&b, &a, BLACK);
-			eval_king_checks(&b, &(a.ke[WHITE]), NULL, WHITE);
-			eval_king_checks(&b, &(a.ke[BLACK]), NULL, BLACK);
+			eval_king_checks_extU(&b, &(a.ke[WHITE]), 0, b.king[WHITE]);
+			eval_king_checks_extU(&b, &(a.ke[BLACK]), 1, b.king[BLACK]);
+
+			generateBitmaps(&b, &a, FULLBITMAP, WHITE);
+			generateBitmaps(&b, &a, FULLBITMAP, BLACK);
+			a.att_by_side[BLACK] = regenerateSQAttacked(&b, &a, BLACK);
+			a.att_by_side[WHITE] = regenerateSQAttacked(&b, &a, WHITE);
+			mvsfromk22(&b, &a, BLACK);
+			mvsfromk22(&b, &a, WHITE);
+
 			ev=eval(&b, &a, b.pers, &st);
 
 			if(b.mindex_validity!=0) 
@@ -3944,4 +3950,3 @@ void move_gen_checker(char *filein, int max_positions)
 
 	cleanup: free(pi);
 }
-

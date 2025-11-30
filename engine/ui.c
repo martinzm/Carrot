@@ -1114,6 +1114,13 @@ while (uci_state != 0) {
 				uci_state = 2;
 				LOGGER_3("setup myts5");
 				goto reentry;
+			} else if (!strcasecmp(tok, "mytsp")) {
+				strcpy(buff,
+					"position fen 2r2r2/p2qppkp/3p2p1/3P1P2/2n2R2/7R/P5PP/1B1Q2K1 w - -");
+				uci_state = 2;
+				printf("go depth 8 should give you 9645 or less nodes (Arasan) with proper pruning. SF17 has 4.9kN\n");
+				LOGGER_3("setup mytsp");
+				goto reentry;
 			} else if (!strcasecmp(tok, "mytss")) {
 				strcpy(buff,
 					"position fen 5rk/bb3p1p/1p1p1qp/pBpP4/N1Pp2P/P2Q3P/1P3PK/3R4 w - c6 1 31 moves d5c6");

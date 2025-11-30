@@ -216,6 +216,10 @@ BITVAR v;
 		a->mvs[from] = v;
 }
 
+// << 9 - moves up right
+// << 7 - up left
+// >> 7 - down right
+// >> 9 - down left
 // 0 utok vlevo, 1 utok vpravo, 2 posun vpred, 3 doublepush, 4 ep, 5 pot utok vlevo, 6 pot utok vpravo
 // rozdelit na pin a nepin
 int pawn_set_white(board const *b, king_eval const *ke, BITVAR pins, BITVAR *pset){
@@ -227,9 +231,8 @@ BITVAR epbmp, dir, tmp;
 	BITVAR pwb = pwi & pins;
 	BITVAR nbn = b->norm & b->colormaps[BLACK];
 
-	BITVAR pi = b->maps[PAWN] & b->colormaps[WHITE];
-	pset[5]= (pwi << 9) & 0xfefefefefefefefe;
-	pset[6]= (pwi << 7) & 0x7f7f7f7f7f7f7f7f;
+	pset[6]= (pwi << 9) & 0xfefefefefefefefe;
+	pset[5]= (pwi << 7) & 0x7f7f7f7f7f7f7f7f;
 	pset[0]= (nbn >> 7) & pww & 0xfefefefefefefefe;
 	pset[1]= (nbn >> 9) & pww & 0x7f7f7f7f7f7f7f7f;
 	pset[2]= ((~b->norm) >> 8) & pww;
@@ -265,9 +268,9 @@ BITVAR epbmp, dir, tmp;
 	BITVAR pbw = pbi & pins;
 	BITVAR nwn = b->norm & b->colormaps[WHITE];
 
-	BITVAR pi = b->maps[PAWN] & b->colormaps[BLACK];
-	pset[5]= (pbi >> 7) & 0xfefefefefefefefe;
-	pset[6]= (pbi >> 9) & 0x7f7f7f7f7f7f7f7f;
+//	BITVAR pi = b->maps[PAWN] & b->colormaps[BLACK];
+	pset[6]= (pbi >> 7) & 0xfefefefefefefefe;
+	pset[5]= (pbi >> 9) & 0x7f7f7f7f7f7f7f7f;
 	pset[0]= (nwn << 9) & pbb & 0xfefefefefefefefe;
 	pset[1]= (nwn << 7) & pbb & 0x7f7f7f7f7f7f7f7f;
 	pset[2]= ((~b->norm) << 8) & pbb;
@@ -308,6 +311,7 @@ BITVAR att=0, pmap;
 			ClrLO(pmap);
 		}
 	}
+#if 0
 	if(side==WHITE) {
 		BITVAR pi = b->maps[PAWN] & b->colormaps[WHITE];
 		att|=(pi << 9) & 0xfefefefefefefefe;
@@ -318,6 +322,10 @@ BITVAR att=0, pmap;
 		att|=(pi >> 9) & 0x7f7f7f7f7f7f7f7f;
 	}
 return att|a->ke[Flip(side)].att_vec;
+#else 
+return att|a->ke[Flip(side)].att_vec| a->pset[side][5]|a->pset[side][6];
+#endif
+
 }
 
 int generateBitmaps(const board *const b, attack_model *a, BITVAR upd, int side)
@@ -2224,7 +2232,7 @@ void ScoreNormal(board *b, move_cont *mv, int side)
 		fromPos = UnPackFrom(t->move);
 		ToPos = UnPackTo(t->move);
 		piece = b->pieces[fromPos] & PIECEMASK;
-		t->qorder = checkHHTable(b->hht, side, piece, ToPos);
+		t->qorder = checkHHTable(b->hht, side, piece, ToPos) + 20;
 //		L0("HH table:%d\n", t->qorder);
 // assign priority based on distance to enemy king or promotion
 #if 1
@@ -2270,6 +2278,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 {
 	MOVESTORE pot;
 	int r;
+	
 	switch (mv->phase) {
 	case INIT:
 		// setup everything
@@ -2289,18 +2298,20 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 			&& isMoveValid(b, mv->hash.move, a, side, tree)
 			&& (!ExcludeMove(mv, mv->hash.move))) {
 			mv->lastp->move = mv->hash.move;
-			*mm = mv->lastp;
 			*(mv->exclp) = *(mv->lastp);
-			mv->actph = HASHMOVE;
-			mv->lastp->phase=mv->actph;
+//			mv->actph = HASHMOVE;
+			mv->lastp->phase=HASHMOVE;
+			*mm = mv->lastp;
 			mv->lastp++;
 			mv->exclp++;
 			mv->next = mv->lastp;
+			mv->next->ord=mv->count;
+			mv->next->phase=HASHMOVE;
 			return ++mv->count;
 		}
 	case GENERATE_CAPTURES:
 		mv->phase = CAPTUREA;
-		mv->next = mv->lastp;
+//		mv->next = mv->lastp;
 		if (incheck == 1) {
 			generateInCheckMovesN(b, a, &(mv->lastp), 1);
 			mv->quiet=mv->lastp;
@@ -2312,7 +2323,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 		}
 		generateCapturesN2(b, a, &(mv->lastp), 1);
 		mv->tcnt = 95;
-		mv->actph = CAPTUREA;
+//		mv->actph = CAPTUREA;
 	case CAPTUREA:
 		while ((mv->next < mv->lastp) && (mv->tcnt > 0)) {
 			mv->tcnt--;
@@ -2326,8 +2337,9 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 				mv->next++;
 				continue;
 			}
-			mv->next->phase=mv->actph;
 			*mm = mv->next;
+			mv->next->phase=CAPTUREA;
+			mv->next->ord=mv->count;
 			mv->next++;
 			return ++mv->count;
 		}
@@ -2336,7 +2348,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 		if(mv->next < mv->lastp) {
 			SelectBestO(mv);
 		}
-		mv->actph = CAPTURES;
+//		mv->actph = CAPTURES;
 		mv->phase = CAPTURES;
 	case CAPTURES:
 		while (mv->next < mv->lastp) {
@@ -2349,8 +2361,9 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 				mv->next++;
 				continue;
 			}
-			mv->next->phase=mv->actph;
 			*mm = mv->next;
+			mv->next->phase=CAPTURES;
+			mv->next->ord=mv->count;
 			mv->next++;
 			return ++mv->count;
 		}
@@ -2362,14 +2375,15 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 			if (r && isMoveValid(b, pot, a, side, tree)
 				&& (!ExcludeMove(mv, pot))) {
 				mv->lastp->move = pot;
-				mv->actph = KILLER1;
-				mv->lastp->phase=mv->actph;
-				*mm = mv->lastp;
+//				mv->actph = KILLER1;
+				mv->lastp->phase=KILLER1;
 				*(mv->exclp) = *(mv->lastp);
 				mv->exclp++;
+				*mm = mv->lastp;
+				mv->lastp->ord=mv->count;
 				mv->lastp++;
 				mv->next = mv->lastp;
-				mv->actph = KILLER1;
+//				mv->actph = KILLER1;
 				return ++mv->count;
 			}
 		}
@@ -2380,8 +2394,9 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 			if (r && isMoveValid(b, pot, a, side, tree)
 				&& (!ExcludeMove(mv, pot))) {
 				mv->lastp->move = pot;
-				mv->actph = KILLER2;
-				mv->lastp->phase=mv->actph;
+//				mv->actph = KILLER2;
+				mv->lastp->phase=KILLER2;
+				mv->lastp->ord=mv->count;
 				*mm = mv->lastp;
 				*(mv->exclp) = *(mv->lastp);
 				mv->exclp++;
@@ -2398,8 +2413,9 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 				if (r && isMoveValid(b, pot, a, side, tree)
 					&& (!ExcludeMove(mv, pot))) {
 					mv->lastp->move = pot;
-					mv->actph = KILLER3;
-					mv->lastp->phase=mv->actph;
+//					mv->actph = KILLER3;
+					mv->lastp->phase=KILLER3;
+					mv->lastp->ord=mv->count;
 					*mm = mv->lastp;
 					*(mv->exclp) = *(mv->lastp);
 					mv->exclp++;
@@ -2417,8 +2433,9 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 				if (r && isMoveValid(b, pot, a, side, tree)
 					&& (!ExcludeMove(mv, pot))) {
 					mv->lastp->move = pot;
-					mv->actph = KILLER4;
-					mv->lastp->phase=mv->actph;
+//					mv->actph = KILLER4;
+					mv->lastp->phase=KILLER4;
+					mv->lastp->ord=mv->count;
 					*mm = mv->lastp;
 					*(mv->exclp) = *(mv->lastp);
 					mv->exclp++;
@@ -2435,15 +2452,16 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 		ScoreNormal(b, mv, side);
 		SelectBestO(mv);
 rest_moves: mv->phase = NORMAL;
-		mv->actph = NORMAL;
+//		mv->actph = NORMAL;
 	case NORMAL:
 		while (mv->next < mv->lastp) {
 			if (ExcludeMove(mv, mv->next->move)) {
 				mv->next++;
 				continue;
 			}
-			mv->next->phase=mv->actph;
+			mv->next->phase=NORMAL;
 			*mm = mv->next;
+			mv->next->ord=mv->count;
 			mv->next++;
 			return ++mv->count;
 		}
@@ -2457,9 +2475,10 @@ rest_moves: mv->phase = NORMAL;
 				mv->next++;
 				continue;
 			}
-			mv->actph = OTHER;
-			mv->next->phase=mv->actph;
+//			mv->actph = OTHER;
+			mv->next->phase=OTHER;
 			*mm = mv->next;
+			mv->next->ord=mv->count;
 			mv->next++;
 			return ++mv->count;
 		}
@@ -2490,7 +2509,7 @@ char b2[512];
 	case GENERATE_NORMAL:
 		mv->quiet = mv->lastp;
 		generateQuietCheckMovesN(b, a, &(mv->lastp));
-		mv->actph = NORMAL;
+//		mv->actph = NORMAL;
 		mv->phase = NORMAL;
 	case NORMAL:
 
@@ -2508,7 +2527,7 @@ char b2[512];
 //				mv->next++;
 //				continue;
 //			}
-			mv->next->phase=mv->actph;
+			mv->next->phase=NORMAL;
 			*mm = mv->next;
 			mv->next++;
 			return ++mv->count;
@@ -2552,7 +2571,7 @@ int getNextCap(board *b, attack_model *a, move_cont *mv, int ply, int side, int 
 		mv->next = mv->lastp;
 		generateCapturesN2(b, a, &(mv->lastp), 0);
 		mv->tcnt = 0;
-		mv->actph = CAPTUREA;
+//		mv->actph = CAPTUREA;
 		LOGGER_SE("GEN CAP\n");
 	case CAPTUREA:
 		while ((mv->next < mv->lastp) && (mv->tcnt > 0)) {
@@ -2566,7 +2585,7 @@ int getNextCap(board *b, attack_model *a, move_cont *mv, int ply, int side, int 
 				mv->next++;
 				continue;
 			}
-			mv->next->phase=mv->actph;
+			mv->next->phase=CAPTUREA;
 			*mm = mv->next;
 			mv->next++;
 			LOGGER_SE("CAPTUREA\n");
@@ -2575,7 +2594,7 @@ int getNextCap(board *b, attack_model *a, move_cont *mv, int ply, int side, int 
 		mv->phase = SORT_CAPTURES;
 	case SORT_CAPTURES:
 		SelectBestO(mv);
-		mv->actph = CAPTURES;
+//		mv->actph = CAPTURES;
 		mv->phase = CAPTURES;
 		LOGGER_SE("SORT CAP\n");
 	case CAPTURES:
@@ -2588,7 +2607,7 @@ int getNextCap(board *b, attack_model *a, move_cont *mv, int ply, int side, int 
 				mv->next++;
 				continue;
 			}
-			mv->next->phase=mv->actph;
+			mv->next->phase=CAPTURES;
 			*mm = mv->next;
 			mv->next++;
 			LOGGER_SE("CAPTURES\n");
