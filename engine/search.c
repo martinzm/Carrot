@@ -280,7 +280,7 @@ void printPV_simple(board *b, tree_store *tree, int depth, int side, struct _sta
 	LOGGER_1("%s\n",b2);
 }
 
-void printPV_simple_act(board *b, tree_store *tree, int depth, int side, struct _statistics *s, struct _statistics *s2)
+void printPV_simple_act(board *b, tree_store *tree, int depth, int side, struct _statistics *s)
 {
 	int f, xdepth;
 	char buff[1024], b2[1024];
@@ -288,7 +288,7 @@ void printPV_simple_act(board *b, tree_store *tree, int depth, int side, struct 
 	strcpy(buff, "Line: ");
 	xdepth = depth;
 	xdepth = MAXPLY + 1;
-	for (f = 0; f <= xdepth; f++) {
+	for (f = 0; f < depth; f++) {
 		switch (tree->tree[f][f].move & (~CHECKFLAG)) {
 		case DRAW_M:
 		case NA_MOVE:
@@ -1057,7 +1057,8 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 	unsigned long long nodes_stat, null_stat;
 	hashEntry hash;
 	BITVAR pld, rr;
-	DEB_SE( char b2[256];)
+//	DEB_SE( char b2[256];)
+	char b2[256];
 
 	UNDO u;
 
@@ -1073,18 +1074,24 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 	} 
 	LOGGER_SE("%*d, *S , EEEE, amove ch:X, depth %d, talfa %d, tbeta %d,incheck ?\n", 2+ply, ply, depth, alfa, beta);
 
+	DEB_S2( mvs.alfa=alfa; mvs.beta=beta; mvs.def.state=0; mvs.def.real_score=-mb->real_score; )
+
 // mate distance pruning
 	gmr = -mb->real_score;
+
 	if (gmr <= alfa) {
 		b->stats->faillow++;
+		DEB_S2(mvs.def.state|=r_ALFA;)
 		return alfa;
 	}
 	if (-gmr >= beta) {
 		b->stats->failhigh++;
+		DEB_S2(mvs.def.state|=r_BETA;)
 		return beta;
 	}
 
 	incheck = (UnPackCheck(tree->tree[ply-1][ply-1].move) != 0);
+	DEB_S2(if (incheck) mvs.def.state|=r_CHECK;)
 	opside = Flip(side);
 
 	int drw=is_draw(b, att, b->pers);
@@ -1097,6 +1104,7 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 			b->stats->failhigh++;
 		else
 			b->stats->failnorm++;
+		DEB_S2(mvs.def.state|=r_DRAW;)
 		goto ABFINISH2;
 	}
 
@@ -1113,6 +1121,7 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 		talfa = -gmr;
 
 	mt.move = DRAW_M;
+	DEB_S2( mvs.def.a=talfa; mvs.def.b=tbeta; )
 	
 	int hresult=0;
 // time to check hash table
@@ -1123,6 +1132,7 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 		hresult = retrieveHash(b->hs, &hash, side, ply, depth,
 			b->pers->use_ttable_prev, b->norm, b->stats);
 		if (hresult != 0) {
+			DEB_S2( mvs.def.real_score=hash.value; mvs.def.move=hash.bestmove; mvs.def.state|=r_HASH;)
 			mt.real_score = hash.value;
 			mt.move = hash.bestmove;
 			if ((mt.move == NULL_MOVE)
@@ -1177,6 +1187,7 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 		}
 	}
 
+int sco;
 // reverse futility pruning
 		if ((depth < b->pers->futility_depth)&&(depth >= 0)
 			&& (incheck == 0)
@@ -1186,17 +1197,20 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 			&& (talfa<MATEMIN) && (talfa> -MATEMIN)
 			)
 			{
-			int sco=(side==WHITE) ? getlazyEval(b, b->pers): -getlazyEval(b, b->pers);
-//			int sco=(side==WHITE) ? get_material_eval_f(b, b->pers): -get_material_eval_f(b, b->pers);
-				if(sco >= ( tbeta + b->pers->futility_cut[depth] ))
+//			sco=(side==WHITE) ? getlazyEval(b, b->pers): -getlazyEval(b, b->pers);
+			sco=(side==WHITE) ? get_material_eval_f(b, b->pers): -get_material_eval_f(b, b->pers);
+				if(sco >= ( tbeta + b->pers->futility_cut[depth] )) {
+//				if(sco >= ( tbeta + 3000 * depth ))
 					if(b->pers->futility_sim==1) {
 						L0("alfa %d, beta %d, talfa %d, tbeta %d, sco %d, depth %d, fcut %d\n", alfa, beta, talfa, tbeta, sco, depth,b->pers->futility_cut[depth]);
 					} else {
 						mb->real_score=sco;
+						DEB_S2( mvs.def.real_score=sco; mvs.def.state|=r_FUT;)
 						goto ABFINISH2;
 					}
+				}
 		}
-
+		
 	reduce_o = extend_o = 0;
 
 	aftermovecheck = 0;
@@ -1208,7 +1222,6 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 		tree->tree[ply][ply].move = NULL_MOVE;
 		MakeNullMove(b, &u);
 
-		eval_king_checks(b, &(att->ke[b->side]), NULL, b->side);
 		LOGGER_SE("%*d, +S , NULL, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d\n", 2+ply, ply, aftermovecheck, depth, talfa, tbeta, mb->real_score);
 		
 		b->stats->NMP_tries++;
@@ -1218,6 +1231,10 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 // save stats, to get info how many nodes were visited due to NULL move...
 		nodes_stat = b->stats->nodes;
 		null_stat = b->stats->u_nullnodes;
+
+//	eval_king_checks_extU(b, &(att->ke[WHITE]), 0, b->king[WHITE]);
+//	eval_king_checks_extU(b, &(att->ke[BLACK]), 1, b->king[BLACK]);
+
 		if (ext > 0) {
 			LOGGER_SE("%*d, *S , NULL, AB, alfa %d, beta %d, ext %d, ply %d, nulls %d\n", 2+ply, ply, -tbeta, -tbeta+1, ext, ply+1, nulls-1);
 			mt.real_score = -ABNew(b, -tbeta, -tbeta + 1, ext,
@@ -1233,12 +1250,16 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 		UnMakeNullMove(b, &u);
 		LOGGER_SE("%*d, -S , NULL, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d, val %d\n", 2+ply, ply, aftermovecheck, depth, talfa, tbeta, mb->real_score, mt.real_score);
 
+		eval_king_checks_extU(b, &(att->ke[WHITE]), 0, b->king[WHITE]);
+		eval_king_checks_extU(b, &(att->ke[BLACK]), 1, b->king[BLACK]);
+
 // engine stop protection?
 		if (b->search_abort != 0)
 			goto ABFINISH2;
 		b->stats->u_nullnodes = null_stat
 			+ (b->stats->nodes - nodes_stat);
-		if (mt.real_score >= tbeta) {
+		if ((mt.real_score >= tbeta)
+		&& (isMATE(mt.real_score)==0)) { //!!!!
 			b->stats->NMP_cuts++;
 			hash.key = b->key;
 			hash.depth = (int16_t) depth;
@@ -1251,6 +1272,7 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 			if (b->pers->NMP_search_reduction == 0) {
 				b->stats->failhigh++;
 				mb = &mt;
+				DEB_S2( mvs.def.real_score=mt.real_score; mvs.def.state|=r_NULL; mvs.def.re=ext; )
 				goto ABFINISH2;
 			} else if (b->pers->NMP_search_reduction == -1) {
 				reduce_o = 0;
@@ -1260,6 +1282,7 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 		}
 	} else if ((nulls <= 0) && (b->pers->NMP_allowed > 0))
 		nulls = b->pers->NMP_allowed;
+
 
 #if 1
 	if (mt.move == DRAW_M) {
@@ -1316,11 +1339,20 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 
 	while ((getNextMove(b, att, &mvs, ply, side, incheck, &m, tree) != 0)
 		&& (b->search_abort == 0)) {
+
+		if(!isMoveValid(b, m->move, att, side, tree)) {
+
+			printBoardNice(b);
+			L0("invalid move!");
+			sprintfMoveSimple(m->move, b2);
+			LOGGER_0("%*d, +S , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d\n", 2+ply, ply, b2, aftermovecheck, depth, talfa, tbeta, mb->real_score);
+			assert(0);
+		}
+		DEB_S2(m->state=r_NOR; )
 		extend = extend_o;
 		reduce = reduce_o;
 		tree->tree[ply][ply].move = m->move;
 		MakeMoveNew(b, m->move, pos, &u);
-		m->state = 0;
 		m->nodes = -(b->stats->movestested+b->stats->qmovestested);
 // makemove switches board sides, b->side changes during makemove, now b->side==opside
 
@@ -1328,12 +1360,12 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 // is side to move in check, remember it and extend depth by one
 
 		rr = ChangesToMove(b, att, &u);
-		generateBitmaps(b, att, rr, side);
-		generateBitmaps(b, att, rr, opside);
+		generateBitmaps(b, att, rr, WHITE);
+		generateBitmaps(b, att, rr, BLACK);
 		att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
 		att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
-		mvsfromk22(b, att, side);
-		mvsfromk22(b, att, opside);
+		mvsfromk22(b, att, WHITE);
+		mvsfromk22(b, att, BLACK);
 
 		if (isInCheck_Eval(b, att, opside)) {
 // idea from Crafty - extend only SAFE moves
@@ -1347,6 +1379,7 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 			}
 			tree->tree[ply][ply].move |= CHECKFLAG;
 			aftermovecheck = 1;
+			DEB_S2(m->state|=r_CHECK; )
 		} else
 			aftermovecheck = 0;
 
@@ -1374,9 +1407,9 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 			&& mb != &mdum
 			&& (talfa>-MATEMIN) && (tbeta<MATEMIN) && (talfa<MATEMIN) && (tbeta> -MATEMIN)
 			&& (m->phase>=NORMAL)) {
-//			int sco=(side==WHITE) ? getlazyEval(b, b->pers): -getlazyEval(b, b->pers);
-			int sco=(side==WHITE) ? get_material_eval_f(b, b->pers): -get_material_eval_f(b, b->pers);
-				if((sco+b->pers->futility_cut[depth]) <= alfa) {
+//			sco=(side==WHITE) ? getlazyEval(b, b->pers): -getlazyEval(b, b->pers);
+			sco=(side==WHITE) ? get_material_eval_f(b, b->pers): -get_material_eval_f(b, b->pers);
+				if((sco+b->pers->futility_cut[depth]) <= talfa) {
 					m->state=1;
 					if(b->pers->futility_sim==1) {
 						L0("alfa %d, beta %d, talfa %d, tbeta %d, sco %d, depth %d, fcut %d\n", alfa, beta, talfa, tbeta, sco, depth,b->pers->futility_cut[depth]);
@@ -1404,14 +1437,16 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 					m->state=2;
 					if(mvs.count > b->pers->LMR_prog_start_move)
 						reduce += div(depth, b->pers->LMR_prog_mod).quot;
-					reduce += b->pers->LMR_reduction;
-//					reduce += b->pers->LMR_reduction + div(mvs.count,30).quot;
+//					reduce += b->pers->LMR_reduction;
+					reduce += b->pers->LMR_reduction + div(mvs.count,30).quot;
 					b->stats->lmrtotal++;
 				}
 		}
 		m->real_score = SearchMoveNew(b, talfa, tbeta, ttbeta, depth,
 			ply, extend, reduce, side, tree, nulls, att);
 bypass:
+		DEB_S2(m->a=talfa; m->b=tbeta; m->re=extend-reduce; )
+
 		UnMakeMoveNew(b, &u, pos);
 		rr = ChangesToMove(b, att, &u);
 		generateBitmaps(b, att, rr, side);
@@ -1428,6 +1463,7 @@ bypass:
 		LOGGER_SE("%*d, -S , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d, val %d\n", 2+ply, ply, b2, aftermovecheck, depth, talfa, tbeta, mb->real_score, m->real_score);
 
 		if (m->real_score >= tbeta) {
+			DEB_S2(m->state|=r_BETA; )
 			if (mvs.count == 1)
 				b->stats->firstcutoffs++;
 			b->stats->cutoffs++;
@@ -1448,6 +1484,8 @@ bypass:
 			if (mb->real_score > talfa) {
 				talfa = mb->real_score;
 				copyTree(tree, ply);
+			} else {
+				DEB_S2(m->state|=r_ALFA; )
 			}
 		}
 	}
@@ -1504,13 +1542,12 @@ ABFINISH:
 	b->stats->movestested += mvs.count;
 	b->stats->possiblemoves += ((mvs.lastp - mvs.move));
 ABFINISH2: 
-#if 0
-	if(ply==1) {
+DEB_S2(	if(ply<=99) {
 		printBoardNice(b);
+		printPV_simple_act(b, tree, ply, b->side, b->stats);
 		dump_moves(b, &mvs, (mvs.lastp-mvs.move), ply, "abdump");
 		LOGGER_0("count %d, score %d\n", mvs.count, mb->real_score);
-	}
-#endif
+	} )
 	return mb->real_score;
 }
 
@@ -1643,7 +1680,7 @@ unsigned long long tstart, ebfnodesold, tnow;
 	cc = 0;
 	talfa=alfa;
 	tbeta=beta;
-#if 1
+#if 0
 // initial sort redo!
 	b->depth_run = 1;
 	if (!incheck)
@@ -1756,6 +1793,7 @@ rerun:
 		// loop over all moves
 		// inicializujeme line
 		tree->tree[ply][ply].move = NA_MOVE;
+		tree->tree[ply][ply].score = 0;
 		legalmoves = 0;
 		
 // looping moves for depth f
@@ -2013,6 +2051,7 @@ rerun:
 	STATS[MAXPLY].depth_max_sum += b->stats->depth_max;
 #endif 
 }
+	printPV_simple(b, tree,f,b->side,&s,b->stats);
 
 	DEB_1 (if((b->uci_options->engine_verbose>=1)) printSearchStat(b->stats);)
 	return b->bestscore;

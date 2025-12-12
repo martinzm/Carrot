@@ -26,6 +26,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <pthread.h>
+#include "defines.h"
 #include "macros.h"
 #include "stats.h"
 
@@ -108,15 +109,26 @@ typedef enum _RANKS {
 #define PIECEMASK 7
 #define PAWNS_TOT 18
 
+
+typedef enum _MOVE_FLAGS { r_NOR=0x0000, r_FUT=0x01, r_LMR=0x02, r_LMP=0x04, r_HASH=0x08,
+	r_BETA=0x10, r_ALFA=0x20, r_NULL=0x40, r_CHECK=0x80, r_DRAW=0x100 } MOVE_FLAGS;
+
 typedef struct _move_entry {
 	MOVESTORE move;
 	long int qorder;
 	int real_score;
 	int phase;
-	int state;
 	long long nodes;
 	int ord;
-} move_entry;
+
+	int state;
+DEB_S2(
+	int a;
+	int b;
+	int re;
+	int depth;
+	int ply; )
+	} move_entry;
 
 #define KMOVES_WIDTH 2
 
@@ -147,6 +159,10 @@ typedef struct _move_cont {
 	move_entry move[300];
 	move_entry bad [300];
 	move_entry excl[300];
+DEB_S2(
+	move_entry def;
+	int alfa;
+	int beta;)
 } move_cont;
 
 #define EMPTYBITMAP 0ULL
@@ -958,5 +974,17 @@ inline int GT_M(board const *b, personality const *p, int s, int pi, int fo)
        return fo != 0 ? BitCount(b->maps[pi] & b->colormaps[s]) :
                p->mat_info[b->mindex].m[s][pi];
 }
+
+// returns 
+inline int GT_M0(board const *b, personality const *p, int s, int pi)
+{
+       return p->mat_info[b->mindex].m[s][pi];
+}
+
+inline int GT_M1(board const *b, personality const *p, int s, int pi)
+{
+       return BitCount(b->maps[pi] & b->colormaps[s]);
+}
+
 
 #endif

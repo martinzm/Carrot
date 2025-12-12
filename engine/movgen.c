@@ -2278,6 +2278,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 {
 	MOVESTORE pot;
 	int r;
+	move_entry *m;
 	
 	switch (mv->phase) {
 	case INIT:
@@ -2316,19 +2317,22 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 			generateInCheckMovesN(b, a, &(mv->lastp), 1);
 			mv->quiet=mv->lastp;
 			SelectBestO(mv);
-			move_entry *m=mv->lastp-1;
+			DEB_S2(m=mv->lastp-1;for(;m>=mv->next; m--) m->state=0; )
+			m=mv->lastp-1;
 			for(;m>=mv->next; m--) if(!is_quiet_move(b, a, m)) break; else m->phase=NORMAL;
 			if(m>=mv->next && m>mv->lastp-1) mv->quiet=m+1;
 			goto rest_moves;
 		}
 		generateCapturesN2(b, a, &(mv->lastp), 1);
+		DEB_S2(move_entry *m=mv->lastp-1; for(;m>=mv->next; m--) m->state=0; )
 		mv->tcnt = 95;
 //		mv->actph = CAPTUREA;
 	case CAPTUREA:
 		while ((mv->next < mv->lastp) && (mv->tcnt > 0)) {
 			mv->tcnt--;
 			SelectBest(mv);
-			if (((mv->next->qorder < A_OR2_MAX)
+			if (isMoveValid(b, mv->next->move, a, side, tree))
+			  if (((mv->next->qorder < A_OR2_MAX)
 				&& (mv->next->qorder > A_OR2))
 				&& (SEEx(b, mv->next->move) < 0)) {
 				mv->next->phase=OTHER;
@@ -2352,7 +2356,8 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 		mv->phase = CAPTURES;
 	case CAPTURES:
 		while (mv->next < mv->lastp) {
-			if (((mv->next->qorder < A_OR2_MAX)
+			if (isMoveValid(b, mv->next->move, a, side, tree))
+			  if (((mv->next->qorder < A_OR2_MAX)
 				&& (mv->next->qorder > A_OR2))
 				&& (SEEx(b, mv->next->move) < 0)) {
 				mv->next->phase=OTHER;
@@ -2448,6 +2453,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 	case GENERATE_NORMAL:
 		mv->quiet = mv->next = mv->lastp;
 		generateMovesN2(b, a, &(mv->lastp));
+		DEB_S2(m=mv->lastp-1;for(;m>=mv->next; m--) m->state=0; )
 		// get HH values and sort
 		ScoreNormal(b, mv, side);
 		SelectBestO(mv);
@@ -2493,6 +2499,8 @@ rest_moves: mv->phase = NORMAL;
 int getNextCheckin(board *b, attack_model *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store *tree)
 {
 char b2[512];
+	move_entry *m;
+	
 	switch (mv->phase) {
 	case INIT:
 		// setup everything
@@ -2509,24 +2517,12 @@ char b2[512];
 	case GENERATE_NORMAL:
 		mv->quiet = mv->lastp;
 		generateQuietCheckMovesN(b, a, &(mv->lastp));
+		DEB_S2(m=mv->lastp-1;for(;m>=mv->next; m--) m->state=0; )
 //		mv->actph = NORMAL;
 		mv->phase = NORMAL;
 	case NORMAL:
 
 		while (mv->next < mv->lastp) {
-//			if (!isMoveValid(b, mv->next->move, a, side, tree)) {
-//				sprintfMoveSimple(mv->next->move,b2);
-//				printBoardNice(b);
-//				L0("Problem move %s\n", b2);
-//				mv->next->phase=OTHER;
-//				mv->next++;
-//				continue;
-//			}
-//			if ((SEEx(b, mv->next->move) < 0)) {
-//				mv->next->phase=OTHER;
-//				mv->next++;
-//				continue;
-//			}
 			mv->next->phase=NORMAL;
 			*mm = mv->next;
 			mv->next++;
@@ -2538,13 +2534,14 @@ char b2[512];
 		mv->phase = DONE;
 	case DONE:
 		break;
-//	default:
 	}
 	return 0;
 }
 
 int getNextCap(board *b, attack_model *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store *tree)
 {
+	move_entry *m;
+
 	switch (mv->phase) {
 	case INIT:
 		// setup everything
@@ -2570,6 +2567,7 @@ int getNextCap(board *b, attack_model *a, move_cont *mv, int ply, int side, int 
 		mv->phase = CAPTUREA;
 		mv->next = mv->lastp;
 		generateCapturesN2(b, a, &(mv->lastp), 0);
+		DEB_S2(m=mv->lastp-1;for(;m>=mv->next; m--) m->state=0; )
 		mv->tcnt = 0;
 //		mv->actph = CAPTUREA;
 		LOGGER_SE("GEN CAP\n");
@@ -2843,6 +2841,7 @@ void sprintfMove(board *b, MOVESTORE m, char *buf)
 		L0("ERROR unknown piece %d\n", pfrom);
 		sprintf(b2, "%s", SQUARES_ASC[from]);
 		L0("ERROR unknown piece from %s\n", b2);
+		assert(0);
 	}
 // provereni zdali je vic figur stejneho typu ktere mohou na cilove pole
 
