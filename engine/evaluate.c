@@ -1975,7 +1975,7 @@ int mat_setup2(int pw, int pb, int nw, int nb, int bwl, int bwd, int bbl, int bb
 {
 	int v[] = { 100, 325, 325, 500, 975, 0 };
 // 0 16 8 4 2 1
-// 
+// 128 - normal, 64 -  44, 14, 8 - , 0 - no winning potential
 	uint8_t imul[] = { 0, 8, 14, 44, 64, 128 };
 	int i, op;
 	int mp, pd;
@@ -2000,8 +2000,10 @@ int mat_setup2(int pw, int pb, int nw, int nb, int bwl, int bwd, int bbl, int bb
 
 		meval_value_c(pw, pb, nw, nb, bwl, bwd, bbl, bbd, rw, rb, qw, qb, t);
 		mp=5;
-// scaling is triggered when side ahead in material
-		if (((mvtot[i] - mvtot[op])>=(-v[ROOK]))&&(t->m[i][PAWN]<=1)) {
+// scaling is triggered when a side ahead in material
+		if (((mvtot[i] - mvtot[op])>=(-v[ROOK]))
+//			&&((mvtot[i] - mvtot[op])>=0)
+			&&(t->m[i][PAWN]<=1)) {
 			if((t->m[i][PAWN]==1)) {
 // discount last pawn of i
 				if ((t->m[i][PAWN] == 1)&&(t->m[op][PIECES] > 0)) {
@@ -2014,7 +2016,7 @@ int mat_setup2(int pw, int pb, int nw, int nb, int bwl, int bwd, int bbl, int bb
 					t->m[op][HEAVY] = t->m[op][ROOK] + t->m[op][QUEEN];
 					t->m[op][PIECES] = t->m[op][LIGHT] + t->m[op][HEAVY];
 					t->m[op][TPIECES] = t->m[op][PIECES] + t->m[op][PAWN];
-				
+
 					if(t->m[op][PIECES]<tt->m[op][PIECES]) {
 						t->m[i][PAWN]--;
 						t->m[i][TPIECES]--;

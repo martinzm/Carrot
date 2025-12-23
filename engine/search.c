@@ -650,7 +650,7 @@ int QuiesceCheckN(board *b, int talfa, int tbeta, int depth, int ply, int side, 
 		}
 		DEB_SE(
 				sprintfMoveSimple(m->move, b2);
-				LOGGER_0("%*d, +C , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d, actph %d\n", 2+ply, ply, b2, aftermovecheck, depth, talfa, tbeta, mb->real_score, mvs.actph);
+				LOGGER_0("%*d, +C , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d\n", 2+ply, ply, b2, aftermovecheck, depth, talfa, tbeta, mb->real_score);
 		)
 
 		if (((checks > 0)) && (aftermovecheck != 0))
@@ -797,14 +797,16 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 /* 
  * filter out captures not improving our situation
  */
+// check if capture can help us at all
+		
 		MakeMoveNew(b, m->move, pos, &u);
 		rr = ChangesToMove(b, att, &u);
-		generateBitmaps(b, att, rr, side);
-		generateBitmaps(b, att, rr, opside);
+		generateBitmaps(b, att, rr, BLACK);
+		generateBitmaps(b, att, rr, WHITE);
 		att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
 		att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
-		mvsfromk22(b, att, side);
-		mvsfromk22(b, att, opside);
+		mvsfromk22(b, att, BLACK);
+		mvsfromk22(b, att, WHITE);
 
 		if (isInCheck_Eval(b, att, opside)) {
 			tree->tree[ply][ply].move |= CHECKFLAG;
@@ -834,12 +836,12 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 			if ((incheck2 != 0)) {
 				UnMakeMoveNew(b, &u, pos);
 				rr = ChangesToMove(b, att, &u);
-				generateBitmaps(b, att, rr, side);
-				generateBitmaps(b, att, rr, opside);
+				generateBitmaps(b, att, rr, BLACK);
+				generateBitmaps(b, att, rr, WHITE);
 				att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
 				att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
-				mvsfromk22(b, att, side);
-				mvsfromk22(b, att, opside);
+				mvsfromk22(b, att, BLACK);
+				mvsfromk22(b, att, WHITE);
 				LOGGER_SE("%*d, -Q2 , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d, val %d\n", 2+ply, ply, b2, aftermcheck, depth, talfa, tbeta, mb->real_score, m->real_score);
 //				tree->tree[ply][ply].move = NA_MOVE;
 				continue;
@@ -859,12 +861,12 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 				m->real_score = -QuiesceNew(b, -tbeta, -talfa, depth - 1, ply + 1, opside, tree, 0, att);
 		UnMakeMoveNew(b, &u, pos);
 		rr = ChangesToMove(b, att, &u);
-		generateBitmaps(b, att, rr, side);
-		generateBitmaps(b, att, rr, opside);
+		generateBitmaps(b, att, rr, BLACK);
+		generateBitmaps(b, att, rr, WHITE);
 		att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
 		att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
-		mvsfromk22(b, att, side);
-		mvsfromk22(b, att, opside);
+		mvsfromk22(b, att, BLACK);
+		mvsfromk22(b, att, WHITE);
 
 		LOGGER_SE("%*d, -Q , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d, val %d\n", 2+ply, ply, b2, aftermcheck, depth, talfa, tbeta, mb->real_score, m->real_score);
 		if (m->real_score >= tbeta) {
@@ -900,12 +902,12 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 //			L0("Qcheck MOVE %s\n", b3);
 			MakeMoveNew(b, m->move, pos, &u);
 			rr = ChangesToMove(b, att, &u);
-			generateBitmaps(b, att, rr, side);
-			generateBitmaps(b, att, rr, opside);
+			generateBitmaps(b, att, rr, BLACK);
+			generateBitmaps(b, att, rr, WHITE);
 			att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
 			att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
-			mvsfromk22(b, att, side);
-			mvsfromk22(b, att, opside);
+			mvsfromk22(b, att, BLACK);
+			mvsfromk22(b, att, WHITE);
 
 DEB_SE(
 			sprintfMoveSimple(m->move, b2);
@@ -918,12 +920,12 @@ DEB_SE(
 //			L0("+++\n");
 			UnMakeMoveNew(b, &u, pos);
 			rr = ChangesToMove(b, att, &u);
-			generateBitmaps(b, att, rr, side);
-			generateBitmaps(b, att, rr, opside);
+			generateBitmaps(b, att, rr, BLACK);
+			generateBitmaps(b, att, rr, WHITE);
 			att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
 			att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
-			mvsfromk22(b, att, side);
-			mvsfromk22(b, att, opside);
+			mvsfromk22(b, att, BLACK);
+			mvsfromk22(b, att, WHITE);
 
 			LOGGER_SE("%*d, -G , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d, val %d\n", 2+ply, ply, b2, 1, depth, talfa, tbeta, mb->real_score, m->real_score);
 			if(m->real_score>=tbeta) {
@@ -989,6 +991,7 @@ int SearchMoveNew(board *b, int talfa, int tbeta, int ttbeta, int depth, int ply
 			tree, b->pers->quiesce_check_depth_limit, att);
 
 	if ((val > talfa && val < tbeta && ttbeta < tbeta)
+//	if ((val > talfa)
 		&& (b->search_abort == 0)) {
 		ext = depth + extend - 1;
 		b->stats->zerorerun++;
@@ -1073,6 +1076,7 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 		}
 	} 
 	LOGGER_SE("%*d, *S , EEEE, amove ch:X, depth %d, talfa %d, tbeta %d,incheck ?\n", 2+ply, ply, depth, alfa, beta);
+	DEB_SE(printBoardNice(b);)
 
 	DEB_S2( mvs.alfa=alfa; mvs.beta=beta; mvs.def.state=0; mvs.def.real_score=-mb->real_score; )
 
@@ -1114,7 +1118,7 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 	tree->tree[ply][ply + 1].move = NA_MOVE;
 
 	talfa = alfa;
-	tbeta = beta;
+	ttbeta = tbeta = beta;
 	if (tbeta > gmr)
 		tbeta = gmr;
 	if (talfa < -gmr)
@@ -1232,18 +1236,23 @@ int sco;
 		nodes_stat = b->stats->nodes;
 		null_stat = b->stats->u_nullnodes;
 
-//	eval_king_checks_extU(b, &(att->ke[WHITE]), 0, b->king[WHITE]);
-//	eval_king_checks_extU(b, &(att->ke[BLACK]), 1, b->king[BLACK]);
+	eval_king_checks_extU(b, &(att->ke[WHITE]), 0, b->king[WHITE]);
+	eval_king_checks_extU(b, &(att->ke[BLACK]), 1, b->king[BLACK]);
+	att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+	att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+	mvsfromk22(b, att, BLACK);
+	mvsfromk22(b, att, WHITE);
 
 		if (ext > 0) {
 			LOGGER_SE("%*d, *S , NULL, AB, alfa %d, beta %d, ext %d, ply %d, nulls %d\n", 2+ply, ply, -tbeta, -tbeta+1, ext, ply+1, nulls-1);
 			mt.real_score = -ABNew(b, -tbeta, -tbeta + 1, ext,
 				ply + 1, opside, tree, nulls - 1, att);
 		} else {
+// null move rovnou do QS vytvari po navratu illegal moves obzvlaste v kombinaci s Futility pruningem
 			LOGGER_SE("%*d, *S , NULL, Q, alfa %d, beta %d, ext %d, ply %d, checks %d\n", 2+ply, ply, -tbeta, -tbeta+1, ext, ply+1, b->pers->quiesce_check_depth_limit);
-			mt.real_score = -QuiesceNew(b, -tbeta, -tbeta + 1, ext,
-				ply + 1, opside, tree,
-				b->pers->quiesce_check_depth_limit, att);
+//			mt.real_score = -QuiesceNew(b, -tbeta, -tbeta + 1, ext,
+//				ply + 1, opside, tree,
+//				b->pers->quiesce_check_depth_limit, att);
 		}
 
 // update null nodes statistics
@@ -1252,6 +1261,10 @@ int sco;
 
 		eval_king_checks_extU(b, &(att->ke[WHITE]), 0, b->king[WHITE]);
 		eval_king_checks_extU(b, &(att->ke[BLACK]), 1, b->king[BLACK]);
+		att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+		att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+		mvsfromk22(b, att, BLACK);
+		mvsfromk22(b, att, WHITE);
 
 // engine stop protection?
 		if (b->search_abort != 0)
@@ -1284,7 +1297,7 @@ int sco;
 		nulls = b->pers->NMP_allowed;
 
 
-#if 1
+#if 0
 	if (mt.move == DRAW_M) {
 // no hash, if we are deep enough and not in zero window, try IID
 		if ((depth >= b->pers->IID_remain_depth) && (isPV)
@@ -1343,15 +1356,53 @@ int sco;
 		if(!isMoveValid(b, m->move, att, side, tree)) {
 
 			printBoardNice(b);
-			L0("invalid move!");
+			L0("invalid move!\n");
 			sprintfMoveSimple(m->move, b2);
 			LOGGER_0("%*d, +S , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d\n", 2+ply, ply, b2, aftermovecheck, depth, talfa, tbeta, mb->real_score);
+			L0("phase:%d\n", m->phase);
+			BITVAR pins = ((att->ke[side].cr_pins | att->ke[side].di_pins));
+			printmask(pins, "pins");
+//		a->mvs[fr] = ((((pins >> fr) &1)-1)|mr) & mk;
+//		a->mvk[fr] = mk;
+			int fr = UnPackFrom(m->move);
+		printmask(att->mvs[fr], "moves");
+		printmask(att->mvk[fr], "masked");
+//		printmask(a->mvs[fr], "moves");
+
 			assert(0);
 		}
 		DEB_S2(m->state=r_NOR; )
 		extend = extend_o;
 		reduce = reduce_o;
 		tree->tree[ply][ply].move = m->move;
+
+#if 1
+// check for Futility pruning conditions, based on depth
+// !extended !incheck !isPV !first_move use_fprune
+// getlazyEval + fprune_margin < alfa drop;
+
+		
+		if ((mvs.count > 0)
+			&& (depth < b->pers->futility_depth)&&(depth > 0)
+			&& (incheck == 0) && (aftermovecheck == 0)
+			&& (extend == extend_o)
+			&& !(ttbeta== talfa+1)
+			&& mb != &mdum
+			&& (tbeta<MATEMIN) && (tbeta> -MATEMIN)
+			&& (talfa<MATEMIN) && (talfa> -MATEMIN)
+			&& (m->phase>=NORMAL)) {
+//			sco=(side==WHITE) ? getlazyEval(b, b->pers): -getlazyEval(b, b->pers);
+			sco=(side==WHITE) ? get_material_eval_f(b, b->pers): -get_material_eval_f(b, b->pers);
+				if((sco+b->pers->futility_cut[depth]) <= talfa) {
+					m->state=1;
+					if(b->pers->futility_sim==1) {
+						L0("alfa %d, beta %d, talfa %d, tbeta %d, sco %d, depth %d, fcut %d\n", alfa, beta, talfa, tbeta, sco, depth,b->pers->futility_cut[depth]);
+					} else 
+						goto bypass2;
+				}
+		}
+#endif
+
 		MakeMoveNew(b, m->move, pos, &u);
 		m->nodes = -(b->stats->movestested+b->stats->qmovestested);
 // makemove switches board sides, b->side changes during makemove, now b->side==opside
@@ -1390,34 +1441,9 @@ int sco;
 
 		DEB_SE(
 				sprintfMoveSimple(m->move, b2);
-				LOGGER_0("%*d, +S , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d, phase %d\n", 2+ply, ply, b2, aftermovecheck, depth, talfa, tbeta, mb->real_score, mvs.actph);
+				LOGGER_0("%*d, +S , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d\n", 2+ply, ply, b2, aftermovecheck, depth, talfa, tbeta, mb->real_score);
 		)
 
-#if 0
-// check for Futility pruning conditions, based on depth
-// !extended !incheck !isPV !first_move use_fprune
-// getlazyEval + fprune_margin < alfa drop;
-
-		
-		if ((mvs.count > 0)
-			&& (depth < b->pers->futility_depth)&&(depth > 0)
-			&& (incheck == 0) && (aftermovecheck == 0)
-			&& (extend == extend_o)
-			&& !isPV
-			&& mb != &mdum
-			&& (talfa>-MATEMIN) && (tbeta<MATEMIN) && (talfa<MATEMIN) && (tbeta> -MATEMIN)
-			&& (m->phase>=NORMAL)) {
-//			sco=(side==WHITE) ? getlazyEval(b, b->pers): -getlazyEval(b, b->pers);
-			sco=(side==WHITE) ? get_material_eval_f(b, b->pers): -get_material_eval_f(b, b->pers);
-				if((sco+b->pers->futility_cut[depth]) <= talfa) {
-					m->state=1;
-					if(b->pers->futility_sim==1) {
-						L0("alfa %d, beta %d, talfa %d, tbeta %d, sco %d, depth %d, fcut %d\n", alfa, beta, talfa, tbeta, sco, depth,b->pers->futility_cut[depth]);
-					} else 
-						goto bypass;
-				}
-		}
-#endif
 
 // check for LMP conditions based on depth
 // !extended !incheck !isPV !first_move use_lmp move mvs.actph >= NORMAL !MATEd
@@ -1429,7 +1455,7 @@ int sco;
 			&& (b->pers->LMR_reduction > 0)
 			&& (depth >= b->pers->LMR_remain_depth)
 			&& (incheck == 0) && (aftermovecheck == 0)
-			&& (extend == extend_o)
+//			&& (extend == extend_o)
 			&& mb != &mdum
 			&& (m->phase>=NORMAL)) {
 			int lmr_red = can_do_LMR(b, att, talfa, ttbeta, depth, ply, side, m);
@@ -1438,10 +1464,11 @@ int sco;
 					if(mvs.count > b->pers->LMR_prog_start_move)
 						reduce += div(depth, b->pers->LMR_prog_mod).quot;
 //					reduce += b->pers->LMR_reduction;
-					reduce += b->pers->LMR_reduction + div(mvs.count,30).quot;
+					reduce += b->pers->LMR_reduction + div(mvs.count,10).quot;
 					b->stats->lmrtotal++;
 				}
 		}
+		
 		m->real_score = SearchMoveNew(b, talfa, tbeta, ttbeta, depth,
 			ply, extend, reduce, side, tree, nulls, att);
 bypass:
@@ -1457,6 +1484,7 @@ bypass:
 		mvsfromk22(b, att, opside);
 		m->nodes+=(b->stats->movestested+b->stats->qmovestested);
 
+bypass2:
 		if (b->search_abort != 0)
 			goto ABFINISH;
 

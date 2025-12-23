@@ -181,6 +181,17 @@ BITVAR v;
 		BITVAR mk = attack.maps[piece][fr] & mask;
 		a->mvs[fr] = ((((pins >> fr) &1)-1)|mr) & mk;
 		a->mvk[fr] = mk;
+
+#if 0
+		if(piece==KNIGHT){
+		L0("Knight at %d\n", fr);
+		printmask(v, "pcs");
+		printmask(pins, "pin");
+		printmask(mr, "ray");
+		printmask(mk, "umsk");
+		printmask(a->mvs[fr], "mvs");
+		}
+#endif
 		ClrLO(v);
 	}
 }
@@ -348,7 +359,8 @@ unsigned char opside;
 	MVSFROM21(b, a, QUEEN, side, QueenAttacks, 0, FULLBITMAP, t, pins) ;
 	MVSFROM21(b, a, ROOK, side, RookAttacks, 0, FULLBITMAP, t, pins) ;
 	MVSFROM21(b, a, BISHOP, side, BishopAttacks, 0, FULLBITMAP, t, pins) ;
-	mvsfroma21N(b, a, KNIGHT, side, FULLBITMAP, t, pins) ;
+//	mvsfroma21N(b, a, KNIGHT, side, FULLBITMAP, t, pins) ;
+	mvsfroma21N(b, a, KNIGHT, side, FULLBITMAP, b->colormaps[side], pins) ;
 // generate pawn info
 
 //	if(t & b->maps[PAWN]) {
@@ -1292,20 +1304,23 @@ int isMoveValid(board *b, MOVESTORE move, const attack_model *a, int side, tree_
 	// handle special moves
 	switch (prom) {
 	case KING:
+	
 // castling
-		if ((movp != (KING & PIECEMASK)) || (from != getPos(E1, prank))) {
+		if (((movp & PIECEMASK) != KING) || (from != getPos(E1, prank))) {
 			return 0;
 		}
 		if ((getPos(C1, prank)) == to) {
-			if (!(b->castle[side] & QUEENSIDE))
+			if (!(b->castle[side] & QUEENSIDE)) {
 				return 0;
+			}
 			else {
 				path = attack.rays_int[from][getPos(A1, prank)];
 				path2 = attack.rays[from][getPos(C1, prank)];
 			}
 		} else if ((getPos(G1, prank)) == to) {
-			if (!(b->castle[side] & KINGSIDE))
+			if (!(b->castle[side] & KINGSIDE)) {
 				return 0;
+			}
 			else {
 				path = attack.rays_int[from][getPos(H1, prank)];
 				path2 = attack.rays[from][getPos(G1, prank)];
@@ -2298,16 +2313,14 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 		if ((mv->hash.move != DRAW_M) && (b->hs != NULL)
 			&& isMoveValid(b, mv->hash.move, a, side, tree)
 			&& (!ExcludeMove(mv, mv->hash.move))) {
-			mv->lastp->move = mv->hash.move;
-			*(mv->exclp) = *(mv->lastp);
-//			mv->actph = HASHMOVE;
-			mv->lastp->phase=HASHMOVE;
-			*mm = mv->lastp;
-			mv->lastp++;
-			mv->exclp++;
-			mv->next = mv->lastp;
-			mv->next->ord=mv->count;
+			mv->next->move = mv->hash.move;
+			*(mv->exclp) = *(mv->next);
 			mv->next->phase=HASHMOVE;
+			*mm = mv->next;
+			mv->next->ord=mv->count;
+			mv->next++;
+			mv->exclp++;
+			mv->lastp=mv->next;
 			return ++mv->count;
 		}
 	case GENERATE_CAPTURES:
@@ -2623,6 +2636,13 @@ int sortMoveListNew_Init(board *b, attack_model *a, move_cont *mv)
 {
 	mv->phase = INIT;
 	mv->hash.move = DRAW_M;
+#if 1
+	for(int f=0;f<299;f++) {
+	mv->move[f].ord=-1;
+	mv->bad[f].ord=-1;
+	mv->excl[f].ord=-1;
+	}
+#endif
 	return 0;
 }
 

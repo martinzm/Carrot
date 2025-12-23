@@ -359,9 +359,8 @@ int i;
 i = atoi(str);
 if (i == 0)
 	i = 10000;
-timed2Test_IQ("../tests/test_iq.epd", i, 999, 9999);
-return 0;
-}
+timed2Test_IQ("../tests/test_iq.epd", i,999, 9999);
+return 0;}
 
 int thash_def(char *str)
 {

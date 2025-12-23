@@ -1633,7 +1633,7 @@ int timed_driver(int t, int d, int max, personality *pers_init, int sts_mode, st
 	L0("INIT\n");
 	int ii = -1;
 
-//#pragma omp parallel num_threads(8)
+//#pragma omp parallel num_threads(2)
 #pragma omp parallel
 	{
 	int time, depth;
@@ -1694,7 +1694,7 @@ int timed_driver(int t, int d, int max, personality *pers_init, int sts_mode, st
 			depth = d;
 			strncpy(results[i].fen, bx, strcspn(bx,"\r\n"));
 			setup_FEN_board(&b, fen);
-			eval_king_checks(&b, &(a->ke[b.side]), pers_init, b.side);
+//			eval_king_checks(&b, &(a->ke[b.side]), pers_init, b.side);
 
 			DEB_3(printBoardNice(&b);)
 			parseEDPMoves(&b, a, bans, bm, 10);

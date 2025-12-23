@@ -975,16 +975,16 @@ inline int GT_M(board const *b, personality const *p, int s, int pi, int fo)
                p->mat_info[b->mindex].m[s][pi];
 }
 
-// returns 
+// returns material info about particular type on board - from precomputed table, based on normal num of pieces
 inline int GT_M0(board const *b, personality const *p, int s, int pi)
 {
        return p->mat_info[b->mindex].m[s][pi];
 }
 
+// counts particular piece on board for side
 inline int GT_M1(board const *b, personality const *p, int s, int pi)
 {
        return BitCount(b->maps[pi] & b->colormaps[s]);
 }
-
 
 #endif
