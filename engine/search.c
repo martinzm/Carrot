@@ -1195,11 +1195,12 @@ int sco;
 // reverse futility pruning
 		if ((depth < b->pers->futility_depth)&&(depth >= 0)
 			&& (incheck == 0)
-			&& !isPV 
+//			&& !isPV 
 			&& (hresult==0)
 			&& (tbeta<MATEMIN) && (tbeta> -MATEMIN)
 			&& (talfa<MATEMIN) && (talfa> -MATEMIN)
 			)
+
 			{
 //			sco=(side==WHITE) ? getlazyEval(b, b->pers): -getlazyEval(b, b->pers);
 			sco=(side==WHITE) ? get_material_eval_f(b, b->pers): -get_material_eval_f(b, b->pers);
@@ -1236,12 +1237,8 @@ int sco;
 		nodes_stat = b->stats->nodes;
 		null_stat = b->stats->u_nullnodes;
 
-	eval_king_checks_extU(b, &(att->ke[WHITE]), 0, b->king[WHITE]);
-	eval_king_checks_extU(b, &(att->ke[BLACK]), 1, b->king[BLACK]);
-	att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
-	att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
-	mvsfromk22(b, att, BLACK);
-	mvsfromk22(b, att, WHITE);
+		eval_king_checks_extU(b, &(att->ke[WHITE]), 0, b->king[WHITE]);
+		eval_king_checks_extU(b, &(att->ke[BLACK]), 1, b->king[BLACK]);
 
 		if (ext > 0) {
 			LOGGER_SE("%*d, *S , NULL, AB, alfa %d, beta %d, ext %d, ply %d, nulls %d\n", 2+ply, ply, -tbeta, -tbeta+1, ext, ply+1, nulls-1);
@@ -1250,9 +1247,9 @@ int sco;
 		} else {
 // null move rovnou do QS vytvari po navratu illegal moves obzvlaste v kombinaci s Futility pruningem
 			LOGGER_SE("%*d, *S , NULL, Q, alfa %d, beta %d, ext %d, ply %d, checks %d\n", 2+ply, ply, -tbeta, -tbeta+1, ext, ply+1, b->pers->quiesce_check_depth_limit);
-//			mt.real_score = -QuiesceNew(b, -tbeta, -tbeta + 1, ext,
-//				ply + 1, opside, tree,
-//				b->pers->quiesce_check_depth_limit, att);
+			mt.real_score = -QuiesceNew(b, -tbeta, -tbeta + 1, ext,
+			ply + 1, opside, tree,
+				b->pers->quiesce_check_depth_limit, att);
 		}
 
 // update null nodes statistics
@@ -1261,10 +1258,6 @@ int sco;
 
 		eval_king_checks_extU(b, &(att->ke[WHITE]), 0, b->king[WHITE]);
 		eval_king_checks_extU(b, &(att->ke[BLACK]), 1, b->king[BLACK]);
-		att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
-		att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
-		mvsfromk22(b, att, BLACK);
-		mvsfromk22(b, att, WHITE);
 
 // engine stop protection?
 		if (b->search_abort != 0)
@@ -1376,7 +1369,7 @@ int sco;
 		reduce = reduce_o;
 		tree->tree[ply][ply].move = m->move;
 
-#if 1
+#if 0
 // check for Futility pruning conditions, based on depth
 // !extended !incheck !isPV !first_move use_fprune
 // getlazyEval + fprune_margin < alfa drop;
@@ -1448,23 +1441,24 @@ int sco;
 // check for LMP conditions based on depth
 // !extended !incheck !isPV !first_move use_lmp move mvs.actph >= NORMAL !MATEd
 
-
 // setup LMR reductions, not extended, normal moves, not in check
 // reduce based on ply and movecount
 		if ((mvs.count > b->pers->LMR_start_move)
 			&& (b->pers->LMR_reduction > 0)
 			&& (depth >= b->pers->LMR_remain_depth)
-			&& (incheck == 0) && (aftermovecheck == 0)
-//			&& (extend == extend_o)
-			&& mb != &mdum
-			&& (m->phase>=NORMAL)) {
+			&& (incheck == 0) 
+			&& (aftermovecheck == 0)
+			&& (extend == extend_o)
+//			&& mb != &mdum
+			&& (m->phase>=NORMAL)
+			){
 			int lmr_red = can_do_LMR(b, att, talfa, ttbeta, depth, ply, side, m);
 				if(lmr_red>0) {
 					m->state=2;
 					if(mvs.count > b->pers->LMR_prog_start_move)
 						reduce += div(depth, b->pers->LMR_prog_mod).quot;
 //					reduce += b->pers->LMR_reduction;
-					reduce += b->pers->LMR_reduction + div(mvs.count,10).quot;
+					reduce += b->pers->LMR_reduction + div(mvs.count,30).quot;
 					b->stats->lmrtotal++;
 				}
 		}
@@ -1593,7 +1587,7 @@ int ply = 0;
 int changes;
 int alow, ahigh;
 int pos[4];
-int aspdiff[]={500, 1000, 10000, 100000, 1000000, iINFINITY};
+int aspdiff[]={1500, 3000, 10000, 100000, 1000000, iINFINITY};
 
 int cc, v, xcc, old_score, old_score_count;
 MOVESTORE bestmove, hashmove, i, t1pbestmove;
@@ -1708,11 +1702,35 @@ unsigned long long tstart, ebfnodesold, tnow;
 	cc = 0;
 	talfa=alfa;
 	tbeta=beta;
-#if 0
+#if 1
 // initial sort redo!
 	b->depth_run = 1;
 	if (!incheck)
 		while (cc < b->max_idx_root) {
+
+		if(!isMoveValid(b, mvs.move[cc].move, att, side, tree)) {
+
+			printBoardNice(b);
+			L0("invalid root move!\n");
+			sprintfMoveSimple(mvs.move[cc].move, b2);
+			LOGGER_0("%*d, +S , %s, amove ch:%d, depth %d, talfa %d, tbeta %d\n", 2+ply, ply, b2, aftermovecheck, depth, talfa, tbeta);
+			L0("phase:%d\n", mvs.move[cc].phase);
+			BITVAR pins = ((att->ke[side].cr_pins | att->ke[side].di_pins));
+			printmask(pins, "pins");
+			int fr = UnPackFrom(mvs.move[cc].move);
+			printmask(att->mvs[fr], "moves");
+			printmask(att->mvk[fr], "masked");
+
+	eval_king_checks_extU(b, &(att->ke[WHITE]), 0, b->king[WHITE]);
+	eval_king_checks_extU(b, &(att->ke[BLACK]), 1, b->king[BLACK]);
+			pins = ((att->ke[side].cr_pins | att->ke[side].di_pins));
+			printmask(pins, "pins");
+
+		  	assert(0);
+		}
+
+
+
 			MakeMoveNew(b, mvs.move[cc].move, pos, &u);
 
 			rr = ChangesToMove(b, att, &u);

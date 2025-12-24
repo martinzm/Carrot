@@ -359,8 +359,8 @@ unsigned char opside;
 	MVSFROM21(b, a, QUEEN, side, QueenAttacks, 0, FULLBITMAP, t, pins) ;
 	MVSFROM21(b, a, ROOK, side, RookAttacks, 0, FULLBITMAP, t, pins) ;
 	MVSFROM21(b, a, BISHOP, side, BishopAttacks, 0, FULLBITMAP, t, pins) ;
-//	mvsfroma21N(b, a, KNIGHT, side, FULLBITMAP, t, pins) ;
-	mvsfroma21N(b, a, KNIGHT, side, FULLBITMAP, b->colormaps[side], pins) ;
+	mvsfroma21N(b, a, KNIGHT, side, FULLBITMAP, t, pins) ;
+//	mvsfroma21N(b, a, KNIGHT, side, FULLBITMAP, b->colormaps[side], pins) ;
 // generate pawn info
 
 //	if(t & b->maps[PAWN]) {
@@ -1164,7 +1164,7 @@ int eval_king_checks_extU(board const *b, king_eval *ke, int side, int from)
 	}
 
 // a piece at end of vector
-	pq |= ps & b->norm;
+	pq = ps & b->norm;
 	ke->cr_attackers = ps & dd;
 	pp |= pq ^ ke->cr_attackers;
 
@@ -1175,10 +1175,9 @@ int eval_king_checks_extU(board const *b, king_eval *ke, int side, int from)
 		if(v[f]&dd) ke->att_vec|=(v[f] & ~dd);
 		pz |= (w[f] ^ v[f]) & dd;
 	}
-	pq |= ps & b->norm;
-
-	pp |= ps ^ ke->di_attackers;
+	pq = ps & b->norm;
 	ke->di_attackers = ps & dd;
+	pp |= pq ^ ke->di_attackers;
 
 	ke->cr_all_ray = attack.maps[ROOK][from];
 	ke->di_all_ray = attack.maps[BISHOP][from];
@@ -2636,7 +2635,7 @@ int sortMoveListNew_Init(board *b, attack_model *a, move_cont *mv)
 {
 	mv->phase = INIT;
 	mv->hash.move = DRAW_M;
-#if 1
+#if 0
 	for(int f=0;f<299;f++) {
 	mv->move[f].ord=-1;
 	mv->bad[f].ord=-1;
