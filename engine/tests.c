@@ -1634,7 +1634,7 @@ int timed_driver(int t, int d, int max, personality *pers_init, int sts_mode, st
 	int ii = -1;
 
 //#pragma omp parallel num_threads(2)
-#pragma omp parallel
+//#pragma omp parallel
 	{
 	int time, depth;
 	int i;
@@ -1981,6 +1981,8 @@ void timed2Test_IQ(char *filename, int max_time, int max_depth, int max_position
 
 	r1 = malloc(sizeof(struct _results) * (max_positions + 1));
 	pi = (personality*) init_personality("pers.xml");
+	cb.lo=0;
+	cb.loops=1;
 
 	if ((cb.handle = fopen(filename, "r")) == NULL) {
 		printf("File %s is missing\n", filename);

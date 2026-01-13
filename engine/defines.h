@@ -30,6 +30,7 @@
 #define L2 LOGGER_2 
 #define L3 LOGGER_3 
 #define L4 LOGGER_4 
+#define LS2 LOGGER_S2
 
 #define DEB_0(x) x
 #define DEB_X(x)

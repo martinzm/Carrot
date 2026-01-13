@@ -111,7 +111,7 @@ typedef enum _RANKS {
 
 
 typedef enum _MOVE_FLAGS { r_NOR=0x0000, r_FUT=0x01, r_LMR=0x02, r_LMP=0x04, r_HASH=0x08,
-	r_BETA=0x10, r_ALFA=0x20, r_NULL=0x40, r_CHECK=0x80, r_DRAW=0x100 } MOVE_FLAGS;
+	r_BETA=0x10, r_ALFA=0x20, r_NULL=0x40, r_CHECK=0x80, r_DRAW=0x100, r_IWIN=0x200 } MOVE_FLAGS;
 
 typedef struct _move_entry {
 	MOVESTORE move;
@@ -120,7 +120,6 @@ typedef struct _move_entry {
 	int phase;
 	long long nodes;
 	int ord;
-
 	int state;
 DEB_S2(
 	int a;
@@ -139,12 +138,12 @@ typedef struct _kmoves {
 
 typedef struct _move_cont {
 	int phase;
-//	int actph;
 	int count;
 	int tcnt;
+	int tgen;
 	int lpcheck;
 	move_entry *next;  // points at end of moves already offered, starts at move
-			   // it includes even moves that were considered but failed validity and/or were skipped then
+					   // it includes even moves that were considered but failed validity and/or were skipped then
 	move_entry *badp;  // points at end of bad moves, starts at bad
 	move_entry *exclp; // points at end of excluded moves list, starts at excl
 	move_entry *lastp; // points at end of list of all moves generated, starts at move
@@ -164,6 +163,7 @@ DEB_S2(
 	int alfa;
 	int beta;)
 } move_cont;
+
 
 #define EMPTYBITMAP 0ULL
 #define RANK8 0xFF00000000000000ULL
@@ -779,6 +779,7 @@ typedef struct _tree_store {
 	int depth;
 	tree_node tree[MAXPLY + 3][MAXPLY + 3];
 	long int score;
+	move_cont root_c;
 } tree_store;
 
 typedef struct _search_history {

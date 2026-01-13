@@ -164,5 +164,8 @@ BITVAR ChangesToMove(board *b, attack_model *a, UNDO *u);
 int eval_king_checks_extN(board const *b, king_eval *ke, personality const *p, int side, int from);
 int eval_king_checks_extU(board const *b, king_eval *ke, int side, int from);
 BITVAR regenerateSQAttacked(const board *const , attack_model *, int);
+int setup_root_moves(board *b, attack_model *a, int side, int incheck, tree_store *tree);
+int getNextRootMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store *tree);
+
 
 #endif

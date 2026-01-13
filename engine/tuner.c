@@ -177,26 +177,26 @@ DEB_X(MAT_DUO(mat[i], mat[i+1], p, rook_on_seventh[0], rook_on_seventh[1], i, ma
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, rook_on_open[0], rook_on_open[1], i, map); i+=2;)
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, rook_on_semiopen[0], rook_on_semiopen[1], i, map); i+=2;)
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, pawn_weak_onopen_penalty[0], pawn_weak_onopen_penalty[1], i, map); i+=2;)
-DEB_0(MAT_DUO(mat[i], mat[i+1], p, pawn_weak_center_penalty[0], pawn_weak_center_penalty[1], i, map); i+=2;)
+DEB_X(MAT_DUO(mat[i], mat[i+1], p, pawn_weak_center_penalty[0], pawn_weak_center_penalty[1], i, map); i+=2;)
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, king_castle_pot_bonus[0], king_castle_pot_bonus[1], i, map);
   mat[i+1].tunable=0; i+=2;)
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, king_moved_away_bonus[0], king_moved_away_bonus[1], i, map);
   mat[i+1].tunable=0; i+=2;)
-DEB_0(MAT_DUO(mat[i], mat[i+1], p, pawn_iso_center_penalty[0], pawn_iso_center_penalty[1], i, map); i+=2;)
+DEB_X(MAT_DUO(mat[i], mat[i+1], p, pawn_iso_center_penalty[0], pawn_iso_center_penalty[1], i, map); i+=2;)
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, pawn_iso_onopen_penalty[0], pawn_iso_onopen_penalty[1], i, map); i+=2;)
-DEB_0(MAT_DUO(mat[i], mat[i+1], p, isolated_penalty[0], isolated_penalty[1], i, map); i+=2;)
-DEB_0(MAT_DUO(mat[i], mat[i+1], p, backward_penalty[0], backward_penalty[1], i, map); i+=2;)
+DEB_X(MAT_DUO(mat[i], mat[i+1], p, isolated_penalty[0], isolated_penalty[1], i, map); i+=2;)
+DEB_X(MAT_DUO(mat[i], mat[i+1], p, backward_penalty[0], backward_penalty[1], i, map); i+=2;)
 DEB_0(for(sq=0;sq<=5;sq++) { MAT_DUO(mat[i], mat[i+1], p, passer_bonus[0][WHITE][sq], passer_bonus[1][WHITE][sq], i, map); MAT_DUO_ADD(mat[i], mat[i+1], p, passer_bonus[0][BLACK][sq], passer_bonus[1][BLACK][sq], map); i+=2; })
-DEB_0(for(sq=0;sq<=5;sq++) { MAT_DUO(mat[i], mat[i+1], p, pot_passer_bonus[0][WHITE][sq], pot_passer_bonus[1][WHITE][sq], i, map); MAT_DUO_ADD(mat[i], mat[i+1], p, pot_passer_bonus[0][BLACK][sq], pot_passer_bonus[1][BLACK][sq], map); i+=2; })
+DEB_X(for(sq=0;sq<=5;sq++) { MAT_DUO(mat[i], mat[i+1], p, pot_passer_bonus[0][WHITE][sq], pot_passer_bonus[1][WHITE][sq], i, map); MAT_DUO_ADD(mat[i], mat[i+1], p, pot_passer_bonus[0][BLACK][sq], pot_passer_bonus[1][BLACK][sq], map); i+=2; })
 DEB_X(for(sq=0;sq<=6;sq++) { MAT_DUO(mat[i], mat[i+1], p, passer_my_king_bonus[0][WHITE][sq], passer_my_king_bonus[1][WHITE][sq], i, map); MAT_DUO_ADD(mat[i], mat[i+1], p, passer_my_king_bonus[0][BLACK][sq], passer_my_king_bonus[1][BLACK][sq], map);
   mat[i].tunable=0; i+=2; })
 DEB_X(for(sq=0;sq<=6;sq++) { MAT_DUO(mat[i], mat[i+1], p, passer_op_king_penalty[0][WHITE][sq], passer_op_king_penalty[1][WHITE][sq], i, map); MAT_DUO_ADD(mat[i], mat[i+1], p, passer_op_king_penalty[0][BLACK][sq], passer_op_king_penalty[1][BLACK][sq], map);
   mat[i].tunable=0; i+=2; })
-DEB_0(for(sq=0;sq<=4;sq++) {
+DEB_X(for(sq=0;sq<=4;sq++) {
       MAT_DUO(mat[i], mat[i+1], p, pawn_blocked_penalty[0][WHITE][sq], pawn_blocked_penalty[1][WHITE][sq], i, map);
       MAT_DUO_ADD(mat[i], mat[i+1], p, pawn_blocked_penalty[0][BLACK][sq], pawn_blocked_penalty[1][BLACK][sq], map);
 	  i+=2; } )
-DEB_0(for(sq=0;sq<=4;sq++) {
+DEB_X(for(sq=0;sq<=4;sq++) {
       MAT_DUO(mat[i], mat[i+1], p, pawn_stopped_penalty[0][WHITE][sq], pawn_stopped_penalty[1][WHITE][sq], i, map);
       MAT_DUO_ADD(mat[i], mat[i+1], p, pawn_stopped_penalty[0][BLACK][sq], pawn_stopped_penalty[1][BLACK][sq], map);
       i+=2; } )
@@ -243,9 +243,9 @@ DEB_0(
 		 i+=2; } 
 		 ii++; }
 		 )
-DEB_0(
+DEB_X(
 		for(pi=0;pi<=5;pi++) { for(sq=0;sq<mob_lengths[pi];sq++){ MAT_DUO(mat[i], mat[i+1], p, mob_val[0][WHITE][pi][sq], mob_val[1][WHITE][pi][sq], i, map); MAT_DUO_ADD(mat[i], mat[i+1], p, mob_val[0][BLACK][pi][sq], mob_val[1][BLACK][pi][sq], map); i+=2; } })
-DEB_0(
+DEB_X(
 		for(pi=0;pi<=5;pi++) { for(sq=0;sq<mob_lengths2[pi];sq++){ MAT_DUO(mat[i], mat[i+1], p, mob_uns[0][WHITE][pi][sq], mob_uns[1][WHITE][pi][sq], i, map); MAT_DUO_ADD(mat[i], mat[i+1], p, mob_uns[0][BLACK][pi][sq], mob_uns[1][BLACK][pi][sq], map); i+=2; } })
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, pshelter_open_penalty[0], pshelter_open_penalty[1], i, map); i+=2;)
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, pshelter_isol_penalty[0], pshelter_isol_penalty[1], i, map); i+=2;)
@@ -267,30 +267,30 @@ DEB_X(for(sq=0;sq<=7;sq++) {
       MAT_DUO(mat[i], mat[i+1], p, pshelter_dir_protect[0][WHITE][sq], pshelter_dir_protect[1][WHITE][sq], i, map);
       MAT_DUO_ADD(mat[i], mat[i+1], p, pshelter_dir_protect[0][BLACK][sq], pshelter_dir_protect[1][BLACK][sq], map);
       i+=2; } )
-DEB_0(for(sq=0;sq<=7;sq++) {
+DEB_X(for(sq=0;sq<=7;sq++) {
 	  MAT_DUO(mat[i], mat[i+1], p, pawn_n_protect[0][WHITE][sq], pawn_n_protect[1][WHITE][sq], i, map);
       MAT_DUO_ADD(mat[i], mat[i+1], p, pawn_n_protect[0][BLACK][sq], pawn_n_protect[1][BLACK][sq], map);
       i+=2; } )
-DEB_0(for(sq=0;sq<=7;sq++) {
+DEB_X(for(sq=0;sq<=7;sq++) {
       MAT_DUO(mat[i], mat[i+1], p, pawn_pot_protect[0][WHITE][sq],pawn_pot_protect[1][WHITE][sq], i, map);
       MAT_DUO_ADD(mat[i], mat[i+1], p, pawn_pot_protect[0][BLACK][sq], pawn_pot_protect[1][BLACK][sq], map);
       i+=2; } )
-DEB_0(for(sq=0;sq<=7;sq++) {
+DEB_X(for(sq=0;sq<=7;sq++) {
 	  MAT_DUO(mat[i], mat[i+1], p, pawn_dir_protect[0][WHITE][sq], pawn_dir_protect[1][WHITE][sq], i, map);
 	  MAT_DUO_ADD(mat[i], mat[i+1], p, pawn_dir_protect[0][BLACK][sq], pawn_dir_protect[1][BLACK][sq], map);
 	  i+=2; })
-DEB_0(for(sq=0;sq<=7;sq++) {
+DEB_X(for(sq=0;sq<=7;sq++) {
       MAT_DUO(mat[i], mat[i+1], p, doubled_n_penalty[0][WHITE][sq], doubled_n_penalty[1][WHITE][sq], i, map);
       MAT_DUO_ADD(mat[i], mat[i+1], p, doubled_n_penalty[0][BLACK][sq], doubled_n_penalty[1][BLACK][sq], map);
       i+=2; } )
 DEB_0(MAT_DUO(mat[i], mat[i+1], p, bishopboth[0], bishopboth[1], i, map); i+=2;)
-DEB_0(MAT_DUO(mat[i], mat[i+1], p, rookpair[0], rookpair[1], i, map); i+=2; )
-DEB_0(MAT_DUO(mat[i], mat[i+1], p, knightpair[0], knightpair[1], i, map); i+=2; )
-DEB_0(for(sq=0;sq<=7;sq++) {
+DEB_X(MAT_DUO(mat[i], mat[i+1], p, rookpair[0], rookpair[1], i, map); i+=2; )
+DEB_X(MAT_DUO(mat[i], mat[i+1], p, knightpair[0], knightpair[1], i, map); i+=2; )
+DEB_X(for(sq=0;sq<=7;sq++) {
 				MAT_DUO(mat[i], mat[i+1], p, pawn_protect_count[0][WHITE][sq], pawn_protect_count[1][WHITE][sq], i, map);
 				MAT_DUO_ADD(mat[i], mat[i+1], p, pawn_protect_count[0][BLACK][sq], pawn_protect_count[1][BLACK][sq], map);
 			i+=2;})
-DEB_0(for(sq=0;sq<=7;sq++) {
+DEB_X(for(sq=0;sq<=7;sq++) {
 				MAT_DUO(mat[i], mat[i+1], p, pawn_prot_over_penalty[0][WHITE][sq], pawn_prot_over_penalty[1][WHITE][sq], i, map);
 				MAT_DUO_ADD(mat[i], mat[i+1], p, pawn_prot_over_penalty[0][BLACK][sq], pawn_prot_over_penalty[1][BLACK][sq], map);
 				i+=2;})
@@ -314,7 +314,7 @@ DEB_0(
 )
 
 int start_in2[] = { 1, 2, 3, 4, -1 };
-DEB_0(
+DEB_X(
   ii = 0;
   while (start_in2[ii] != -1)
 	{

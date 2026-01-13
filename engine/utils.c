@@ -1065,3 +1065,73 @@ BITVAR x;
 	L0("TOT Df %6d\n",((mabx[2]+mobx[2]+sqbx[2]+spbx[2])*a->phase+(maex[2]+moex[2]+sqex[2]+spex[2])*(255-a->phase))/255);
 
 }
+
+/*
+
+typedef struct _move_entry {
+	MOVESTORE move;
+	long int qorder;
+	int real_score;
+	int phase;
+	long long nodes;
+	int ord;
+
+	int state;
+DEB_S2(
+	int a;
+	int b;
+	int re;
+	int depth;
+	int ply; )
+	} move_entry;
+
+typedef struct _move_cont {
+	int phase;
+	int count;
+	int tcnt;
+	int tgen;
+	int lpcheck;
+	move_entry *next;  // points at end of moves already offered, starts at move
+					   // it includes even moves that were considered but failed validity and/or were skipped then
+	move_entry *badp;  // points at end of bad moves, starts at bad
+	move_entry *exclp; // points at end of excluded moves list, starts at excl
+	move_entry *lastp; // points at end of list of all moves generated, starts at move
+	move_entry *quiet; // points to first quiet move or null
+
+	move_entry hash;
+	move_entry killer1;
+	move_entry killer2;
+	move_entry killer3;
+	move_entry killer4;
+
+	move_entry move[300];
+	move_entry bad [300];
+	move_entry excl[300];
+DEB_S2(
+	move_entry def;
+	int alfa;
+	int beta;)
+} move_cont;
+
+
+ */
+ 
+
+void move_cont_dump(board const *b, attack_model *a, move_cont *mvs) {
+char b2[256];
+move_entry *i;
+
+	L0("Moves Gen %d, Proc %d\n", mvs->tgen, mvs->count);
+	DEB_S2(sprintfMoveSimple(mvs->def.move, b2);)
+	LS2("initial A: %d, B: %d\n", mvs->alfa, mvs->beta);
+	LS2("def score: %d, def state: %X, def reduction: %d, move: %s\n", mvs->def.real_score, mvs->def.state, mvs->def.re, b2);
+
+	i=mvs->move;
+	for(;i<mvs->lastp;i++) {
+		sprintfMoveSimple(i->move, b2);
+//		L0("%s, sc: %d, init ord: %d, proc ord: %d, nodes %lld\n", b2, i->real_score, i->qorder, i->ord, i->nodes);
+		LS2("%s,\tsc: %6d,\ti_ord: %6d,\tp_ord: %6d,\tnodes %8lld,\tstate: %4X,\tA: %6d,\tB: %6d,\tRE: %2d,\tdepth: %2d\n",
+		b2, i->real_score, i->qorder, i->ord, i->nodes, i->state, i->a, i->b, i->re, i->depth);
+	}
+
+}
