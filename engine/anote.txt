@@ -1,3 +1,24 @@
+NMP:
+  R=3
+  ne sach
+  ne pokud mam jen pesce
+  advanced R += depth/3
+  ne v PV, ne v CUT node
+  
+
+RFP:
+  ne sach
+  ne PV
+  ne TT move neexistuje nebo je capture
+  
+
+LMR:
+  ne depth < 3
+  nekdy ne tactical moves, pv, give check, in check, passed pawn, good relative history, extended tahy
+  advanced R roste s depth a poctem jiz testovanych tahu
+  Senpai R=1 pro prvnich 6 tahu a pak depth/3
+  
+
 hledani:
 - nastaveni pozice
 - tah strana 1
