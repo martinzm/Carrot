@@ -48,6 +48,9 @@ MLINE(LMR_remain_depth, LMR_remain_depth, _general_option, 0, 3)\
 MLINE(LMR_prog_start_move, LMR_prog_start_move, _general_option, 0, 6)\
 MLINE(LMR_prog_mod, LMR_prog_mod, _general_option, 0, 3)\
 MLINE(LMR_sim, LMR_sim, _general_option, 0, 0)\
+MLINE(LMP_enable, LMP_enable, _general_option, 0, 0)\
+MLINE(LMP_start_move, LMP_start_move, _general_option, 0, 15)\
+MLINE(LMP_depth, LMP_depth, _general_option, 0, 3)\
 MLINE(IID_remain_depth, IID_remain_depth, _general_option, 0, 4)\
 MLINE(quiesce_phase_limit, quiesce_phase_limit, _general_option, 0, 30)\
 MLINE(quiesce_phase_bonus, quiesce_phase_bonus, _general_option, 0, 2000)\

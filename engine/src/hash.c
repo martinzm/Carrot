@@ -173,7 +173,8 @@ void storeHashX(hashStore *hs, BITVAR key, BITVAR pld, BITVAR ver, struct _stati
 	c=HASHPOS- 1;
 
 	for (i = 0; i < HASHPOS; i +=1 ) {
-		if(((UNPACKHASHAGE(h[i].pld))&0x3F) !=0) 
+//		if(((UNPACKHASHAGE(h[i].pld))&0x3F) !=0) 
+		if(((UNPACKHASHAGE(h[i].pld))) !=0) 
 		  if ((hi == h[i].key) && (h[i].ver==ver)) {
 // mame nas zaznam
 			s->hashStoreHits++;
@@ -329,8 +330,9 @@ int retrieveHash(hashStore *hs, hashEntry *hash, int side, int ply, int depth, i
 			&& (UNPACKHASHAGE(h[i].pld)!=0)
 			&& ((use_previous > 0)
 				|| ((use_previous == 0)
-					&& (UNPACKHASHAGE(h[i].pld)== hs->hashValidId))))
+					&& (UNPACKHASHAGE(h[i].pld)== hs->hashValidId)))) {
 			break;
+		}
 	}
 	if (i >= HASHPOS) {
 		s->hashMiss++;
@@ -338,12 +340,12 @@ int retrieveHash(hashStore *hs, hashEntry *hash, int side, int ply, int depth, i
 	}
 	
 	pld=h[i].pld;
-	UNPACKHASH(pld, hash->bestmove, hash->value, hash->depth, hash->scoretype, hash->age)
-	
-	if(hash->age!=hs->hashValidId) UPDATEHASHAGE(h[i].pld, hs->hashValidId);
-	
+	UNPACKHASH(pld, hash->bestmove, hash->value, hash->depth, hash->scoretype, hash->age);
+	UPDATEHASHAGE(h[i].pld, hs->hashValidId);
 	s->hashHits++;
 
+	hash->value -= ply*(isMATE(hash->value));
+/*
 	switch (isMATE(hash->value)) {
 	case -1:
 		hash->value += ply;
@@ -354,6 +356,7 @@ int retrieveHash(hashStore *hs, hashEntry *hash, int side, int ply, int depth, i
 	default:
 		break;
 	}
+*/
 	return 1;
 }
 
@@ -498,15 +501,15 @@ hashStore* allocateHashStore(size_t hashBytes, unsigned int hashPVLen)
 	LOGGER_0("Bytes: %d, hashEntry %d, HASHLEN %o, msk %o, mask len %d\n", hashBytes, sizeof(hashEntry_e), hashLen, msk, l);
 	hashLen = msk;
 
-	xx = (sizeof(hashStore) * 2);
-	hs = (hashStore*) aligned_alloc(8,xx);
+	xx = ((sizeof(hashStore) * 2)/128+1)*128;
+	hs = (hashStore*) aligned_alloc(128,xx);
 	
 	xx = sizeof(hashBucket) * hashLen * HASHPOS;
 	hs->hash = (hashBucket*) aligned_alloc(128,xx);
 	hs->hashlen = (size_t) hashLen;
 	hs->llen=l;
 
-	xx=sizeof(hashEntryPV_e) * hashPVLen+0xFFU;
+	xx=((sizeof(hashEntryPV_e) * hashPVLen)/128 + 1)*128   ;
 	hs->pv = (hashEntryPV_e*) aligned_alloc(128,xx);
 	hs->hashPVlen = hashPVLen;
 
@@ -736,6 +739,7 @@ int updateHHTable(board *b, hhTable *hh, move_entry *m, int cutoff, int side, in
 	return 0;
 }
 
+#define HHScale 400
 int updateHHTable2(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int bonus)
 {
 	int fromPos, toPos, piece;
@@ -744,15 +748,15 @@ int updateHHTable2(board *b, hhTable *hh, move_entry *m, int cutoff, int side, i
 	fromPos = UnPackFrom(m[cutoff].move);
 	toPos = UnPackTo(m[cutoff].move);
 	piece = b->pieces[fromPos] & PIECEMASK;
-	hh->val[side][piece][toPos] += 32*bonus - hh->val[side][piece][toPos] * abs(bonus)/400;
+	hh->val[side][piece][toPos] += bonus - hh->val[side][piece][toPos] * abs(bonus)/HHScale;
 	return 0;
 }
 
 int updateHHTableGood(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int depth, int ply){
-	return updateHHTable2(b, hh, m, cutoff, side, Min(depth*depth, 400));
+	return updateHHTable2(b, hh, m, cutoff, side, Min(depth*depth, HHScale));
 }
 int updateHHTableBad(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int depth, int ply){
-	return updateHHTable2(b, hh, m, cutoff, side, -Min(depth*depth/4, 400));
+	return updateHHTable2(b, hh, m, cutoff, side, -Min(depth*depth/4, HHScale));
 }
 
 int checkHHTable(hhTable *hh, int side, int piece, int square)

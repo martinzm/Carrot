@@ -147,6 +147,27 @@ static inline void MoveFromTo(int from, int to, int side, int piece, board *b)
 	b->pieces[to] = (int8_t)(piece + side * BLACKPIECE);
 }
 
+
+static inline int GT_M(board const *b, personality const *p, int s, int pi, int fo)
+{
+       return fo != 0 ? BitCount(b->maps[pi] & b->colormaps[s]) :
+               p->mat_info[b->mindex].m[s][pi];
+}
+
+// returns material info about particular type on board - from precomputed table, based on normal num of pieces
+static inline int GT_M0(board const *b, personality const *p, int s, int pi)
+{
+       return p->mat_info[b->mindex].m[s][pi];
+}
+
+// counts particular piece on board for side
+static inline int GT_M1(board const *b, personality const *p, int s, int pi)
+{
+       return BitCount(b->maps[pi] & b->colormaps[s]);
+}
+
+
+
 #define INLINES_H
 
 #endif

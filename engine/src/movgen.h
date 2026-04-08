@@ -124,8 +124,9 @@ void mvsfromk22(const board *const, attack_model *, int);
 // board, attack, piece_type, side_to_generate, piece_function, index, dest_squares_set, source_squares_set, pins
 
 #define MVSFROM21(B, A, P, S, F, I, M, L, X) \
-{ BITVAR v; v=B->maps[P] & (L);\
-  while(v) {\
+{ BITVAR v;int i; v=B->maps[P] & (L);\
+  i = BitCount(v);\
+  for(;i>0;i--) {\
 		int fr=LastOne(v);\
 		BITVAR mr = attack.rays_dir[B->king[S]][fr];\
 		BITVAR mk = F(B, fr) & M;\

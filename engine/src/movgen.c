@@ -175,7 +175,8 @@ BITVAR v;
 void mvsfroma21N(const board * const b, attack_model *a, int piece, int side, BITVAR mask, BITVAR lim, BITVAR pins) {
 BITVAR v;
 	v = b->maps[piece] & (lim);
-	while (v) {
+	for(int i=BitCount(v);i>0;i--){
+//	while (v) {
 		int fr = LastOne(v); 
 		BITVAR mr = attack.rays_dir[b->king[side]][fr];
 		BITVAR mk = attack.maps[piece][fr] & mask;
@@ -316,7 +317,8 @@ BITVAR att=0, pmap;
 	for(int f=0; f<4; f++) {
 		int piece = ptype[f];
 		pmap = b->maps[piece]& b->colormaps[side];
-		while(pmap) {
+		for(int i=BitCount(pmap);i>0;i--){
+//		while(pmap) {
 			int ppos = LastOne(pmap);
 			att|=a->mvk[ppos];
 			ClrLO(pmap);
@@ -412,10 +414,12 @@ void generateCapturesN3(const board *const b, attack_model *a, move_entry **m, i
 	for(int f=0; f<4; f++) {
 		int piece = ptype[f];
 		pmap = b->maps[piece]& b->colormaps[side];
-		while(pmap) {
+		for(int i=BitCount(pmap);i>0;i--){
+//		while(pmap) {
 			int ppos = LastOne(pmap);
 			mv= a->mvs[ppos] & b->colormaps[opside];
-			while (mv) {
+			for(int i2=BitCount(mv);i2>0;i2--){
+//			while (mv) {
 				to = LastOne(mv);
 				move->move = PackMove(ppos, to, ER_PIECE, 0);
 				move->qorder = move->real_score =
@@ -563,7 +567,8 @@ void generateCapturesN3(const board *const b, attack_model *a, move_entry **m, i
 // !!!! king should be moved into separate function
 	from = b->king[side];
 	mv = a->mvs[from] & (b->colormaps[opside]);
-	while (mv) {
+	for(int i2=BitCount(mv);i2>0;i2--){
+//	while (mv) {
 		to = LastOne(mv);
 		move->move = PackMove(from, to, ER_PIECE, 0);
 		move->qorder = move->real_score =
@@ -1127,12 +1132,12 @@ int eval_king_checks_extU(board const *b, king_eval *ke, int side, int from)
 {
 	BITVAR cr2, di2, c2, d2, c, d, c3, d3, c2s, d2s;
 	BITVAR rw,rb, t, pin[8], pins;
-	BITVAR v[4], w[4], s[4], z[4], x[4], u[8], aa, bb, ps, pz, pzz, pq, pp;
+	BITVAR v[8], w[8], s[4], z[4], x[4], u[8], aa, bb, ps, pz, pzz, pq, pp;
 	int dircfr[] = { 2, 6, 0, 4, 1, 5, 3, 7 };
 	int dirf[] = { 1, 2, 0, 3, 1, 2, 0, 3 };
 	int dil[] = { ROOK, ROOK, BISHOP, BISHOP };
 
-	int ff, o;
+	int ff, o, i;
 	BITVAR epbmp;
 
 	o = Flip(side);
@@ -1183,7 +1188,8 @@ int eval_king_checks_extU(board const *b, king_eval *ke, int side, int from)
 	ke->di_all_ray = attack.maps[BISHOP][from];
 
 	pins=0;
-	while (pz) {
+	for(i=BitCount(pz);i>0;i--){
+//	while (pz) {
 		ff = LastOne(pz);
 		pins |= pp & (attack.rays_dir[from][ff]);
 		ClrLO(pz);
@@ -1202,7 +1208,8 @@ int eval_king_checks_extU(board const *b, king_eval *ke, int side, int from)
 	  if ((attack.rays_dir[from][b->ep] & attack.rank[from])!=0) {
 		c2 = c2s = (b->maps[ROOK] | b->maps[QUEEN]) & (b->colormaps[o]) & attack.rays_dir[from][b->ep];
 
-		while (c2) {
+		for(i=BitCount(c2);i>0;i--){
+//		while (c2) {
 			ff = LastOne(c2);
 			cr2 = attack.rays_int[from][ff];
 			c3 = cr2 & b->norm;
@@ -1215,7 +1222,7 @@ int eval_king_checks_extU(board const *b, king_eval *ke, int side, int from)
 
 // incorporate knights
 	ke->kn_pot_att_pos = attack.maps[KNIGHT][from];
-	ke->kn_attackers = ke->kn_pot_att_pos & b->maps[KNIGHT] & b->colormaps[o];
+	ke->kn_attackers = attack.maps[KNIGHT][from] & b->maps[KNIGHT] & b->colormaps[o];
 //inorporate pawns
 	ke->pn_pot_att_pos = attack.pawn_att[side][from];
 	ke->pn_attackers = ke->pn_pot_att_pos & b->maps[PAWN] & b->colormaps[o];
@@ -1755,14 +1762,19 @@ int MakeNullMove(board *b, UNDO *ret)
 //	ret->prev_castle[BLACK] = b->castle[BLACK];
 	ret->rule50move = b->rule50move;
 	ret->prev_ep = b->ep;
+//	ret->prev_mindex= b->mindex;
+//	ret->captured=ER_PIECE;
 	ret->key = b->key;
-	ret->pawnkey = b->pawnkey;
+//	ret->pawnkey = b->pawnkey;
 	ret->mindex_validity = b->mindex_validity;
+	b->rule50move = b->move;
+
+//	ret->psq_b = b->psq_b;
+//	ret->psq_e = b->psq_e;
 
 	b->key ^= epKey[b->ep];
 	ret->ep = b->ep = 0;
 	b->key ^= sideKey;  //hash
-	b->rule50move = b->move;
 	b->move++;
 	b->positions[b->move - b->move_start] = b->key;
 	b->posnorm[b->move - b->move_start] = b->norm;
@@ -1780,6 +1792,10 @@ void UnMakeNullMove(board *b, UNDO *u)
 	b->side = u->side;
 	b->key = u->key;
 	b->mindex_validity = u->mindex_validity;
+//	b->mindex = u->prev_mindex;
+//	b->pawnkey = u->pawnkey;
+//	b->psq_b = u->psq_b;
+//	b->psq_e = u->psq_e;
 }
 
 int MakeMove(board *b, MOVESTORE move, UNDO *u){
@@ -2246,18 +2262,18 @@ void ScoreNormal(board *b, move_cont *mv, int side)
 		fromPos = UnPackFrom(t->move);
 		ToPos = UnPackTo(t->move);
 		piece = b->pieces[fromPos] & PIECEMASK;
-		t->qorder = checkHHTable(b->hht, side, piece, ToPos) + 20;
+		t->qorder = checkHHTable(b->hht, side, piece, ToPos) + MV_HH;
 //		L0("HH table:%d\n", t->qorder);
 // assign priority based on distance to enemy king or promotion
-#if 1
+#if 0
 		if (piece == PAWN) {
 			dist = side == WHITE ? 7 - getRank(ToPos) :
 				getRank(ToPos);
-			t->qorder += (7 - dist)*3;
+			t->qorder += (7 - dist);
 		} 
 		else {
 			dist = attack.distance[ToPos][b->king[opside]];
-			t->qorder += (7 - dist)*3;
+			t->qorder += (7 - dist);
 		}
 #endif
 //		L0("HH after:%d\n", t->qorder);
@@ -2304,6 +2320,9 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 		mv->count = 0;
 		mv->phase = PVLINE;
 		mv->quiet = NULL;
+		mv->cgen = 0;
+		mv->quiet_pr = 0;
+		mv->cap_pr = 0;
 // previous PV move
 	case PVLINE:
 		mv->phase = HASHMOVE;
@@ -2332,11 +2351,12 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 			DEB_S2(m=mv->lastp-1;for(;m>=mv->next; m--) m->state=0; )
 			m=mv->lastp-1;
 			for(;m>=mv->next; m--) if(!is_quiet_move(b, a, m)) break; else m->phase=NORMAL;
+			mv->cgen=(m-mv->next)+1;
 			if(m>=mv->next && m>mv->lastp-1) mv->quiet=m+1;
 			goto rest_moves;
 		}
 		generateCapturesN2(b, a, &(mv->lastp), 1);
-		mv->tgen=mv->lastp-mv->next;
+		mv->cgen=mv->tgen=mv->lastp-mv->next;
 		DEB_S2(move_entry *m=mv->lastp-1; for(;m>=mv->next; m--) m->state=0; )
 		mv->tcnt = 95;
 	case CAPTUREA:
@@ -2357,6 +2377,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 			mv->next->phase=CAPTUREA;
 			mv->next->ord=mv->count;
 			mv->next++;
+			mv->cap_pr++;
 			return ++mv->count;
 		}
 		mv->phase = SORT_CAPTURES;
@@ -2380,6 +2401,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 			*mm = mv->next;
 			mv->next->phase=CAPTURES;
 			mv->next->ord=mv->count;
+			mv->cap_pr++;
 			mv->next++;
 			return ++mv->count;
 		}
@@ -2463,6 +2485,7 @@ rest_moves: mv->phase = NORMAL;
 			*mm = mv->next;
 			mv->next->ord=mv->count;
 			mv->next++;
+			mv->quiet_pr++;
 			return ++mv->count;
 		}
 		mv->phase = OTHER_SET;
@@ -2569,6 +2592,7 @@ int getNextRootMove(board *b, attack_model *a, move_cont *mv, int ply, int side,
 		mv->count = 0;
 		mv->phase = NORMAL;
 		mv->quiet = NULL;
+		mv->cgen = 0;
 	case NORMAL:
 		while (mv->next < mv->lastp) {
 			mv->next->phase=NORMAL;
@@ -2601,6 +2625,9 @@ char b2[512];
 		mv->count = 0;
 		mv->phase = PVLINE;
 		mv->quiet = NULL;
+		mv->cgen = 0;
+		mv->quiet_pr = 0;
+		mv->cap_pr = 0;
 // previous PV move
 	case PVLINE:
 		mv->phase = GENERATE_NORMAL;
@@ -2618,6 +2645,7 @@ char b2[512];
 			*mm = mv->next;
 			mv->next->ord=mv->count;
 			mv->next++;
+			mv->quiet_pr++;
 			return ++mv->count;
 		}
 		mv->phase = OTHER;
@@ -2643,6 +2671,9 @@ int getNextCap(board *b, attack_model *a, move_cont *mv, int ply, int side, int 
 		mv->count = 0;
 		mv->phase = PVLINE;
 		mv->quiet = NULL;
+		mv->cgen = 0;
+		mv->quiet_pr = 0;
+		mv->cap_pr = 0;
 		mv->lpcheck = ! ( 
 			(BitCount(
 			  ((b->maps[BISHOP] | b->maps[ROOK] | b->maps[QUEEN]) & b->colormaps[Flip(side)]))==0)
@@ -2659,7 +2690,7 @@ int getNextCap(board *b, attack_model *a, move_cont *mv, int ply, int side, int 
 		mv->phase = CAPTUREA;
 		mv->next = mv->lastp;
 		generateCapturesN2(b, a, &(mv->lastp), 0);
-		mv->tgen=mv->lastp-mv->next;
+		mv->cgen=mv->tgen=mv->lastp-mv->next;
 		DEB_S2(m=mv->lastp-1;for(;m>=mv->next; m--) m->state=0; )
 		mv->tcnt = 0;
 //		mv->actph = CAPTUREA;
@@ -2680,6 +2711,7 @@ int getNextCap(board *b, attack_model *a, move_cont *mv, int ply, int side, int 
 			*mm = mv->next;
 			mv->next->ord=mv->count;
 			mv->next++;
+			mv->cap_pr++;
 			LOGGER_SE("CAPTUREA\n");
 			return ++mv->count;
 		}
@@ -2703,6 +2735,7 @@ int getNextCap(board *b, attack_model *a, move_cont *mv, int ply, int side, int 
 			*mm = mv->next;
 			mv->next->ord=mv->count;
 			mv->next++;
+			mv->cap_pr++;
 			LOGGER_SE("CAPTURES\n");
 			return ++mv->count;
 		}

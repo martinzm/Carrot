@@ -127,7 +127,7 @@ DEB_S2(
 	int re;
 	int depth;
 	int ply; )
-	} move_entry;
+	} move_entry __attribute__((aligned(8)));
 
 #define KMOVES_WIDTH 2
 
@@ -141,6 +141,9 @@ typedef struct _move_cont {
 	int count;
 	int tcnt;
 	int tgen;
+	int cgen;
+	int quiet_pr;
+	int cap_pr;
 	int lpcheck;
 	move_entry *next;  // points at end of moves already offered, starts at move
 					   // it includes even moves that were considered but failed validity and/or were skipped then
@@ -162,7 +165,7 @@ DEB_S2(
 	move_entry def;
 	int alfa;
 	int beta;)
-} move_cont;
+} move_cont __attribute__((aligned(64)));
 
 
 #define EMPTYBITMAP 0ULL
@@ -241,8 +244,8 @@ int FirstOne(BITVAR board);
 //fix jak vymazat nejvyssi bit?
 #define ClrHI(x) (x &= x)
 
-#define Max(x,y) ((x) > (y) ? (x) : (y))
-#define Min(x,y) ((x) < (y) ? (x) : (y))
+#define Max(x,y) (((x) > (y)) ? (x) : (y))
+#define Min(x,y) (((x) < (y)) ? (x) : (y))
 
 #define MaxN(a,b)             \
 ({                           \
@@ -258,7 +261,11 @@ int FirstOne(BITVAR board);
     _ai < _bi ? _ai : _bi;       \
 })
 
+#define CLAMP(x, low, high) (Min( (high), Max( (x), (low) ) ))
+
 #define Flip(side) ((side == WHITE) ? BLACK : WHITE)
+#define PVAL(B,E,P,S) ((B-E)*P/S+E)
+
 
 #define NORMM(FR) normmark[FR]
 //#define NORMM(FR) 1LL<<FR
@@ -314,7 +321,7 @@ typedef struct _att_mov {
 	BITVAR surr2[64];
 	BITVAR super1[64][64];
 	BITVAR super2[64][64];
-} att_mov;
+} att_mov __attribute__((aligned(64)));
 
 struct _ui_opt {
 //  0 sudden death
@@ -347,7 +354,7 @@ typedef struct _meval_t {
 	int mat;
 	int mat_w;
 	int mat_o[ER_SIDE];
-} meval_t;
+} meval_t __attribute__((aligned(8)));
 
 /*
  * hodnoty mohou byt multivalue 1, 7, 28, 64, 8
@@ -514,14 +521,14 @@ typedef struct _runtime_o {
 // hashing
 typedef struct _hashEntry {
 	BITVAR key; //8
-	BITVAR map;
-	BITVAR pld;
+	BITVAR map; //8
+	BITVAR pld; //8
 	int32_t value;  // 4
 	MOVESTORE bestmove;  //2 15b
-	int16_t depth;  //2 limit to 8b, max depth 256
+	int16_t depth;  //1 limit to 8b, max depth 256
 	uint8_t age;  //1 6b
 	uint8_t scoretype; //1 2b 
-} hashEntry;
+} hashEntry __attribute__((aligned(8)));
 
 typedef struct _hashEntry_e {
 	hashEntry e[HASHPOS];
@@ -970,6 +977,7 @@ void ClearAll(int pos, int side, int piece, board *b);
 void MoveFromTo(int from, int to, int side, int piece, board *b);
 #endif 
 
+#if 0
 inline int GT_M(board const *b, personality const *p, int s, int pi, int fo)
 {
        return fo != 0 ? BitCount(b->maps[pi] & b->colormaps[s]) :
@@ -987,5 +995,6 @@ inline int GT_M1(board const *b, personality const *p, int s, int pi)
 {
        return BitCount(b->maps[pi] & b->colormaps[s]);
 }
+#endif
 
 #endif

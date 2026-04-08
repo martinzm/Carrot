@@ -38,11 +38,18 @@ struct _statistics {
 	long long qpossiblemoves;  // stejne jako non q verze
 	long long lmrtotal;
 	long long lmrrerun;
+	long long lmpcount;
 	long long fhflcount;
 	long long firstcutoffs;
 	long long cutoffs;
+	long long moves_to_cutoff;
+	long long non_cutoff_moves;
+	long long first_quiet_cuts;
+	long long quiet_cuts;
+	long long quiet_cuts_cap;
 	long long qfirstcutoffs;
 	long long qcutoffs;
+	long long FUT_cuts;
 	long long NMP_cuts;
 	long long NMP_tries;
 	long long qSEE_tests;

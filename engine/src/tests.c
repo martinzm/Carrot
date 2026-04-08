@@ -1628,13 +1628,16 @@ int timed2_remis_cback(char *fen, void *data)
 int timed_driver(int t, int d, int max, personality *pers_init, int sts_mode, struct _results *results, CBACK, void *cdata)
 {
 	char b5[2048];
+	char tst[10000][256];
 	int error, passed, res_val;
 	passed = error = res_val = 0;
 	L0("INIT\n");
-	int ii = -1;
 
-//#pragma omp parallel num_threads(2)
-//#pragma omp parallel
+	if(max>10000) max=10000;
+	int ii = 0;
+
+//#pragma omp parallel num_threads(4)
+#pragma omp parallel proc_bind(spread) num_threads(4)
 	{
 	int time, depth;
 	int i;
@@ -1677,24 +1680,29 @@ int timed_driver(int t, int d, int max, personality *pers_init, int sts_mode, st
 	moves->tree_board.stats = stat;
 
 	a = &ATT;
-#pragma omp critical 
+
+#pragma omp master
 	{
-		vv=cback(bx, cdata);
+	while ((ii < max)) {
+			if(cback(tst[ii], cdata)) {
+				if (parseEPD(tst[ii], fen, am, bm, pm, cm, NULL, &dm, &name) > 0) {
+//					L0("%d:%s\n",ii, tst[ii]);
+					ii++;
+					free(name);
+				}
+			} else break;
 	}
-	while ( vv && (ii < max)) {
-		if (parseEPD(bx, fen, am, bm, pm, cm, NULL, &dm, &name) > 0) {
-#pragma omp critical
-			{
-			// allocate slot for parsed position
-			if(ii<max) ii++;
-			i=ii;
-			}
-			if(i>=max) break;
+	L0("Loaded %d positions\n", ii);
+	}
+#pragma omp barrier
+
+#pragma omp for reduction (+:passed, error, res_val)
+	for (i=0;i < ii;i++) {
+			parseEPD(tst[i], fen, am, bm, pm, cm, NULL, &dm, &name);
 			time = t;
 			depth = d;
-			strncpy(results[i].fen, bx, strcspn(bx,"\r\n"));
+			strncpy(results[i].fen, tst[i], strcspn(tst[i],"\r\n"));
 			setup_FEN_board(&b, fen);
-//			eval_king_checks(&b, &(a->ke[b.side]), pers_init, b.side);
 
 			DEB_3(printBoardNice(&b);)
 			parseEDPMoves(&b, a, bans, bm, 10);
@@ -1758,7 +1766,7 @@ int timed_driver(int t, int d, int max, personality *pers_init, int sts_mode, st
 			results[i].passed = val;
 			if (val <= 0) {
 				sprintf(b2, "Error: Move %s, DtM %d => ", buffer, adm);
-#pragma omp atomic
+//#pragma omp atomic
 				error++;
 				
 				if (val == -1) {
@@ -1782,30 +1790,28 @@ int timed_driver(int t, int d, int max, personality *pers_init, int sts_mode, st
 			} else {
 				sprintf(b2, "Passed, Move: %s, toMate: %i",
 					buffer, adm);
-#pragma omp atomic
+//#pragma omp atomic
 				passed++;
-#pragma omp atomic
+//#pragma omp atomic
 				res_val += val;
 			}
 			sprintf(b3, "%d: FEN:%s, %s, Time: %dh, %dm, %ds, %dms\n",
 				i, fen, b2, (int) ttt / 3600000,
 				(int) (ttt % 3600000) / 60000,
 				(int) (ttt % 60000) / 1000, (int) ttt % 1000);
+#if 1
 #pragma omp critical 
 		  {
 			printf(b3);
 			LOGGER_0(b3);
 		  }
+#endif
 			free(name);
-		}
-#pragma omp critical
-		{
-			vv=cback(bx, cdata);
-		}
 	}
 
-#pragma omp single
+#pragma omp master
 	clearSearchCnt(&(results[ii].stats));
+#pragma omp barrier
 #pragma omp critical
 	AddSearchCnt(&(results[ii].stats), &s);
 	freeKillerStore(b.kmove);

@@ -487,4 +487,5 @@ void MoveFromTo(int from, int to, int side, int piece, board *b)
 	b->pieces[from] = ER_PIECE;
 	b->pieces[to] = (int8_t)(piece + side * BLACKPIECE);
 }
+
 #endif

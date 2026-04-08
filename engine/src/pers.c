@@ -31,7 +31,8 @@
 
 int NZEROONLY=1;
 
-extern const xmlChar _binary_pers_default_xml_start;
+#define EXTXML _binary_src_pers_default_xml_start
+extern const xmlChar EXTXML;
 
 int lim_out=1;
 
@@ -491,7 +492,7 @@ int params_out_values(char *x, _values *i)
 	int f;
 	char buf[512], b2[512];
 	sprintf(buf, "PERS: %s ", x);
-	for (f = 0; f < 8; f++) {
+	for (f = 0; f < 2; f++) {
 		sprintf(b2, "PERS: VAL[%i]:%i, %i, %i, %i, %i, %i\t", f,
 			(*i)[f][PAWN], (*i)[f][KNIGHT], (*i)[f][BISHOP],
 			(*i)[f][ROOK], (*i)[f][QUEEN], (*i)[f][KING]);
@@ -1103,7 +1104,7 @@ int load_personality_inmem(personality *p)
 {
 	xmlDocPtr doc;
 
-	doc = xmlReadDoc(&_binary_pers_default_xml_start, "noname.xml", NULL,0);
+	doc = xmlReadDoc(&EXTXML, "noname.xml", NULL,0);
 	if(doc==NULL) return 0;
 	parsedoc_int(doc, p);
 

@@ -43,6 +43,7 @@ void clearSearchCnt(struct _statistics *s)
 	s->zerorerun = 0;
 	s->lmrtotal = 0;
 	s->lmrrerun = 0;
+	s->lmpcount = 0;
 // quiesce zero rerun
 	s->quiesceoverrun = 0;
 	s->positionsvisited = 0;
@@ -50,8 +51,15 @@ void clearSearchCnt(struct _statistics *s)
 	s->fhflcount = 0;
 	s->firstcutoffs = 0;
 	s->cutoffs = 0;
+	s->moves_to_cutoff = 0;
+	s->non_cutoff_moves = 0;
+	s->first_quiet_cuts = 0;
+	s->quiet_cuts = 0;
+	s->quiet_cuts_cap = 0;
+
 	s->qfirstcutoffs = 0;
 	s->qcutoffs = 0;
+	s->FUT_cuts = 0;
 	s->NMP_tries = 0;
 	s->NMP_cuts = 0;
 	s->qSEE_tests = 0;
@@ -113,16 +121,24 @@ void AddSearchCnt(struct _statistics *s, struct _statistics *b)
 	s->zerorerun += b->zerorerun;
 	s->lmrtotal += b->lmrtotal;
 	s->lmrrerun += b->lmrrerun;
+	s->lmpcount += b->lmpcount;
 	s->quiesceoverrun += b->quiesceoverrun;
 	s->positionsvisited += b->positionsvisited;
 	s->qposvisited += b->qposvisited;
 	s->fhflcount += b->fhflcount;
 	s->firstcutoffs += b->firstcutoffs;
 	s->cutoffs += b->cutoffs;
+	s->moves_to_cutoff += b->moves_to_cutoff;
+	s->non_cutoff_moves += b->non_cutoff_moves;
+	s->first_quiet_cuts += b->first_quiet_cuts;
+	s->quiet_cuts += b->quiet_cuts;
+	s->quiet_cuts_cap += b->quiet_cuts_cap;
+
 	s->qfirstcutoffs += b->qfirstcutoffs;
 	s->qcutoffs += b->qcutoffs;
 	s->NMP_tries += b->NMP_tries;
 	s->NMP_cuts += b->NMP_cuts;
+	s->FUT_cuts += b->FUT_cuts;
 	s->qSEE_tests += b->qSEE_tests;
 	s->qSEE_cuts += b->qSEE_cuts;
 	s->hashStores += b->hashStores;
@@ -179,14 +195,22 @@ void CopySearchCnt(struct _statistics *s, struct _statistics *b)
 	s->zerorerun = b->zerorerun;
 	s->lmrtotal = b->lmrtotal;
 	s->lmrrerun = b->lmrrerun;
+	s->lmpcount = b->lmpcount;
 	s->quiesceoverrun = b->quiesceoverrun;
 	s->positionsvisited = b->positionsvisited;
 	s->qposvisited = b->qposvisited;
 	s->fhflcount = b->fhflcount;
 	s->firstcutoffs = b->firstcutoffs;
 	s->cutoffs = b->cutoffs;
+	s->moves_to_cutoff = b->moves_to_cutoff;
+	s->non_cutoff_moves = b->non_cutoff_moves;
+	s->first_quiet_cuts = b->first_quiet_cuts;
+	s->quiet_cuts = b->quiet_cuts;
+	s->quiet_cuts_cap = b->quiet_cuts_cap;
+
 	s->qfirstcutoffs = b->qfirstcutoffs;
 	s->qcutoffs = b->qcutoffs;
+	s->FUT_cuts = b->FUT_cuts;
 	s->NMP_tries = b->NMP_tries;
 	s->NMP_cuts = b->NMP_cuts;
 	s->qSEE_tests = b->qSEE_tests;
@@ -248,16 +272,24 @@ void DecSearchCnt(struct _statistics *s, struct _statistics *b, struct _statisti
 	r->zerorerun = s->zerorerun - b->zerorerun;
 	r->lmrtotal = s->lmrtotal - b->lmrtotal;
 	r->lmrrerun = s->lmrrerun - b->lmrrerun;
+	r->lmpcount = s->lmpcount - b->lmpcount;
 	r->quiesceoverrun = s->quiesceoverrun - b->quiesceoverrun;
 	r->positionsvisited = s->positionsvisited - b->positionsvisited;
 	r->qposvisited = s->qposvisited - b->qposvisited;
 	r->fhflcount = s->fhflcount - b->fhflcount;
 	r->firstcutoffs = s->firstcutoffs - b->firstcutoffs;
 	r->cutoffs = s->cutoffs - b->cutoffs;
+	r->moves_to_cutoff = s->moves_to_cutoff - b->moves_to_cutoff;
+	r->non_cutoff_moves = s->non_cutoff_moves - b->non_cutoff_moves;
+	r->first_quiet_cuts = s->first_quiet_cuts - b->first_quiet_cuts;
+	r->quiet_cuts = s->quiet_cuts - b->quiet_cuts;
+	r->quiet_cuts_cap = s->quiet_cuts_cap - b->quiet_cuts_cap;
 	r->qfirstcutoffs = s->qfirstcutoffs - b->qfirstcutoffs;
 	r->qcutoffs = s->qcutoffs - b->qcutoffs;
 	r->NMP_tries = s->NMP_tries - b->NMP_tries;
 	r->NMP_cuts = s->NMP_cuts - b->NMP_cuts;
+	r->FUT_cuts = s->FUT_cuts - b->FUT_cuts;
+
 	r->qSEE_tests = s->qSEE_tests - b->qSEE_tests;
 	r->qSEE_cuts = s->qSEE_cuts - b->qSEE_cuts;
 	r->hashStores = s->hashStores - b->hashStores;
@@ -346,9 +378,25 @@ void printSearchStat(struct _statistics *s)
 		s->zerototal, s->zerorerun, s->quiesceoverrun, s->lmrtotal,
 		s->lmrrerun, s->fhflcount);
 	LOGGER_0(
+		"Info: LMP: count %lld\n", s->lmpcount);
+	LOGGER_0(
 		"Info: Cutoffs: First move %lld, Any move %lld, Ratio of first %lld%%\n",
 		s->firstcutoffs, s->cutoffs,
 		100 * s->firstcutoffs / (s->cutoffs + 1));
+	LOGGER_0(
+		"Info: Moves before Cuttoffs %lld, Average %lld, Non cutoff moves %lld\n", s->moves_to_cutoff,(s->moves_to_cutoff/(s->cutoffs+1)),
+		s->non_cutoff_moves);
+
+	LOGGER_0(
+		"Info: Quiet Cutoffs: First move %lld, Any move %lld, Ratio of first %lld%%\n",
+		s->first_quiet_cuts, s->quiet_cuts,
+		100 * s->first_quiet_cuts / (s->quiet_cuts + 1));
+	LOGGER_0(
+		"Info: Quiet Cutoffs after capture move %lld\n", s->quiet_cuts_cap);
+		
+	LOGGER_0(
+		"Info: Futility: cuts %lld\n", s->FUT_cuts);
+
 	LOGGER_0(
 		"Info: QCutoffs: First move %lld, Any move %lld, Ratio of first %lld%%\n",
 		s->qfirstcutoffs, s->qcutoffs,
@@ -425,9 +473,29 @@ void printSearchStat2(struct _statistics *s, char *buff)
 		s->lmrrerun, s->fhflcount);
 	strcat(buff, bb);
 	sprintf(bb,
+		"Info: LMP: count %lld\n", s->lmpcount);
+	strcat(buff, bb);
+	sprintf(bb,
 		"Cutoffs: First move %lld, Any move %lld, Ratio of first %lld%%, \n",
 		s->firstcutoffs, s->cutoffs,
 		100 * s->firstcutoffs / (s->cutoffs + 1));
+	strcat(buff, bb);
+	sprintf(bb,
+		"Info: Moves before Cuttoffs %lld, Average %lld, Non cutoff moves %lld\n", s->moves_to_cutoff, (s->moves_to_cutoff/(s->cutoffs+1)),
+		s->non_cutoff_moves);
+	strcat(buff, bb);
+
+	sprintf(bb, 
+		"Info: Quiet Cutoffs: First move %lld, Any move %lld, Ratio of first %lld%%\n",
+		s->first_quiet_cuts, s->quiet_cuts,
+		100 * s->first_quiet_cuts / (s->quiet_cuts + 1));
+	strcat(buff, bb);
+	sprintf(bb,
+		"Info: Quiet Cutoffs after capture move %lld\n", s->quiet_cuts_cap);
+	strcat(buff, bb);
+
+	sprintf(bb,
+		"Info: Futility: cuts %lld\n", s->FUT_cuts);
 	strcat(buff, bb);
 	sprintf(bb,
 		"QCutoffs: First move %lld, Any move %lld, Ratio of first %lld%%, \n",

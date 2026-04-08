@@ -2551,7 +2551,8 @@ int get_material_eval_f(board *b, personality *p)
 	stacker st;
 
 	get_material_eval(b, p, &mb, &me, &wb, &we, &st);
-	score = (mb * phase + me * (255 - phase)) / 255;
+//	score = (mb * phase + me * (255 - phase)) / 255;
+	score = PVAL(mb, me, phase, 255);
 	return score;
 }
 
@@ -3470,9 +3471,12 @@ int scr, sc4, sc3, sc2;
 int mb, me, wb, we, phase;
 
 	phase = eval_phase(b, p);
+
 	get_material_eval(b, p, &mb, &me, &wb, &we, NULL);
-	sc4 = (mb * phase + me * (255 - phase)) / 255;
-	sc3 = (b->psq_b * phase + b->psq_e * (255 - phase)) / 255;
+	sc4 = PVAL(mb, me, phase,255);
+	sc3 = PVAL(b->psq_b, b->psq_e, phase, 255);
+//	sc4 = (mb * phase + me * (255 - phase)) / 255;
+//	sc3 = (b->psq_b * phase + b->psq_e * (255 - phase)) / 255;
 	sc2 = sc3 + sc4;
 	return sc2;
 }
@@ -3501,9 +3505,11 @@ int lazyEval(board *b, attack_model *a, int alfa, int beta, int side, int ply, i
 #else
 	get_material_eval(b, p, &mb, &me, &wb, &we, NULL);
 #endif
-	sc4 = (mb * a->phase + me * (255 - a->phase)) / 255;
+	sc4 = PVAL(mb, me, a->phase,255);
+//	sc4 = (mb * a->phase + me * (255 - a->phase)) / 255;
 	
-	sc3 = (b->psq_b * a->phase + b->psq_e * (255 - a->phase)) / 255;
+	sc3 = PVAL(b->psq_b, b->psq_e, a->phase, 255);
+//	sc3 = (b->psq_b * a->phase + b->psq_e * (255 - a->phase)) / 255;
 	sc2 = sc3 + sc4;
 	
 	if ((((sc2 + p->lazy_eval_cutoff) < alfa)
