@@ -445,75 +445,6 @@ int search_finished(board *b)
 	b->run.nodes_at_iter_start = b->stats->nodes;
 	return 0;
 }
-/*
- * no check
- * hash failed low
- * has no null
- * mat < beta
- * depth >= 2
- * other piece then pawn for side to move
- * 
- */
-
-int can_do_NullMove(board *b, attack_model *a, int alfa, int beta, int depth, int ply, int side)
-{
-
-	personality const *p;
-
-	if (b->mindex_validity != 0) {
-		p = b->pers;
-#if 0
-		pieces=6*p->mat_info[b->mindex].m[b->side][QUEEN]
-			  +6*p->mat_info[b->mindex].m[b->side][ROOK]
-			  +6*p->mat_info[b->mindex].m[b->side][KNIGHT]
-			  +6*p->mat_info[b->mindex].m[b->side][BISHOP]
-			  +1*p->mat_info[b->mindex].m[b->side][PAWN];
-		if(pieces<6) return 0;
-#endif
-		if ((GT_M0(b, p, b->side, PIECES) == 0))
-//			&& (GT_M0(b, p, b->side, PAWN) < 6))
-			return 0;
-	} else return 1;
-	return 1;
-}
-
-/*
- *  do not reduce when
- *  - remaining depth is too low
- *  - in PVS
- *  - inCheck
- *  - good or neutral capture + promotions
- *  - move gives check (only quiet move others covered by above)
- *  -
- *  funkce je volana po make_move, takze side je strana co udelala tah
- *  b->side je strana na tahu
- */
-/*
- * DEPTH klesa do 0, ply roste
- */
-
-/*
- * LMR doesnt reduce captures, hashmove, killers, non captures with good history
- * checks not reduced normally, no pawn
- */
-int can_do_LMR(board *b, attack_model *a, int alfa, int beta, int depth, int ply, int side, UNDO *u)
-{
-
-	int8_t from, movp, ToPos, rank;
-	int prio;
-
-	rank=getRank(u->from);
-	if (u->old == PAWN) {
-		if(((u->side==WHITE)&&(rank==RANKi7))||((u->side==BLACK)&&(rank==RANKi2))) return 0;
-		return 0;
-	}
-
-	prio = checkHHTable(b->hht, side, u->old, u->to);
-	if (prio > 0)
-		return 0;
-	return 1;
-}
-
 int position_quality(board *b, attack_model *a, int alfa, int beta, int depth, int ply, int side)
 {
 	BITVAR x;
@@ -982,14 +913,14 @@ int SearchMoveNew(board *b, int talfa, int tbeta, int ttbeta, int depth, int ply
 	b->stats->zerototal += (1 - isPV);
 	ext = depth - reduce + extend - 1;
 	val = talfa;
-	int check_depth = isPV ? b->pers->quiesce_check_depth_limit : 0;
+//	int check_depth = isPV ? b->pers->quiesce_check_depth_limit : 0;
+	int check_depth = b->pers->quiesce_check_depth_limit;
 	if (((ext > 0) && (ply < MAXPLY))) {
 		val = -ABNew(b, -ttbeta, -talfa, ext, ply + 1, opside, tree,
 			nulls, att);
 //	unexpected over alpha? - rerun as it might be because of reduced depth
-		if ((val > talfa) && (reduce>extend)) {
-			ext = isPV&(ttbeta==tbeta) ? depth + extend -1 : depth - 1;
-			val = -ABNew(b, -ttbeta, -talfa, ext,
+		if ((val > talfa) && (reduce>0)) {
+			val = -ABNew(b, -ttbeta, -talfa, depth - 1,
 				ply + 1, opside, tree, nulls, att);
 				b->stats->lmrrerun++;
 				if (val <= talfa)
@@ -1017,6 +948,74 @@ int SearchMoveNew(board *b, int talfa, int tbeta, int ttbeta, int depth, int ply
 			b->stats->lmrrerun++;
 	}
 	return val;
+}
+
+/*
+ * no check
+ * hash failed low
+ * has no null
+ * mat < beta
+ * depth >= 2
+ * other piece then pawn for side to move
+ * 
+ */
+
+int can_do_NullMove(board *b, attack_model *a, int alfa, int beta, int depth, int ply, int side)
+{
+	personality const *p;
+
+	if (b->mindex_validity != 0) {
+		p = b->pers;
+#if 0
+		pieces=6*p->mat_info[b->mindex].m[b->side][QUEEN]
+			  +6*p->mat_info[b->mindex].m[b->side][ROOK]
+			  +6*p->mat_info[b->mindex].m[b->side][KNIGHT]
+			  +6*p->mat_info[b->mindex].m[b->side][BISHOP]
+			  +1*p->mat_info[b->mindex].m[b->side][PAWN];
+		if(pieces<6) return 0;
+#endif
+		if ((GT_M0(b, p, b->side, PIECES) == 0))
+//			&& (GT_M0(b, p, b->side, PAWN) < 6))
+			return 0;
+	} else return 1;
+	return 1;
+}
+
+/*
+ *  do not reduce when
+ *  - remaining depth is too low
+ *  - in PVS
+ *  - inCheck
+ *  - good or neutral capture + promotions
+ *  - move gives check (only quiet move others covered by above)
+ *  -
+ *  funkce je volana po make_move, takze side je strana co udelala tah
+ *  b->side je strana na tahu
+ */
+/*
+ * DEPTH klesa do 0, ply roste
+ */
+
+/*
+ * LMR doesnt reduce captures, hashmove, killers, non captures with good history
+ * checks not reduced normally, no pawn
+ */
+int can_do_LMR(board *b, attack_model *a, int alfa, int beta, int depth, int ply, int side, UNDO *u)
+{
+
+	int8_t from, movp, ToPos, rank;
+	int prio;
+
+	rank=getRank(u->from);
+	if (u->old == PAWN) {
+		if(((u->side==WHITE)&&(rank==RANKi7))||((u->side==BLACK)&&(rank==RANKi2))) return 0;
+//		return 0;
+	}
+
+	prio = checkHHTable(b->hht, side, u->old, u->to);
+	if (prio > 00)
+		return 0;
+	return 1;
 }
 
 /*
@@ -1251,7 +1250,9 @@ int pvalue;
 	if ((nulls > 0) && (isPV == 0) && (b->pers->NMP_allowed > 0)
 		&& (incheck == 0)
 		&& (can_do_NullMove(b, att, talfa, tbeta, depth, ply, side) != 0)
-		&& (depth > b->pers->NMP_min_depth)) {
+		&& (depth > b->pers->NMP_min_depth)
+		&& sco >= tbeta
+		) {
 		tree->tree[ply][ply].move = NULL_MOVE;
 		MakeNullMove(b, &u);
 
@@ -1302,9 +1303,9 @@ int pvalue;
 			hash.value = mt.real_score;
 			hash.bestmove = NULL_MOVE;
 			hash.scoretype = FAILHIGH_SC;
-//			if ((b->hs != NULL) && (b->search_abort == 0))
-//				storeHash(b->hs, &hash, side, ply, ext, b->norm, 
-//					b->stats);
+			if ((b->hs != NULL) && (b->search_abort == 0))
+				storeHash(b->hs, &hash, side, ply, ext, b->norm, 
+					b->stats);
 			if (b->pers->NMP_search_reduction == 0) {
 				b->stats->failhigh++;
 				mb = &mt;
@@ -1376,6 +1377,7 @@ int pvalue;
 	while (((ply==0 ? getNextRootMove(b, att, MVS, ply, side, incheck, &m, tree) : getNextMove(b, att, MVS, ply, side, incheck, &m, tree)) != 0)
 		&& (b->search_abort == 0)) {
 
+		m->real_score=-iINFINITY;
 		if(!isMoveValid(b, m->move, att, side, tree)) {
 			printBoardNice(b);
 			L0("invalid move!\n");
@@ -1468,24 +1470,23 @@ int pvalue;
 // check for LMP conditions based on depth
 // !extended !incheck !isPV !first_move use_lmp move mvs.actph >= NORMAL !MATEd
 
-//		if ((MVS->count > b->pers->LMP_start_move*depth)
-		if (((MVS->quiet_pr) > b->pers->LMP_start_move*depth)
+		if ((MVS->count > (b->pers->LMP_start_move + 2*depth*depth))
+//		if (((MVS->quiet_pr) > b->pers->LMP_start_move*depth)
 			&& (b->pers->LMP_enable > 0)
 			&& (depth <= b->pers->LMP_depth)
 			&& (incheck == 0) 
 			&& (aftermovecheck == 0)
-			&& (extend == extend_o)
-//			&& mb != &mdum
+//			&& (extend == extend_o)
 			&& (m->phase==NORMAL)
 			&& !isPV
 			&& (u.whereCa == -1)
 			&& (u.old != PAWN)
 			){
-//			int lmp_red = can_do_LMR(b, att, talfa, ttbeta, depth, ply, side, &u);
-//				if(lmp_red>0) {
+			int lmp_red = can_do_LMR(b, att, talfa, ttbeta, depth, ply, side, &u);
+				if(lmp_red>0) {
 					b->stats->lmpcount++;
 					goto bypass;
-//				}
+				}
 		}
 
 int lmr_a=talfa;
@@ -1493,27 +1494,25 @@ int lmr_b=tbeta;
 int lmr_s=m->real_score;
 // setup LMR reductions, not extended, normal moves, not in check, no PV, not giving check, no good history, no pawns
 // reduce based on ply and movecount
-		if ((MVS->quiet_pr > b->pers->LMR_start_move)
+		if ((MVS->count > b->pers->LMR_start_move)
 			&& (b->pers->LMR_reduction > 0)
-			&& (depth >= b->pers->LMR_remain_depth)
+			&& (depth > b->pers->LMR_remain_depth)
 			&& (incheck == 0) 
 			&& (aftermovecheck == 0)
-			&& (extend == extend_o)
-//			&& mb != &mdum
-			&& (m->phase==NORMAL)
+//			&& (extend == extend_o)
 			&& !isPV
 			&& (u.whereCa == -1)
+//			&& (m->qorder< MV_HH)
 			){
 			int lmr_red = can_do_LMR(b, att, talfa, tbeta, depth, ply, side, &u);
 				if(lmr_red>0) {
-//				if(MVS->count > 20) goto bypass;
 				DEB_S2(m->state|=r_LMR;)
 //					m->state=2;
 					if(b->pers->LMR_sim==0) { 
 //						if(MVS->count > b->pers->LMR_prog_start_move)
 //							reduce += div(depth, b->pers->LMR_prog_mod * 2).quot;
-//						reduce += b->pers->LMR_reduction + div(MVS->count,b->pers->LMR_prog_mod).quot;
-						reduce += b->pers->LMR_reduction;
+						reduce += b->pers->LMR_reduction + div(MVS->count,b->pers->LMR_prog_mod).quot;
+//						reduce += b->pers->LMR_reduction;
 //						reduce += isPV ? div(cbrt(depth)*cbrt(MVS->count),b->pers->LMR_prog_mod).quot :
 //							div(sqrt(depth)*cbrt(MVS->count),b->pers->LMR_prog_mod).quot;
 					} else {
@@ -1556,7 +1555,7 @@ bypass2:
 			}
 
 			b->stats->cutoffs++;
-			if ((m->ord == 0) && (MVS->cap_pr!=0)&&(MVS->quiet_pr==0))
+			if ((m->ord == 0))
 				b->stats->firstcutoffs++;
 			if (m->phase>=KILLER1 && m->phase<OTHER) {
 				b->stats->quiet_cuts++;
@@ -1568,10 +1567,10 @@ bypass2:
 				&& (m->phase>=KILLER1 && m->phase<OTHER)) {
 				update_killer_move(b->kmove, ply, m->move, b->stats);
 // update history when over beta
-				if(m->phase==NORMAL) {
+//				if(m->phase==NORMAL) {
 					updateHHTableGood(b, b->hht, m, 0, side, depth, ply);
 					if(MVS->quiet!=NULL) for(mn=m-1; mn>=MVS->quiet; mn--) updateHHTableBad(b, b->hht, mn, 0, side, depth, ply);
-				}
+//				}
 			}
 			
 			mb = m;
@@ -1585,9 +1584,9 @@ bypass2:
 			if (mb->real_score > talfa) {
 
 //update history when alpha updated
-				if(m->phase==NORMAL) {
-					updateHHTableGood(b, b->hht, m, 0, side, depth, ply);
-				}
+//				if(m->phase==NORMAL) {
+//					updateHHTableGood(b, b->hht, m, 0, side, depth, ply);
+//				}
 			if((b->pers->LMR_sim!=0) && (lmr_sim_flag>0)){
 				sprintfMoveSimple(m->move, b2);
 				L0("Invalid MOVE %s, score %d, talfa %d, tbeta %d\n",b2, m->real_score, talfa, tbeta);

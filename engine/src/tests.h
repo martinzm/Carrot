@@ -62,4 +62,5 @@ int parseEPD(char *buffer, char FEN[100], char (*am)[CMTLEN], char (*bm)[CMTLEN]
 void analyzer_1(char *, int, int, int, int, int, char*);
 void eval_qui_checker(char *filein, char *fileout, int max_positions);
 
+int movegensort_test(char *, char *);
 #endif

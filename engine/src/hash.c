@@ -711,12 +711,12 @@ int freeHHTable(hhTable *hh)
 int clearHHTable(hhTable *hh)
 {
 	int v[ER_PIECE];
-	v[PAWN] = P_OR;
-	v[KNIGHT] = N_OR;
-	v[BISHOP] = B_OR;
-	v[ROOK] = R_OR;
-	v[QUEEN] = Q_OR;
-	v[KING] = K_OR_M;
+	v[PAWN] = 5;
+	v[KNIGHT] = 7;
+	v[BISHOP] = 6;
+	v[ROOK] = 4;
+	v[QUEEN] = 3;
+	v[KING] = 2;
 
 	int f, q;
 	for (q = PAWN; q < ER_PIECE; q++) {
@@ -739,7 +739,6 @@ int updateHHTable(board *b, hhTable *hh, move_entry *m, int cutoff, int side, in
 	return 0;
 }
 
-#define HHScale 400
 int updateHHTable2(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int bonus)
 {
 	int fromPos, toPos, piece;
@@ -756,7 +755,7 @@ int updateHHTableGood(board *b, hhTable *hh, move_entry *m, int cutoff, int side
 	return updateHHTable2(b, hh, m, cutoff, side, Min(depth*depth, HHScale));
 }
 int updateHHTableBad(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int depth, int ply){
-	return updateHHTable2(b, hh, m, cutoff, side, -Min(depth*depth/4, HHScale));
+	return updateHHTable2(b, hh, m, cutoff, side, -Min(depth*depth, HHScale));
 }
 
 int checkHHTable(hhTable *hh, int side, int piece, int square)

@@ -23,4 +23,12 @@ int uci_loop(int second);
 int uci_loop2(int second);
 int tell_to_engine(char *s);
 int move_filter_build(char *str, MOVESTORE *m);
+
+int start_threads(board *b);
+board* allocate_board();
+int allocate_tables(board *b);
+int stop_threads(board *b);
+int deallocate_tables(board *b);
+int deallocate_board(board *b);
+
 #endif

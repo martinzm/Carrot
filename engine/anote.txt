@@ -1,3 +1,28 @@
+Aktualni razeni
+hlavni hledani
+- hash
+- Q promotion
+- N promotion pokud dava sach
+- captures v poradi MVV-LVA, pozitivni
+- z ostatnich v poradi MVV-LVA, SEE>=0
+- tichy sach (v planu)
+- killers
+- rosada
+- HistoryH (v planu)
+- tiche tahy - v poradi jezdec, strelec, pesec, vez, dama, kral
+- captures SEE<0 (dle SEE)
+- underpromotions
+
+quiescence
+- Q promotion
+- N promotion pokud dava sach
+- captures v poradi MVV-LVA, pozitivni a neutralni
+- z ostatnich v poradi MVV-LVA, SEE>=0
+
+
+
+
+
 NMP:
   R=3
   ne sach

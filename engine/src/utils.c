@@ -1126,12 +1126,19 @@ move_entry *i;
 	LS2("initial A: %d, B: %d\n", mvs->alfa, mvs->beta);
 	LS2("def score: %d, def state: %X, def reduction: %d, move: %s\n", mvs->def.real_score, mvs->def.state, mvs->def.re, b2);
 
+	printBoardNice(b);
 	i=mvs->move;
 	for(;i<mvs->lastp;i++) {
 		sprintfMoveSimple(i->move, b2);
-//		L0("%s, sc: %d, init ord: %d, proc ord: %d, nodes %lld\n", b2, i->real_score, i->qorder, i->ord, i->nodes);
-		LS2("%s,\tsc: %6d,\ti_ord: %6d,\tp_ord: %6d,\tnodes %8lld,\tstate: %4X,\tA: %6d,\tB: %6d,\tRE: %2d,\tdepth: %2d\n",
-		b2, i->real_score, i->qorder, i->ord, i->nodes, i->state, i->a, i->b, i->re, i->depth);
+		L0("%s, sc: %d, init ord: %d, proc ord: %d, nodes %lld\n", b2, i->real_score, i->qorder, i->ord, i->nodes);
+//		L2("%s,\tsc: %6d,\ti_ord: %6d,\tp_ord: %6d,\tnodes %8lld,\tstate: %4X,\tA: %6d,\tB: %6d,\tRE: %2d,\tdepth: %2d\n",
+//		b2, i->real_score, i->qorder, i->ord, i->nodes, i->state, i->a, i->b, i->re, i->depth);
 	}
-
+	i=mvs->bad;
+	for(;i<mvs->badp;i++) {
+		sprintfMoveSimple(i->move, b2);
+		L0("%s, sc: %d, init ord: %d, proc ord: %d, nodes %lld\n", b2, i->real_score, i->qorder, i->ord, i->nodes);
+//		L2("%s,\tsc: %6d,\ti_ord: %6d,\tp_ord: %6d,\tnodes %8lld,\tstate: %4X,\tA: %6d,\tB: %6d,\tRE: %2d,\tdepth: %2d\n",
+//		b2, i->real_score, i->qorder, i->ord, i->nodes, i->state, i->a, i->b, i->re, i->depth);
+	}
 }

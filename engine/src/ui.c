@@ -991,6 +991,9 @@ while (uci_state != 0) {
 			if (!strcmp(tok, "testsee0")) {
 				see0_test();
 			}
+			if (!strcmp(tok, "testmovesort")) {
+				movegensort_test("r1n3k1/1P6/n7/1B3pP1/1p1R2q1/3p1N2/7P/R3K3 w Q f6 0 1", "pers.xml");
+			}
 			if (!strcmp(tok, "ttswap")) {
 				ttest_swap_eval(b2);
 			}
@@ -1112,6 +1115,12 @@ while (uci_state != 0) {
 					"position fen k7/b7/b7/8/8/8/7Q/7K w - - 0 1");
 				uci_state = 2;
 				LOGGER_3("setup myts5");
+				goto reentry;
+			} else if (!strcasecmp(tok, "myts7")) {
+				strcpy(buff,
+					"position fen 5rkr/pppb2pp/2nb4/3p3B/4p2q/8/PPPPPPPP/RNBQK1NR w KQ - 0 1");
+				uci_state = 2;
+				LOGGER_3("setup myts7");
 				goto reentry;
 			} else if (!strcasecmp(tok, "mytsp")) {
 				strcpy(buff,

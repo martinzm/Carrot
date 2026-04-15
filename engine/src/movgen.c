@@ -462,15 +462,15 @@ void generateCapturesN3(const board *const b, attack_model *a, move_entry **m, i
 				move->move = PackMove(ppos, to, QUEEN, 0);
 				move->qorder = move->real_score = b->pers->LVAcap[KING + 1][b->pieces[to] & PIECEMASK];
 				move++;
-				move->move = PackMove(ppos, to, KNIGHT, 0);
-				move->qorder = move->real_score = b->pers->LVAcap[KING + 2][b->pieces[to] & PIECEMASK];
-				move++;
 //underpromotion
+				move->move = PackMove(ppos, to, KNIGHT, 0);
+				move->qorder = move->real_score = A_CA_PROM_N;
+				move++;
 				move->move = PackMove(ppos, to, BISHOP, 0);
-				move->qorder = move->real_score = A_OR2;
+				move->qorder = move->real_score = MV_UND+1;
 				move++;
 				move->move = PackMove(ppos, to, ROOK, 0);
-				move->qorder = move->real_score = A_OR2;
+				move->qorder = move->real_score = MV_UND+2;
 				move++;
 				ClrLO(pmap);
 			}
@@ -481,15 +481,15 @@ void generateCapturesN3(const board *const b, attack_model *a, move_entry **m, i
 				move->move = PackMove(ppos, to, QUEEN, 0);
 				move->qorder = move->real_score = b->pers->LVAcap[KING + 1][b->pieces[to] & PIECEMASK];
 				move++;
-				move->move = PackMove(ppos, to, KNIGHT, 0);
-				move->qorder = move->real_score = b->pers->LVAcap[KING + 2][b->pieces[to] & PIECEMASK];
-				move++;
 //underpromotion
+				move->move = PackMove(ppos, to, KNIGHT, 0);
+				move->qorder = move->real_score = A_CA_PROM_N;
+				move++;
 				move->move = PackMove(ppos, to, BISHOP, 0);
-				move->qorder = move->real_score = A_OR2;
+				move->qorder = move->real_score = MV_UND+6;
 				move++;
 				move->move = PackMove(ppos, to, ROOK, 0);
-				move->qorder = move->real_score = A_OR2;
+				move->qorder = move->real_score = MV_UND+7;
 				move++;
 				ClrLO(pmap);
 			}
@@ -499,17 +499,18 @@ void generateCapturesN3(const board *const b, attack_model *a, move_entry **m, i
 				int ppos = LastOne(pmap);
 				to = getPos(getFile(ppos), getRank(ppos)+get_rank);
 				move->move = PackMove(ppos, to, QUEEN, 0);
-				move->qorder = move->real_score = A_QUEEN_PROM;
-				move++;
-				move->move = PackMove(ppos, to, KNIGHT, 0);
-				move->qorder = move->real_score = A_KNIGHT_PROM;
+//				move->qorder = move->real_score = A_QUEEN_PROM;
+				move->qorder = move->real_score = b->pers->LVAcap[KING + 1][ER_PIECE];
 				move++;
 // underpromotion
+				move->move = PackMove(ppos, to, KNIGHT, 0);
+				move->qorder = move->real_score = A_CA_PROM_N;
+				move++;
 				move->move = PackMove(ppos, to, BISHOP, 0);
-				move->qorder = move->real_score = A_MINOR_PROM + B_OR;
+				move->qorder = move->real_score = MV_UND+1;
 				move++;
 				move->move = PackMove(ppos, to, ROOK, 0);
-				move->qorder = move->real_score = A_MINOR_PROM + R_OR;
+				move->qorder = move->real_score = MV_UND+2;
 				move++;
 				ClrLO(pmap);
 			}
@@ -522,7 +523,7 @@ void generateCapturesN3(const board *const b, attack_model *a, move_entry **m, i
 				move->qorder = move->real_score = b->pers->LVAcap[KING + 1][b->pieces[to] & PIECEMASK];
 				move++;
 				move->move = PackMove(ppos, to, KNIGHT, 0);
-				move->qorder = move->real_score = b->pers->LVAcap[KING + 2][b->pieces[to] & PIECEMASK];
+				move->qorder = move->real_score = A_CA_PROM_N;
 				move++;
 				ClrLO(pmap);
 			}
@@ -534,7 +535,7 @@ void generateCapturesN3(const board *const b, attack_model *a, move_entry **m, i
 				move->qorder = move->real_score = b->pers->LVAcap[KING + 1][b->pieces[to] & PIECEMASK];
 				move++;
 				move->move = PackMove(ppos, to, KNIGHT, 0);
-				move->qorder = move->real_score = b->pers->LVAcap[KING + 2][b->pieces[to] & PIECEMASK];
+				move->qorder = move->real_score = A_CA_PROM_N;
 				move++;
 				ClrLO(pmap);
 			}
@@ -544,10 +545,10 @@ void generateCapturesN3(const board *const b, attack_model *a, move_entry **m, i
 				int ppos = LastOne(pmap);
 				to = getPos(getFile(ppos), getRank(ppos)+get_rank);
 				move->move = PackMove(ppos, to, QUEEN, 0);
-				move->qorder = move->real_score = A_QUEEN_PROM;
+				move->qorder = move->real_score = b->pers->LVAcap[KING + 1][ER_PIECE];
 				move++;
 				move->move = PackMove(ppos, to, KNIGHT, 0);
-				move->qorder = move->real_score = A_KNIGHT_PROM;
+				move->qorder = move->real_score = A_CA_PROM_N;
 				move++;
 				ClrLO(pmap);
 			}
@@ -558,8 +559,8 @@ void generateCapturesN3(const board *const b, attack_model *a, move_entry **m, i
 	while(pmap) {
 		int ppos = LastOne(pmap);
 		to = getPos(getFile(b->ep), getRank(b->ep) + get_rank);
-			move->move = PackMove(ppos, to, PAWN,0);
-			move->qorder = move->real_score = b->pers->LVAcap[PAWN][PAWN];
+		move->move = PackMove(ppos, to, PAWN,0);
+		move->qorder = move->real_score = b->pers->LVAcap[PAWN][PAWN];
 		move++;
 		ClrLO(pmap);
 	}
@@ -582,10 +583,10 @@ void generateCapturesN3(const board *const b, attack_model *a, move_entry **m, i
 // serialize captures
 void generateCapturesN2(const board *const b, attack_model *a, move_entry **m, int gen_u)
 {
-	generateBitmaps(b, a, b->colormaps[b->side], b->side);
+//	generateBitmaps(b, a, b->colormaps[b->side], b->side);
 //	a->att_by_side[WHITE] = KingAvoidSQAlt(b, a, WHITE);
 //	a->att_by_side[BLACK] = KingAvoidSQAlt(b, a, BLACK);
-	mvsfromk22(b, a, b->side);
+//	mvsfromk22(b, a, b->side);
 	generateCapturesN3(b, a, m, gen_u);
 }
 
@@ -704,7 +705,7 @@ void generateMovesN2(const board *const b, attack_model *a, move_entry **m)
 		int ppos = LastOne(pmap);
 		to = getPos(getFile(ppos), getRank(ppos)+get_rank);
 		move->move = PackMove(ppos, to, ER_PIECE, 0);
-		move->qorder = move->real_score = MV_OR + P_OR;
+		move->qorder = move->real_score = b->pers->LVAcap[PAWN][ER_PIECE];
 		move++;
 		ClrLO(pmap);
 	}
@@ -714,7 +715,7 @@ void generateMovesN2(const board *const b, attack_model *a, move_entry **m)
 		int ppos = LastOne(pmap);
 		to = getPos(getFile(ppos), getRank(ppos)+2*get_rank);
 		move->move = PackMove(ppos, to, ER_PIECE, 0);
-		move->qorder = move->real_score = MV_OR + P_OR + 1;
+		move->qorder = move->real_score = b->pers->LVAcap[PAWN][ER_PIECE]+1;
 		move++;
 		ClrLO(pmap);
 	}
@@ -728,7 +729,7 @@ void generateMovesN2(const board *const b, attack_model *a, move_entry **m)
 	while (mv) {
 		to = LastOne(mv);
 		move->move = PackMove(from, to, ER_PIECE, 0);
-		move->qorder = move->real_score = MV_OR;
+		move->qorder = move->real_score = b->pers->LVAcap[KING][ER_PIECE];
 		move++;
 		ClrLO(mv);
 	}
@@ -740,6 +741,7 @@ void generateMovesN2(const board *const b, attack_model *a, move_entry **m)
 		move->qorder = move->real_score = (from>to) ? CS_Q_OR:CS_K_OR ;
 		move++;
 		ClrLO(mv);
+//		L0("castle, %d, %d\n", from, to);
 	}
 	*m = move;
 	return;
@@ -914,7 +916,7 @@ void generateQuietCheckMovesN(const board *const b, attack_model *a, move_entry 
 		to = getPos(getFile(ppos), getRank(ppos)+get_rank);
 		if(NORMM(to) & (~a->ke[opside].pn_pot_att_pos)) {
 			move->move = PackMove(ppos, to, ER_PIECE, 0);
-			move->qorder = move->real_score = MV_OR + P_OR;
+			move->qorder = move->real_score = b->pers->LVAcap[PAWN][ER_PIECE];
 			move++;
 		}
 		ClrLO(pmap);
@@ -926,7 +928,7 @@ void generateQuietCheckMovesN(const board *const b, attack_model *a, move_entry 
 		to = getPos(getFile(ppos), getRank(ppos)+2*get_rank);
 		if(NORMM(to) & (~a->ke[opside].pn_pot_att_pos)) {
 			move->move = PackMove(ppos, to, ER_PIECE, 0);
-			move->qorder = move->real_score = MV_OR + P_OR + 1;
+			move->qorder = move->real_score = b->pers->LVAcap[PAWN][ER_PIECE]+1;
 			move++;
 		}
 		ClrLO(pmap);
@@ -937,7 +939,7 @@ void generateQuietCheckMovesN(const board *const b, attack_model *a, move_entry 
 		to = getPos(getFile(ppos), getRank(ppos)+get_rank);
 		if(NORMM(to) & (a->ke[opside].pn_pot_att_pos)) {
 			move->move = PackMove(ppos, to, ER_PIECE, 0);
-			move->qorder = move->real_score = MV_OR + P_OR;
+			move->qorder = move->real_score = b->pers->LVAcap[PAWN][ER_PIECE];
 			move++;
 		}
 		ClrLO(pmap);
@@ -948,7 +950,7 @@ void generateQuietCheckMovesN(const board *const b, attack_model *a, move_entry 
 		to = getPos(getFile(ppos), getRank(ppos)+2*get_rank);
 		if(NORMM(to) & (a->ke[opside].pn_pot_att_pos)) {
 			move->move = PackMove(ppos, to, ER_PIECE, 0);
-			move->qorder = move->real_score = MV_OR + P_OR + 1;
+			move->qorder = move->real_score = b->pers->LVAcap[PAWN][ER_PIECE]+1;
 			move++;
 		}
 		ClrLO(pmap);
@@ -962,7 +964,7 @@ void generateQuietCheckMovesN(const board *const b, attack_model *a, move_entry 
 		while (mv) {
 			to = LastOne(mv);
 			move->move = PackMove(from, to, ER_PIECE, 0);
-			move->qorder = move->real_score = MV_OR;
+			move->qorder = move->real_score = b->pers->LVAcap[KING][ER_PIECE];
 			move++;
 			ClrLO(mv);
 		}
@@ -1845,6 +1847,8 @@ int pos[4];
 	UnMakeMoveNew(b, u, pos);
 }
 
+
+// predelat pomoci generace capture a normal
 void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **m, int gen_u)
 {
 	int from, to, ff, orank;
@@ -1945,15 +1949,15 @@ void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **
 					move->move = PackMove(ppos, to, QUEEN, 0);
 					move->qorder = move->real_score = b->pers->LVAcap[KING + 1][b->pieces[to] & PIECEMASK];
 					move++;
-					move->move = PackMove(ppos, to, KNIGHT, 0);
-					move->qorder = move->real_score = b->pers->LVAcap[KING + 2][b->pieces[to] & PIECEMASK];
-					move++;
 //underpromotion
+					move->move = PackMove(ppos, to, KNIGHT, 0);
+					move->qorder = move->real_score = A_CA_PROM_N;
+					move++;
 					move->move = PackMove(ppos, to, BISHOP, 0);
-					move->qorder = move->real_score = A_OR2;
+					move->qorder = move->real_score = MV_UND+6;
 					move++;
 					move->move = PackMove(ppos, to, ROOK, 0);
-					move->qorder = move->real_score = A_OR2;
+					move->qorder = move->real_score = MV_UND+7;
 					move++;
 				}
 				ClrLO(pmap);
@@ -1966,15 +1970,15 @@ void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **
 					move->move = PackMove(ppos, to, QUEEN, 0);
 					move->qorder = move->real_score = b->pers->LVAcap[KING + 1][b->pieces[to] & PIECEMASK];
 					move++;
-					move->move = PackMove(ppos, to, KNIGHT, 0);
-					move->qorder = move->real_score = b->pers->LVAcap[KING + 2][b->pieces[to] & PIECEMASK];
-					move++;
 //underpromotion
+					move->move = PackMove(ppos, to, KNIGHT, 0);
+					move->qorder = move->real_score = A_CA_PROM_N;
+					move++;
 					move->move = PackMove(ppos, to, BISHOP, 0);
-					move->qorder = move->real_score = A_OR2;
+					move->qorder = move->real_score = MV_UND+1;
 					move++;
 					move->move = PackMove(ppos, to, ROOK, 0);
-					move->qorder = move->real_score = A_OR2;
+					move->qorder = move->real_score = MV_UND+2;
 					move++;
 				}
 				ClrLO(pmap);
@@ -1989,7 +1993,7 @@ void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **
 					move->qorder = move->real_score = b->pers->LVAcap[KING + 1][b->pieces[to] & PIECEMASK];
 					move++;
 					move->move = PackMove(ppos, to, KNIGHT, 0);
-					move->qorder = move->real_score = b->pers->LVAcap[KING + 2][b->pieces[to] & PIECEMASK];
+					move->qorder = move->real_score = A_CA_PROM_N;
 					move++;
 				}
 				ClrLO(pmap);
@@ -2003,7 +2007,7 @@ void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **
 					move->qorder = move->real_score = b->pers->LVAcap[KING + 1][b->pieces[to] & PIECEMASK];
 					move++;
 					move->move = PackMove(ppos, to, KNIGHT, 0);
-					move->qorder = move->real_score = b->pers->LVAcap[KING + 2][b->pieces[to] & PIECEMASK];
+					move->qorder = move->real_score = A_CA_PROM_N;
 					move++;
 				}
 				ClrLO(pmap);
@@ -2049,7 +2053,7 @@ void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **
 			to = getPos(getFile(ppos), getRank(ppos)+get_rank);
 			if(NORMM(to) & all) {
 				move->move = PackMove(ppos, to, ER_PIECE, 0);
-				move->qorder = move->real_score = MV_OR + P_OR;
+				move->qorder = move->real_score = b->pers->LVAcap[PAWN][ER_PIECE];
 				move++;
 			}
 			ClrLO(pmap);
@@ -2061,7 +2065,7 @@ void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **
 			to = getPos(getFile(ppos), getRank(ppos)+2*get_rank);
 			if(NORMM(to) & all) {
 				move->move = PackMove(ppos, to, ER_PIECE, 0);
-				move->qorder = move->real_score = MV_OR + P_OR + 1;
+				move->qorder = move->real_score = b->pers->LVAcap[PAWN][ER_PIECE]+1;
 				move++;
 			}
 			ClrLO(pmap);
@@ -2075,17 +2079,17 @@ void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **
 				to = getPos(getFile(ppos), getRank(ppos)+get_rank);
 				if(NORMM(to) & all) {
 					move->move = PackMove(ppos, to, QUEEN, 0);
-					move->qorder = move->real_score = A_QUEEN_PROM;
-					move++;
-					move->move = PackMove(ppos, to, KNIGHT, 0);
-					move->qorder = move->real_score = A_KNIGHT_PROM;
+					move->qorder = move->real_score = b->pers->LVAcap[KING+1][ER_PIECE];
 					move++;
 // underpromotion
+					move->move = PackMove(ppos, to, KNIGHT, 0);
+					move->qorder = move->real_score = A_CA_PROM_N;
+					move++;
 					move->move = PackMove(ppos, to, BISHOP, 0);
-					move->qorder = move->real_score = A_MINOR_PROM + B_OR;
+					move->qorder = move->real_score = MV_UND+1;
 					move++;
 					move->move = PackMove(ppos, to, ROOK, 0);
-					move->qorder = move->real_score = A_MINOR_PROM + R_OR;
+					move->qorder = move->real_score = MV_UND+2;
 					move++;
 				}
 				ClrLO(pmap);
@@ -2098,10 +2102,10 @@ void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **
 				to = getPos(getFile(ppos), getRank(ppos)+get_rank);
 				if(NORMM(to) & all) {
 					move->move = PackMove(ppos, to, QUEEN, 0);
-					move->qorder = move->real_score = A_QUEEN_PROM;
+					move->qorder = move->real_score = b->pers->LVAcap[KING+1][ER_PIECE];
 					move++;
 					move->move = PackMove(ppos, to, KNIGHT, 0);
-					move->qorder = move->real_score = A_KNIGHT_PROM;
+					move->qorder = move->real_score = A_CA_PROM_N;
 					move++;
 				}
 				ClrLO(pmap);
@@ -2123,7 +2127,8 @@ void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **
 	while (mv) {
 		to = LastOne(mv);
 		move->move = PackMove(from, to, ER_PIECE, 0);
-		move->qorder = move->real_score = MV_OR;
+//		move->qorder = move->real_score = MV_OR;
+		move->qorder = move->real_score = b->pers->LVAcap[KING][ER_PIECE];
 		move++;
 		ClrLO(mv);
 	}
@@ -2133,8 +2138,8 @@ void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **
 
 void generateInCheckMovesN(const board *const b, attack_model *a, move_entry **m, int gen_u)
 {
-	generateBitmaps(b, a, b->colormaps[b->side], b->side);
-	mvsfromk22(b, a, b->side);
+//	generateBitmaps(b, a, b->colormaps[b->side], b->side);
+//	mvsfromk22(b, a, b->side);
 	generateInCheckMovesN2(b, a, m, gen_u);
 }
 
@@ -2252,17 +2257,20 @@ void SelectBest(move_cont *mv)
 	}
 }
 
+// score generate normal quiet moves with HH
 void ScoreNormal(board *b, move_cont *mv, int side)
 {
 	move_entry *t;
 	int fromPos, ToPos, piece, opside, dist;
 
 	opside = Flip(side);
-	for (t = mv->lastp - 1; t > mv->next; t--) {
+	for (t = mv->lastp - 1; t >= mv->next; t--) {
 		fromPos = UnPackFrom(t->move);
 		ToPos = UnPackTo(t->move);
 		piece = b->pieces[fromPos] & PIECEMASK;
-		t->qorder = checkHHTable(b->hht, side, piece, ToPos) + MV_HH;
+
+		if(t->qorder < CS_K_OR) t->qorder = checkHHTable(b->hht, side, piece, ToPos) + MV_HH;
+
 //		L0("HH table:%d\n", t->qorder);
 // assign priority based on distance to enemy king or promotion
 #if 0
@@ -2277,6 +2285,36 @@ void ScoreNormal(board *b, move_cont *mv, int side)
 		}
 #endif
 //		L0("HH after:%d\n", t->qorder);
+	}
+}
+
+// score / test captures with SEE. SEE return is in miliPawns
+void ScoreCaps(board *b, move_cont *mv, int side)
+{
+	int see;
+	move_entry *t;
+	int fromPos, ToPos, piece, opside, dist;
+
+	opside = Flip(side);
+	for (t = mv->lastp - 1; t >= mv->next; t--) {
+
+		if(t->qorder == A_CA_PROM_N) {
+			fromPos = UnPackFrom(t->move);
+			piece = b->pieces[fromPos] & PIECEMASK;
+			if((piece == KNIGHT)
+			&& (attack.maps[KNIGHT][b->king[opside]] & attack.maps[KNIGHT][fromPos]))
+			t->qorder = A_CA_PROM_Q-1;
+		} else
+		if ((t->qorder < A_OR)
+				&& (t->qorder >= A_OR2)) {
+//				L0("SEE hit\n");
+				see = SEEx(b, t->move);
+				if(see < 0) {
+//					t->qorder += (MV_BAD-A_OR2);
+					t->qorder = (MV_OR + see/100);
+//					L0("neg SEE %d\n", see);
+				}
+		}
 	}
 }
 
@@ -2336,6 +2374,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 			mv->next->phase=HASHMOVE;
 			*mm = mv->next;
 			mv->next->ord=mv->count;
+			mv->next->qorder=HASH_OR;
 			mv->next++;
 			mv->exclp++;
 			mv->lastp=mv->next;
@@ -2356,6 +2395,9 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 			goto rest_moves;
 		}
 		generateCapturesN2(b, a, &(mv->lastp), 1);
+		ScoreCaps(b, mv, side);
+//		move_cont_dump(b, a, mv);
+		
 		mv->cgen=mv->tgen=mv->lastp-mv->next;
 		DEB_S2(move_entry *m=mv->lastp-1; for(;m>=mv->next; m--) m->state=0; )
 		mv->tcnt = 95;
@@ -2364,10 +2406,10 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 			mv->tcnt--;
 			SelectBest(mv);
 			if (isMoveValid(b, mv->next->move, a, side, tree))
-			  if (((mv->next->qorder < A_OR2_MAX)
-				&& (mv->next->qorder > A_OR2))
-				&& (SEEx(b, mv->next->move) < 0)) {
+			  if ((mv->next->qorder < MV_OR)
+			  ) {
 				mv->next->phase=OTHER;
+				mv->next->ord=-1;
 				*(mv->badp) = *(mv->next);
 				mv->badp++;
 				mv->next++;
@@ -2389,9 +2431,9 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 	case CAPTURES:
 		while (mv->next < mv->lastp) {
 			if (isMoveValid(b, mv->next->move, a, side, tree))
-			  if (((mv->next->qorder < A_OR2_MAX)
-				&& (mv->next->qorder > A_OR2))
-				&& (SEEx(b, mv->next->move) < 0)) {
+			  if ((mv->next->qorder < MV_OR)
+			  ) {
+				mv->next->ord=-1;
 				mv->next->phase=OTHER;
 				*(mv->badp) = *(mv->next);
 				mv->badp++;
@@ -2413,6 +2455,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 			if (r && isMoveValid(b, mv->killer1.move, a, side, tree)
 				&& (!ExcludeMove(mv,  mv->killer1.move))) {
 				mv->killer1.phase=KILLER1;
+				mv->next->qorder=KILLER_OR+4;
 				*(mv->exclp) = mv->killer1;
 				mv->exclp++;
 				*mm =  &(mv->killer1);
@@ -2427,6 +2470,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 			if (r && isMoveValid(b, mv->killer2.move, a, side, tree)
 				&& (!ExcludeMove(mv, mv->killer2.move))) {
 				mv->killer2.phase=KILLER2;
+				mv->next->qorder=KILLER_OR+3;
 				*(mv->exclp) = mv->killer2;
 				mv->exclp++;
 				*mm =  &(mv->killer2);
@@ -2445,6 +2489,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 					*(mv->exclp) = mv->killer3;
 					mv->exclp++;
 					*mm =  &(mv->killer3);
+					mv->next->qorder=KILLER_OR+2;
 					mv->killer3.ord=mv->count;
 					return ++mv->count;
 				}
@@ -2458,6 +2503,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 				if (r && isMoveValid(b, mv->killer4.move, a, side, tree)
 					&& (!ExcludeMove(mv, mv->killer4.move))) {
 					mv->killer3.phase=KILLER4;
+					mv->next->qorder=KILLER_OR+1;
 					*(mv->exclp) = mv->killer4;
 					mv->exclp++;
 					*mm =  &(mv->killer4);
@@ -2661,6 +2707,7 @@ char b2[512];
 int getNextCap(board *b, attack_model *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store *tree)
 {
 	move_entry *m;
+int fromPos, piece;
 
 	switch (mv->phase) {
 	case INIT:
@@ -2690,6 +2737,7 @@ int getNextCap(board *b, attack_model *a, move_cont *mv, int ply, int side, int 
 		mv->phase = CAPTUREA;
 		mv->next = mv->lastp;
 		generateCapturesN2(b, a, &(mv->lastp), 0);
+//		ScoreCaps(b, mv, side);
 		mv->cgen=mv->tgen=mv->lastp-mv->next;
 		DEB_S2(m=mv->lastp-1;for(;m>=mv->next; m--) m->state=0; )
 		mv->tcnt = 0;
@@ -2699,10 +2747,17 @@ int getNextCap(board *b, attack_model *a, move_cont *mv, int ply, int side, int 
 		while ((mv->next < mv->lastp) && (mv->tcnt > 0)) {
 			mv->tcnt--;
 			SelectBest(mv);
-			if (((mv->next->qorder < A_OR2_MAX)
-				&& (mv->next->qorder > A_OR2))
-				&& (SEEx(b, mv->next->move) < 0)
-				&& mv->lpcheck) {
+			if(mv->next->qorder == A_CA_PROM_N) {
+				fromPos = UnPackFrom(mv->next->move);
+				piece = b->pieces[fromPos] & PIECEMASK;
+				if((piece == KNIGHT)
+				&& (attack.maps[KNIGHT][b->king[Flip(side)]] & attack.maps[KNIGHT][fromPos]))
+				mv->next->qorder = A_CA_PROM_Q-1;
+			}
+			if ((mv->next->qorder < A_OR_N)
+			&& (SEEx(b, mv->next->move) < 0)
+			) {
+				mv->next->ord=-1;
 				mv->next->phase=OTHER;
 				mv->next++;
 				continue;
@@ -2723,10 +2778,17 @@ int getNextCap(board *b, attack_model *a, move_cont *mv, int ply, int side, int 
 		LOGGER_SE("SORT CAP\n");
 	case CAPTURES:
 		while (mv->next < mv->lastp) {
-			if (((mv->next->qorder < A_OR2_MAX)
-				&& (mv->next->qorder > A_OR2))
-				&& (SEEx(b, mv->next->move) < 0)
-				&& mv->lpcheck) {
+			if(mv->next->qorder == A_CA_PROM_N) {
+				fromPos = UnPackFrom(mv->next->move);
+				piece = b->pieces[fromPos] & PIECEMASK;
+				if((piece == KNIGHT)
+				&& (attack.maps[KNIGHT][b->king[Flip(side)]] & attack.maps[KNIGHT][fromPos]))
+				mv->next->qorder = A_CA_PROM_Q-1;
+			}
+			  if ((mv->next->qorder < A_OR_N)
+			  && (SEEx(b, mv->next->move) < 0)
+			  ) {
+				mv->next->ord=-1;
 				mv->next->phase=OTHER;
 				mv->next++;
 				continue;

@@ -2830,7 +2830,8 @@ void see0_test()
 	b.uci_options = &uci_options;
 
 	char *fen[] =
-		{ "1k2r3/1p1bP3/2p2p1Q/Ppb5/5p1P/5N1P/5PB/4q1K b - - 1 3", };
+		{ "1k2r3/1p1bP3/2p2p1Q/Ppb5/5p1P/5N1P/5PB/4q1K b - - 1 3", 
+		"5k2/ppp2r1p/2p2ppP/8/3b4/2P2N2/PP4P/2KR4 b - - 2 2"};
 
 	b.stats = allocate_stats(1);
 	b.pers = (personality*) init_personality("pers.xml");
@@ -2838,6 +2839,14 @@ void see0_test()
 	b.hps = allocateHashPawnStore(HASHPAWNSIZE * 1024L * 1024L);
 	b.hht = allocateHHTable();
 	b.kmove = allocateKillerStore();
+
+	setup_FEN_board(&b, fen[1]);
+	move = PackMoveF(D4, C3, ER_PIECE, 0);
+	printBoardNice(&b);
+	result = SEEx(&b, move);
+	LOGGER_0("SEEx %d\n", result);
+
+#if 0
 
 	setup_FEN_board(&b, fen[0]);
 	move = PackMoveF(E1, E2, ER_PIECE, 0);
@@ -2860,6 +2869,7 @@ void see0_test()
 	result = SEE0(&b, E5, BLACK, 0);
 	LOGGER_0("SEE0 %d\n", result);
 
+#endif
 	freeKillerStore(b.kmove);
 	freeHHTable(b.hht);
 	freeHashPawnStore(b.hps);
@@ -3957,4 +3967,86 @@ void move_gen_checker(char *filein, int max_positions)
 	printf("Movegen Checker finish\n");
 
 	cleanup: free(pi);
+}
+
+
+int movegensort_test(char *pos, char *pers)
+{
+	int opside, incheck;
+
+	unsigned long long nodes, tnodes;
+	move_entry move[300], *n;
+	char buf[300];
+	BITVAR attacks;
+	struct timespec start, end;
+	unsigned long long int totaltime;
+	char fen[100];
+
+	char buffer[10], b2[1024], b3[2048], b4[512];
+	tree_store *moves;
+	attack_model ATT, *att;
+	char *name;
+	char pm[256][CMTLEN];
+	char am[10][CMTLEN];
+	char bm[10][CMTLEN];
+	char cc[10][CMTLEN], (*cm)[CMTLEN];
+	int dm, adm;
+
+	board *b;
+	b = allocate_board();
+	b->pers = (personality*) init_personality(pers);
+
+	allocate_tables(b);
+//	start_threads(b);
+	b->search_abort=0;
+
+	move_entry *m, mdum = { MATE_M, 0, 0 - GenerateMATESCORE(1) }, *mb, *mn, mt;
+	move_cont mvs, *MVS;
+
+	MVS=&mvs;
+	cm = NULL;
+	
+//	moves = (tree_store*) malloc(sizeof(tree_store));
+
+	att = &ATT;
+
+	parseEPD(pos, fen, am, bm, pm, cm, NULL, &dm, &name);
+	setup_FEN_board(b, fen);
+
+	invalidateHash(b->hs);
+	invalidatePawnHash(b->hps);
+	clearSearchCnt(b->stats);
+	clearHHTable(b->hht);
+
+	incheck = (isInCheck_Eval(b, att, b->side)!=0);
+	opside = Flip(b->side);
+
+	att->phase = eval_phase(b, b->pers);
+
+	eval_king_checks_extU(b, &(att->ke[WHITE]), 0, b->king[WHITE]);
+	eval_king_checks_extU(b, &(att->ke[BLACK]), 1, b->king[BLACK]);
+
+	generateBitmaps(b, att, FULLBITMAP, BLACK);
+	generateBitmaps(b, att, FULLBITMAP, WHITE);
+	att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+	att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+	mvsfromk22(b, att, BLACK);
+	mvsfromk22(b, att, WHITE);
+
+	MVS->hash.move = DRAW_M;
+
+	sortMoveListNew_Init(b, att, MVS);
+	printBoardNice(b);
+	while ((getNextMove(b, att, MVS, 0, b->side, incheck, &m, NULL) != 0)){
+			sprintfMoveSimple(m->move, b2);
+			L0("Move: %s\n", b2);
+	}
+	move_cont_dump(b, att, MVS);
+
+//	stop_threads(b);
+	deallocate_tables(b);
+	free(b->pers);
+	deallocate_board(b);
+	L0("test move sort finished\n");
+return 0;
 }

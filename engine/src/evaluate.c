@@ -3579,7 +3579,7 @@ int SEE(board *b, MOVESTORE m)
 
 int SEEx(board *b, MOVESTORE m)
 {
-	int v[]={ 1000, 3250, 3250, 5000, 9750, 888888 };
+	int v[]={ 1000, 3250, 3250, 5000, 9750, 44444 };
 	int gain[32];
 	int fr, to, side, d, attacker, piece;
 	BITVAR ignore, bto, ppromote;
@@ -3738,7 +3738,7 @@ int MVVLVA_gen(int table[ER_PIECE + 2][ER_PIECE+1], _values Values)
 		for (att = PAWN; att < ER_PIECE; att++) {
 // all values inserted are positive!
 			if (vic == att) { // A_OR + 6*v[att]*2 , 12-60 (72)
-				table[att][vic] = A_OR + (7 * v[att] - v[att]) * 2 ;
+				table[att][vic] = A_OR_N + (7 * v[att] - v[att]) * 2 ;
 			} else if (vic > att) { // A_OR + (7*6-1)*2-(7*2-1)*2, 82-26
 				table[att][vic] = A_OR + (7 * v[vic] - v[att]) * 2;
 			} else if (vic < att) { // A_OR2 + (7*1-6)*2-(7*5-6)*2, 2-58
@@ -3749,24 +3749,17 @@ int MVVLVA_gen(int table[ER_PIECE + 2][ER_PIECE+1], _values Values)
 #if 1
 // lines for capture+promotion
 // to queen
-	for (vic = PAWN; vic < ER_PIECE; vic++) {
-		att = PAWN;
-		table[KING + 1][vic] = A_OR + (7 * v[vic] - v[PAWN] + v[QUEEN]) * 2;
+	for (vic = PAWN; vic <= ER_PIECE; vic++) {
+		table[KING + 1][vic] = A_CA_PROM_Q + v[vic];
 	}
-// to knight
-	for (vic = PAWN; vic < ER_PIECE; vic++) {
-		att = PAWN;
-		table[KING + 2][vic] = A_OR + (7 * v[vic] - v[PAWN] + v[KNIGHT]) * 2;
-	}
-	table[PAWN][ER_PIECE]	=P_OR+20;
-	table[KNIGHT][ER_PIECE]	=N_OR+20;
-	table[BISHOP][ER_PIECE]	=B_OR+20;
-	table[ROOK][ER_PIECE]	=R_OR+20;
-	table[QUEEN][ER_PIECE]	=Q_OR+20;
-	table[KING][ER_PIECE]	=K_OR_M+20;
-	table[KING + 1][ER_PIECE] = (0 - v[PAWN] + v[QUEEN]) * 2 + 20;
-	table[KING + 2][ER_PIECE] = (0 - v[PAWN] + v[KNIGHT]) * 2 + 20;
-#endif
+	table[PAWN][ER_PIECE]	=MV_OR + 5;
+	table[KNIGHT][ER_PIECE]	=MV_OR + 7;
+	table[BISHOP][ER_PIECE]	=MV_OR + 6;
+	table[ROOK][ER_PIECE]	=MV_OR + 4;
+	table[QUEEN][ER_PIECE]	=MV_OR + 3;
+	table[KING][ER_PIECE]	=MV_OR + 2;
+//	table[KING + 1][ER_PIECE] = A_CA_PROM_Q;
+#endif	
 
 	return 0;
 }
