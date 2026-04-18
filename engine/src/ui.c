@@ -1154,6 +1154,9 @@ while (uci_state != 0) {
 					LOGGER_1("INFO: UCI hash reset\n");
 					invalidateHash(b->hs);
 					invalidatePawnHash(b->hps);
+//!!!!
+//					reduceHHTable(b->hht);
+//					clearHHTable(b->hht);
 				} LOGGER_4("INFO: UCI hash reset DONE\n");
 				move_o = b->move;
 				handle_go(b, b2);

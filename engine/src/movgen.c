@@ -2460,6 +2460,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 				mv->exclp++;
 				*mm =  &(mv->killer1);
 				mv->killer1.ord=mv->count;
+				mv->next->phase=KILLER1;;
 				return ++mv->count;
 			}
 		}
@@ -2475,6 +2476,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 				mv->exclp++;
 				*mm =  &(mv->killer2);
 				mv->killer2.ord=mv->count;
+				mv->next->phase=KILLER2;
 				return ++mv->count;
 			}
 		}
@@ -2491,6 +2493,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 					*mm =  &(mv->killer3);
 					mv->next->qorder=KILLER_OR+2;
 					mv->killer3.ord=mv->count;
+					mv->next->phase=KILLER3;
 					return ++mv->count;
 				}
 			}
@@ -2508,6 +2511,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 					mv->exclp++;
 					*mm =  &(mv->killer4);
 					mv->killer4.ord=mv->count;
+					mv->next->phase=KILLER4;
 					return ++mv->count;
 				}
 			}

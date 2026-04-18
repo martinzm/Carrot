@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
+#include <math.h>
 #include "evaluate.h"
 #include "generate.h"
 #include "movgen.h"
@@ -30,13 +31,14 @@
 #include "assert.h"
 
 // 6*4+6*4+9*4+18*2 = 24+24+36+36 = 120 //--
+// koncovka - materialu celkem je mene nez 6 (hluboka) nebo 8 ve schematu 0,1,1,2,4, <12 prechod do koncovky
 
 uint8_t t_phase(int p, int n, int b, int r, int q) {
 	int v[] = { 0, 6, 6, 9, 18 };
 	int nc[] = { 16, 4, 4, 4, 2 };
 	int tot = nc[PAWN]*v[PAWN] + nc[KNIGHT]*v[KNIGHT] + nc[BISHOP]*v[BISHOP] + nc[ROOK]*v[ROOK] + nc[QUEEN]*v[QUEEN];
 	int i = p*v[PAWN] + n*v[KNIGHT] + b*v[BISHOP] + r*v[ROOK] + q*v[QUEEN];
-	return (uint8_t) ((Min(i, tot)*255)/tot) & 255;
+	return (uint8_t) ((Min(i, tot)*255.0)/tot) & 255;
 }
 
 uint8_t eval_phase(board const *b, personality const *p)
@@ -3760,6 +3762,15 @@ int MVVLVA_gen(int table[ER_PIECE + 2][ER_PIECE+1], _values Values)
 	table[KING][ER_PIECE]	=MV_OR + 2;
 //	table[KING + 1][ER_PIECE] = A_CA_PROM_Q;
 #endif	
-
 	return 0;
+}
+
+void init_lmr_table(int table[64][64])
+{
+int d, m;
+	for(d=0;d<64;d++)
+	  for(m=0;m<64;m++) {
+		  table[d][m] = (int) (0.5 + log(d+1)*log(m+1) / 1.9);
+		  L4("%d:%d = %d\n", d,m, table[d][m]);
+		}
 }

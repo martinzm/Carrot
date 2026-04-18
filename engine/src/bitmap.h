@@ -120,7 +120,7 @@ typedef enum _RANKS {
 #define PIECEMASK 7
 #define PAWNS_TOT 18
 
-#define HHScale 400
+#define HHScale 16000
 
 typedef enum _MOVE_FLAGS { r_NOR=0x0000, r_FUT=0x01, r_LMR=0x02, r_LMP=0x04, r_HASH=0x08,
 	r_BETA=0x10, r_ALFA=0x20, r_NULL=0x40, r_CHECK=0x80, r_DRAW=0x100, r_IWIN=0x200 } MOVE_FLAGS;
@@ -424,6 +424,8 @@ typedef struct _personality {
 	struct materi mat_info[420000];
 	uint8_t mat_faze[420000];
 	int *matdeb;
+
+	int lmr_table[64][64];
 
 } personality;
 

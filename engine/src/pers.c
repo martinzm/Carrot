@@ -1128,6 +1128,7 @@ void* init_personality(char *docname)
 //	mat_faze(p->mat_faze);
 	meval_t_gen(p);
 	MVVLVA_gen((p->LVAcap), p->Values);
+	init_lmr_table(p->lmr_table);
 	return p;
 }
 

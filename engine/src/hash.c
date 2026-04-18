@@ -699,6 +699,7 @@ hhTable* allocateHHTable(void)
 	hh = (hhTable*) malloc(sizeof(hhTable));
 	if (hh == NULL)
 		abort();
+	clearHHTable(hh);
 	return hh;
 }
 
@@ -761,4 +762,14 @@ int updateHHTableBad(board *b, hhTable *hh, move_entry *m, int cutoff, int side,
 int checkHHTable(hhTable *hh, int side, int piece, int square)
 {
 	return hh->val[side][piece][square];
+}
+
+int reduceHHTable(hhTable *hh)
+{
+	int f, q;
+	for (int s=0;s<=1;s++)
+		for (q = PAWN; q < ER_PIECE; q++) 
+			for (f = 0; f < 64; f++)
+				hh->val[s][q][f] >>=2;
+	return 0;
 }

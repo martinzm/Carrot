@@ -8,7 +8,7 @@ hlavni hledani
 - tichy sach (v planu)
 - killers
 - rosada
-- HistoryH (v planu)
+- HistoryH
 - tiche tahy - v poradi jezdec, strelec, pesec, vez, dama, kral
 - captures SEE<0 (dle SEE)
 - underpromotions

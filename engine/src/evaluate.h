@@ -56,6 +56,8 @@ int meval_table_gen(meval_t*, personality*, int);
 int meval_t_gen(personality*);
 
 int MVVLVA_gen(int table[ER_PIECE + 2][ER_PIECE+1], _values Values);
+void init_lmr_table(int table[64][64]);
+
 int SEE(board *b, MOVESTORE m);
 int SEEx(board *b, MOVESTORE m);
 int SEE0(board *b, int to, int side, int val);
