@@ -75,6 +75,7 @@ int checkHHTable(hhTable*, int, int, int);
 int updateHHTableGood(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int depth, int ply);
 int updateHHTableBad(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int depth, int ply);
 int reduceHHTable(hhTable*);
+int dumpHHTable(hhTable*);
 
 
 

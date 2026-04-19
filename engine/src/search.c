@@ -1839,9 +1839,6 @@ unsigned long long tstart, ebfnodesold, tnow;
 	if (depth > MAXPLY)
 		depth = MAXPLY;
 
-//	reduceHHTable(b->hht);
-	clearHHTable(b->hht);
-
 	if (depth >= MAXPLY) depth = MAXPLY - 1;
 	b->search_dif = (incheck) ? MISc : MISn;
 
@@ -1951,9 +1948,11 @@ rerun:
 			}
 			SelectBestO(&(tree->root_c));
 		}  // finished iteration
+//		dumpHHTable(b->hht);
 	} else {
 // last iteration was not finished properly
 		DEB_S2( move_cont_dump(b, att, &(tree->root_c)); )
+//		dumpHHTable(b->hht);
 		
 #if 0
 		if (((&tree->root_c)->count)>1) {

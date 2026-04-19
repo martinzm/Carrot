@@ -158,7 +158,7 @@ int handle_uci()
 int handle_newgame(board *bs)
 {
 	setup_normal_board(bs);
-	LOGGER_3("INFO: newgame\n");
+	LOGGER_4("INFO: newgame\n");
 	return 0;
 }
 
@@ -259,6 +259,7 @@ int handle_position(board *bs, char *str)
 {
 
 	char *tok, *b2, bb[100];
+	char *fen, *side, *roch, *ep, *half, *full;
 	int i, a;
 	MOVESTORE m[MAXPLYHIST], mm[MAXPLYHIST];
 	int from, pos[4];
@@ -278,6 +279,8 @@ int handle_position(board *bs, char *str)
 	}
 
 	LOGGER_4("B.T.: %s\n", str);
+	bs->uci_options->newgame=0;
+	
 	tok = tokenizer(str, " \n\r\t", &b2);
 	while (tok) {
 		LOGGER_4("PARSE: %s\n",tok);
@@ -285,15 +288,31 @@ int handle_position(board *bs, char *str)
 		if (!strcasecmp(tok, "fen")) {
 			LOGGER_4("INFO: FEN+moves %s\n",b2);
 			setup_FEN_board(bs, b2);
-			tok = tokenizer(b2, " \n\r\t", &b2);
-			tok = tokenizer(b2, " \n\r\t", &b2);
-			tok = tokenizer(b2, " \n\r\t", &b2);
-			tok = tokenizer(b2, " \n\r\t", &b2);
-			tok = tokenizer(b2, " \n\r\t", &b2);
-			tok = tokenizer(b2, " \n\r\t", &b2);
+			fen = b2;
+			tok = tokenizer(fen, " \n\r\t", &side);
+			tok = tokenizer(side, " \n\r\t", &roch);
+			tok = tokenizer(roch, " \n\r\t", &ep);
+			tok = tokenizer(ep, " \n\r\t", &half);
+			tok = tokenizer(half, " \n\r\t", &full);
+			tok = tokenizer(full, " \n\r\t", &b2);
+			sprintf(bb,"%s %s %s %s %s %s", fen, side, roch, ep, half, full);
+			if(strncmp(bs->uci_options->oldfen, bb, 99) == 0) bs->uci_options->newgame=0;
+			else {
+//				L0("%s\n",bb);
+//				L0("%s\n", bs->uci_options->oldfen);
+				strncpy(bs->uci_options->oldfen, bb, 100);
+				bs->uci_options->newgame=1;
+				LOGGER_1("INFO: UCI new game fen\n");
+			}
 		} else if (!strcasecmp(tok, "startpos")) {
 			LOGGER_4("INFO: startpos %s\n",b2);
 			setup_normal_board(bs);
+			if(strncmp(bs->uci_options->oldfen, STANDARD_FEN, 99) == 0) bs->uci_options->newgame=0;
+			else {
+				strncpy(bs->uci_options->oldfen, STANDARD_FEN, 100);
+				bs->uci_options->newgame=1;
+				LOGGER_1("INFO: UCI new game st fen\n");
+			}
 			DEB_4(printBoardNice(bs);)
 		} else if (!strcasecmp(tok, "moves")) {
 // build filter moves
@@ -316,7 +335,24 @@ int handle_position(board *bs, char *str)
 				MakeMoveNew(bs, mm[0], pos, &u);
 				a++;
 			}
-			break;
+			if(bs->uci_options->oldlen!= (a-2)) {
+				bs->uci_options->newgame=1;
+				LOGGER_1("INFO: UCI new game len %d vs %d\n", a-2, bs->uci_options->oldlen);
+			}
+			bs->uci_options->oldlen=a;
+int f;
+			if(bs->uci_options->newgame!=1) {
+// check moves	
+				for(f=0; f<(a-2);f++) {
+					if(m[f]!=bs->uci_options->old[f]) {
+						LOGGER_1("INFO: UCI new game moves\n");
+						bs->uci_options->newgame=1;
+						break;
+					}
+				}
+			}
+			for(f=0; f<a;f++) bs->uci_options->old[f]=m[f];
+//			break;
 		}
 		tok = tokenizer(b2, " \n\r\t", &b2);
 	}
@@ -469,10 +505,6 @@ printf ("%d %d\n", time, positions);
 timed2STSex(tt, tl, time, 10000, positions, 0, "pers.xml", s);
 return 0;
 }
-
-
-
-
 
 int ttest_wac(char *str)
 {
@@ -782,9 +814,11 @@ board* allocate_board()
 {
 board *b;
 b = malloc(sizeof(board) * 1);
+ 
 b->stats = allocate_stats(1);
 clearALLSearchCnt(STATS);
 b->uci_options = malloc(sizeof(struct _ui_opt));
+strncpy(b->uci_options->oldfen, "XXXXX", 99);
 
 b->hht = allocateHHTable();
 b->kmove = allocateKillerStore();
@@ -1137,28 +1171,38 @@ while (uci_state != 0) {
 				goto reentry;
 			}
 			if (!strcasecmp(tok, "ucinewgame")) {
+				LOGGER_1("INFO: UCI game new\n");
 				handle_newgame(b);
+				b->uci_options->newgame=1;
 				position_setup = 1;
 				break;
 			} else if (!strcasecmp(tok, "position")) {
 				handle_position(b, b2);
 				position_setup = 1;
+// check position
+// detekce jestli je to pokracovani stejne hry nebo ne
 				break;
 			} else if (!strcasecmp(tok, "go")) {
 				if (!position_setup) {
 					handle_newgame(b);
+					b->uci_options->newgame=1;
 					position_setup = 1;
 				}
-				if ((b->pers->ttable_clearing >= 1)
-					|| (b->move != (move_o + 2))) {
+				if ((b->pers->ttable_clearing >= 1)) {
+					b->uci_options->newgame=1;
 					LOGGER_1("INFO: UCI hash reset\n");
-					invalidateHash(b->hs);
-					invalidatePawnHash(b->hps);
-//!!!!
-//					reduceHHTable(b->hht);
-//					clearHHTable(b->hht);
 				} LOGGER_4("INFO: UCI hash reset DONE\n");
 				move_o = b->move;
+				if(b->uci_options->newgame==1) {
+					LOGGER_1("INFO: UCI new game detected\n");
+					invalidateHash(b->hs);
+					invalidatePawnHash(b->hps);
+					clearHHTable(b->hht);
+				} else {
+					LOGGER_1("INFO: UCI game cont\n");
+					invalidateHash(b->hs);
+					reduceHHTable(b->hht);
+				}
 				handle_go(b, b2);
 				break;
 			} else if (!strcasecmp(tok, "gox")) {

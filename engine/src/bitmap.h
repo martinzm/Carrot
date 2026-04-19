@@ -121,6 +121,8 @@ typedef enum _RANKS {
 #define PAWNS_TOT 18
 
 #define HHScale 16000
+#define STANDARD_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
 
 typedef enum _MOVE_FLAGS { r_NOR=0x0000, r_FUT=0x01, r_LMR=0x02, r_LMP=0x04, r_HASH=0x08,
 	r_BETA=0x10, r_ALFA=0x20, r_NULL=0x40, r_CHECK=0x80, r_DRAW=0x100, r_IWIN=0x200 } MOVE_FLAGS;
@@ -360,6 +362,10 @@ struct _ui_opt {
 	int pos_moves[500];  //fixme
 	int search_moves[100];  //fixme
 	int engine_verbose;
+	char oldfen[100];
+	int8_t newgame;
+	MOVESTORE old[1024];
+	int oldlen;
 };
 
 typedef struct _meval_t {

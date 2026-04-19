@@ -1354,7 +1354,7 @@ void writeEPD_FEN(board const *b, char *fen, int epd, char *option)
 void setup_normal_board(board *b)
 {
 	setup_FEN_board(b,
-		"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+		STANDARD_FEN);
 }
 
 void generate_surr_to_pos_vect(BITVAR map[64][64],const att_mov *att){

@@ -712,12 +712,12 @@ int freeHHTable(hhTable *hh)
 int clearHHTable(hhTable *hh)
 {
 	int v[ER_PIECE];
-	v[PAWN] = 5;
-	v[KNIGHT] = 7;
-	v[BISHOP] = 6;
-	v[ROOK] = 4;
-	v[QUEEN] = 3;
-	v[KING] = 2;
+	v[PAWN] = 500;
+	v[KNIGHT] = 700;
+	v[BISHOP] = 600;
+	v[ROOK] = 400;
+	v[QUEEN] = 300;
+	v[KING] = 0;
 
 	int f, q;
 	for (q = PAWN; q < ER_PIECE; q++) {
@@ -753,10 +753,10 @@ int updateHHTable2(board *b, hhTable *hh, move_entry *m, int cutoff, int side, i
 }
 
 int updateHHTableGood(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int depth, int ply){
-	return updateHHTable2(b, hh, m, cutoff, side, Min(depth*depth, HHScale));
+	return updateHHTable2(b, hh, m, cutoff, side, Min(100*depth, HHScale));
 }
 int updateHHTableBad(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int depth, int ply){
-	return updateHHTable2(b, hh, m, cutoff, side, -Min(depth*depth, HHScale));
+	return updateHHTable2(b, hh, m, cutoff, side, -Min(100*depth, HHScale));
 }
 
 int checkHHTable(hhTable *hh, int side, int piece, int square)
@@ -770,6 +770,23 @@ int reduceHHTable(hhTable *hh)
 	for (int s=0;s<=1;s++)
 		for (q = PAWN; q < ER_PIECE; q++) 
 			for (f = 0; f < 64; f++)
-				hh->val[s][q][f] >>=2;
+				hh->val[s][q][f] >>=1;
+	return 0;
+}
+
+int dumpHHTable(hhTable *hh)
+{
+char buf[2048];
+char bf2[2048];
+	int f, q;
+	for (int s=0;s<=1;s++)
+		for (q = PAWN; q < ER_PIECE; q++) { 
+			sprintf(buf,"Side: %d, Piece %d, Vals=",s, q);
+			for (f = 0; f < 64; f++) {
+				sprintf(bf2, "%d ",hh->val[s][q][f]);
+				strcat(buf, bf2);
+			}
+			L0("%s\n", buf);
+		}
 	return 0;
 }
