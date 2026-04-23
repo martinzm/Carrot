@@ -1189,19 +1189,22 @@ while (uci_state != 0) {
 					position_setup = 1;
 				}
 				if ((b->pers->ttable_clearing >= 1)) {
-					b->uci_options->newgame=1;
+//					invalidateHash(b->hs);
+					invalidatePawnHash(b->hps);
+//					b->uci_options->newgame=1;
 					LOGGER_1("INFO: UCI hash reset\n");
 				} LOGGER_4("INFO: UCI hash reset DONE\n");
 				move_o = b->move;
+				invalidateHash(b->hs);
 				if(b->uci_options->newgame==1) {
 					LOGGER_1("INFO: UCI new game detected\n");
-					invalidateHash(b->hs);
-					invalidatePawnHash(b->hps);
-					clearHHTable(b->hht);
+					if(b->pers->ttable_clearing < 1) invalidatePawnHash(b->hps);
+//					clearHHTable(b->hht);
+					clearHHTable2(b->hht,b->pers->piecetosquare);
 				} else {
 					LOGGER_1("INFO: UCI game cont\n");
-					invalidateHash(b->hs);
 					reduceHHTable(b->hht);
+//					clearHHTable(b->hht);
 				}
 				handle_go(b, b2);
 				break;

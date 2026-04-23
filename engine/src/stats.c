@@ -100,6 +100,9 @@ void clearSearchCnt(struct _statistics *s)
 	s->position_quality_tests = 0;
 	s->position_quality_cutoffs = 0;
 	
+	s->zerorerunnodes=0;
+	s->lmrrerunnodes=0;
+	
 }
 
 // do prvniho parametru je pricten druhy
@@ -174,6 +177,8 @@ void AddSearchCnt(struct _statistics *s, struct _statistics *b)
 
 	s->depth_sum += b->depth_sum;
 	s->depth_max_sum += b->depth_max_sum;
+	s->zerorerunnodes += b->zerorerunnodes;
+	s->lmrrerunnodes += b->lmrrerunnodes;
 
 }
 
@@ -252,6 +257,11 @@ void CopySearchCnt(struct _statistics *s, struct _statistics *b)
 	s->depth_sum = b->depth_sum;
 	s->depth_max_sum = b->depth_max_sum;
 #endif
+
+	s->zerorerunnodes = b->zerorerunnodes;
+	s->lmrrerunnodes = b->lmrrerunnodes;
+
+
 }
 
 // od prvniho je odecten druhy a vlozen do tretiho
@@ -332,6 +342,10 @@ void DecSearchCnt(struct _statistics *s, struct _statistics *b, struct _statisti
 #endif
 	r->depth_sum = s->depth_sum - b->depth_sum;
 	r->depth_max_sum = s->depth_max_sum - b->depth_max_sum;
+
+	r->zerorerunnodes = s->zerorerunnodes - b->zerorerunnodes;
+	r->lmrrerunnodes = s->lmrrerunnodes - b->lmrrerunnodes;
+
 }
 
 void printSearchStat(struct _statistics *s)
@@ -377,6 +391,7 @@ void printSearchStat(struct _statistics *s)
 		"Info: ZeroN %lld, ZeroRerun %lld, QZoverRun %lld, LmrN %lld, LmrRerun %lld, FhFlCount: %lld\n",
 		s->zerototal, s->zerorerun, s->quiesceoverrun, s->lmrtotal,
 		s->lmrrerun, s->fhflcount);
+	LOGGER_0("Info: ZeroRerunMoves %lld, LmrRerunMoves %lld\n", s->zerorerunnodes, s->lmrrerunnodes);
 	LOGGER_0(
 		"Info: LMP: count %lld\n", s->lmpcount);
 	LOGGER_0(
@@ -472,6 +487,10 @@ void printSearchStat2(struct _statistics *s, char *buff)
 		s->zerototal, s->zerorerun, s->quiesceoverrun, s->lmrtotal,
 		s->lmrrerun, s->fhflcount);
 	strcat(buff, bb);
+	
+	sprintf(bb, "Info: ZeroRerunMoves %lld, LmrRerunMoves %lld\n", s->zerorerunnodes, s->lmrrerunnodes);
+	strcat(buff, bb);
+	
 	sprintf(bb,
 		"Info: LMP: count %lld\n", s->lmpcount);
 	strcat(buff, bb);

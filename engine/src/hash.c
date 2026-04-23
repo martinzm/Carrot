@@ -709,20 +709,34 @@ int freeHHTable(hhTable *hh)
 	return 0;
 }
 
+// static piece based HH setup
 int clearHHTable(hhTable *hh)
 {
 	int v[ER_PIECE];
-	v[PAWN] = 500;
-	v[KNIGHT] = 700;
-	v[BISHOP] = 600;
-	v[ROOK] = 400;
-	v[QUEEN] = 300;
+	v[PAWN] = 5;
+	v[KNIGHT] =9 ;
+	v[BISHOP] = 8;
+	v[ROOK] = 3;
+	v[QUEEN] = 2;
 	v[KING] = 0;
 
 	int f, q;
 	for (q = PAWN; q < ER_PIECE; q++) {
 		for (f = 0; f < 64; f++)
 			hh->val[0][q][f] = hh->val[1][q][f] = v[q];
+	}
+	return 0;
+}
+
+// psqt based HH setup 
+int clearHHTable2(hhTable *hh, _squares_p v)
+{
+	int f, q;
+	for (q = PAWN; q < ER_PIECE; q++) {
+		for (f = 0; f < 64; f++) {
+			hh->val[0][q][f] = v[0][0][q][f];
+			hh->val[1][q][f] = v[0][1][q][f];
+		}
 	}
 	return 0;
 }
@@ -753,10 +767,10 @@ int updateHHTable2(board *b, hhTable *hh, move_entry *m, int cutoff, int side, i
 }
 
 int updateHHTableGood(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int depth, int ply){
-	return updateHHTable2(b, hh, m, cutoff, side, Min(100*depth, HHScale));
+	return updateHHTable2(b, hh, m, cutoff, side, Min(10*depth*depth, HHScale));
 }
 int updateHHTableBad(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int depth, int ply){
-	return updateHHTable2(b, hh, m, cutoff, side, -Min(100*depth, HHScale));
+	return updateHHTable2(b, hh, m, cutoff, side, -Min(20*depth*depth, HHScale));
 }
 
 int checkHHTable(hhTable *hh, int side, int piece, int square)

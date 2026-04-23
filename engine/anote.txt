@@ -19,9 +19,26 @@ quiescence
 - captures v poradi MVV-LVA, pozitivni a neutralni
 - z ostatnich v poradi MVV-LVA, SEE>=0
 
+HH
+pocitaji se vsechny Quiet tahy i vcetne hashmove, ale jen pokud byl pouzit do move orderingu. Pokud znamenal okamzite ukonceni hledani, tak ne.
+Bonus je 10*depth a dostava jej jen tak na beta cutoff
+Malus je 20*depth a dostavaji jej vsechny tahy pred beta cutoffem
+Tabulka se maze pri nove hre.
+Pri novem tahu se hodnoty puli.
+//aktualni "seed" pro vymazani jsou P..K 5,9,8,3,2,0
+aktualne seed je psqr
 
 
+LMR
+redukce vzdy o 1
+nikdy se neredukuje promoce - resp. pescem na posledni radu
+mirne zlepseni pri pouziti psqt a pesimisticke LMR tabulky (skoro vzdy 1)
 
+zlepseni 
+- neredukovat tah krale kdyz strana na tahu ma 2 a mene figur (bez krale)
+- redukovat vsechno za killery dal i bad exchange
+
+zadna interakce s HH
 
 NMP:
   R=3

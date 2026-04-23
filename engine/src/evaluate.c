@@ -3770,7 +3770,12 @@ void init_lmr_table(int table[64][64])
 int d, m;
 	for(d=0;d<64;d++)
 	  for(m=0;m<64;m++) {
-		  table[d][m] = (int) (0.5 + log(d+1)*log(m+1) / 1.9);
-		  L4("%d:%d = %d\n", d,m, table[d][m]);
+		  if(d==0||m==0){
+			table[d][m]=0;
+			L0("%d:%d = %d\n", d,m, table[d][m]);
+			continue;
+		  }
+		  table[d][m] = (int) (1.0 + log(d)*log(m) / 15.0);
+		  L0("%d:%d = %d\n", d,m, table[d][m]);
 		}
 }

@@ -32,12 +32,14 @@ struct _statistics {
 	long long possiblemoves;  //kolik bylo moznych TAHU
 	long long zerototal;
 	long long zerorerun;
+	long long zerorerunnodes;
 	long long quiesceoverrun;
 	long long qposvisited;  // stejne jako non q verze
 	long long qmovestested;  // stejne jako non q verze
 	long long qpossiblemoves;  // stejne jako non q verze
 	long long lmrtotal;
 	long long lmrrerun;
+	long long lmrrerunnodes;
 	long long lmpcount;
 	long long fhflcount;
 	long long firstcutoffs;

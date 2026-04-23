@@ -168,5 +168,6 @@ BITVAR regenerateSQAttacked(const board *const , attack_model *, int);
 int setup_root_moves(board *b, attack_model *a, int side, int incheck, tree_store *tree);
 int getNextRootMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store *tree);
 
+int is_quiet_move(board const * const b, attack_model const * const a, move_entry const * const m);
 
 #endif

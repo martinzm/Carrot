@@ -41,12 +41,19 @@ BITVAR isInCheck_Eval(board *b, attack_model *a, int side)
 
 int is_quiet_move(board const * const b, attack_model const * const a, move_entry const * const m)
 {
-	int to;
-	int prom;
+	int to, from, prom;
+	int rank;
 
 	to = UnPackTo(m->move);
+	from = UnPackFrom(m->move);
 	prom = UnPackProm(m->move);
-//	if ((b->pieces[to] == ER_PIECE) &&  (prom>QUEEN))
+
+//	rank=getRank(from);
+//	if ((b->pieces[from] == PAWN) {
+//		if(((b->side==WHITE)&&(rank==RANKi7))||((b->side==BLACK)&&(rank==RANKi2))) return 0;
+//	}
+
+	if ((b->pieces[from]&PIECEMASK == PAWN) && (b->pieces[to] == ER_PIECE) && (prom>QUEEN)) return 1;
 	if ((b->pieces[to] == ER_PIECE))
 		return 1;
 	return 0;
