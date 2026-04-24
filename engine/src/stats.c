@@ -388,24 +388,31 @@ void printSearchStat(struct _statistics *s)
 		(s->qmovestested * 100 / (s->qpossiblemoves + 1)),
 		s->qpossiblemoves);
 	LOGGER_0(
-		"Info: ZeroN %lld, ZeroRerun %lld, QZoverRun %lld, LmrN %lld, LmrRerun %lld, FhFlCount: %lld\n",
-		s->zerototal, s->zerorerun, s->quiesceoverrun, s->lmrtotal,
-		s->lmrrerun, s->fhflcount);
+		"Info: ZeroN %lld, ZeroRerun %lld, Zero Rate %.2f%%, QZoverRun %lld\n",
+		s->zerototal, s->zerorerun,  100*s->zerorerun/(s->zerototal+1.0), s->quiesceoverrun);
+	LOGGER_0(
+		"Info: LmrN %lld, LmrRerun %lld, Lmr Rate %.2f%%,  FhFlCount: %lld\n",
+		s->lmrtotal, s->lmrrerun, 100*s->lmrrerun/(s->lmrtotal+1.0), s->fhflcount);
+
+	LOGGER_0(
+		"Info: PVS %lld, PVS in %.2f moves\n",
+		s->movestested-s->zerototal, ((s->movestested+1.0)/(s->movestested-s->zerototal)));
+
 	LOGGER_0("Info: ZeroRerunMoves %lld, LmrRerunMoves %lld\n", s->zerorerunnodes, s->lmrrerunnodes);
 	LOGGER_0(
 		"Info: LMP: count %lld\n", s->lmpcount);
 	LOGGER_0(
-		"Info: Cutoffs: First move %lld, Any move %lld, Ratio of first %lld%%\n",
+		"Info: Cutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%\n",
 		s->firstcutoffs, s->cutoffs,
-		100 * s->firstcutoffs / (s->cutoffs + 1));
+		100 * s->firstcutoffs / (s->cutoffs + 1.0));
 	LOGGER_0(
-		"Info: Moves before Cuttoffs %lld, Average %lld, Non cutoff moves %lld\n", s->moves_to_cutoff,(s->moves_to_cutoff/(s->cutoffs+1)),
+		"Info: Moves before Cuttoffs %lld, Average %.2f%%, Non cutoff moves %lld\n", s->moves_to_cutoff,100*(s->moves_to_cutoff/(s->cutoffs+1.0)),
 		s->non_cutoff_moves);
 
 	LOGGER_0(
-		"Info: Quiet Cutoffs: First move %lld, Any move %lld, Ratio of first %lld%%\n",
+		"Info: Quiet Cutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%\n",
 		s->first_quiet_cuts, s->quiet_cuts,
-		100 * s->first_quiet_cuts / (s->quiet_cuts + 1));
+		100 * s->first_quiet_cuts / (s->quiet_cuts + 1.0));
 	LOGGER_0(
 		"Info: Quiet Cutoffs after capture move %lld\n", s->quiet_cuts_cap);
 		
@@ -413,16 +420,16 @@ void printSearchStat(struct _statistics *s)
 		"Info: Futility: cuts %lld\n", s->FUT_cuts);
 
 	LOGGER_0(
-		"Info: QCutoffs: First move %lld, Any move %lld, Ratio of first %lld%%\n",
+		"Info: QCutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%\n",
 		s->qfirstcutoffs, s->qcutoffs,
-		100 * s->qfirstcutoffs / (s->qcutoffs + 1));
-	LOGGER_0("Info: QuiesceSEE: Tests %lld, Cuts %lld, Ratio %lld%%\n",
+		100 * s->qfirstcutoffs / (s->qcutoffs + 1.0));
+	LOGGER_0("Info: QuiesceSEE: Tests %lld, Cuts %lld, Ratio %.2f%%\n",
 		s->qSEE_tests, s->qSEE_cuts,
-		100 * s->qSEE_cuts / (s->qSEE_tests + 1));
+		100 * s->qSEE_cuts / (s->qSEE_tests + 1.0));
 	LOGGER_0(
-		"Info: NULL MOVE: Tries %lld, Cuts %lld, Ratio %lld%%, Nodes under NULL %lld\n",
+		"Info: NULL MOVE: Tries %lld, Cuts %lld, Ratio %.2f%%, Nodes under NULL %lld\n",
 		s->NMP_tries, s->NMP_cuts,
-		100 * s->NMP_cuts / (s->NMP_tries + 1), s->u_nullnodes);
+		100 * s->NMP_cuts / (s->NMP_tries + 1.0), s->u_nullnodes);
 	LOGGER_0("Info: Aspiration: Iterations %lld, Failed It %lld\n",
 		s->iterations, s->aspfailits);
 	LOGGER_0("Info: Depth: Regular %d, Max %d, RegCum %lld, MaxCum %lld\n",
@@ -483,65 +490,68 @@ void printSearchStat2(struct _statistics *s, char *buff)
 		s->qpossiblemoves);
 	strcat(buff, bb);
 	sprintf(bb,
-		"ZeroN %lld, ZeroRerun %lld, QZoverRun %lld, LmrN %lld, LmrRerun %lld, FhFlCount: %lld\n",
-		s->zerototal, s->zerorerun, s->quiesceoverrun, s->lmrtotal,
-		s->lmrrerun, s->fhflcount);
+		"ZeroN %lld, ZeroRerun %lld, Zero Rate %.2f%%, QZoverRun %lld\n"
+		"LmrN %lld, LmrRerun %lld, Lmr Rate %.2f%%,  FhFlCount: %lld\n"
+		"PVS %lld, PVS in %.2f moves\n",
+		s->zerototal, s->zerorerun,  100*s->zerorerun/(s->zerototal+1.0), s->quiesceoverrun,
+		s->lmrtotal, s->lmrrerun, 100*s->lmrrerun/(s->lmrtotal+1.0), s->fhflcount,
+		s->movestested-s->zerototal, (s->movestested+1.0)/(s->movestested-s->zerototal));
 	strcat(buff, bb);
 	
-	sprintf(bb, "Info: ZeroRerunMoves %lld, LmrRerunMoves %lld\n", s->zerorerunnodes, s->lmrrerunnodes);
+	sprintf(bb, "ZeroRerunMoves %lld, LmrRerunMoves %lld\n", s->zerorerunnodes, s->lmrrerunnodes);
 	strcat(buff, bb);
 	
 	sprintf(bb,
-		"Info: LMP: count %lld\n", s->lmpcount);
+		"LMP: count %lld\n", s->lmpcount);
 	strcat(buff, bb);
 	sprintf(bb,
-		"Cutoffs: First move %lld, Any move %lld, Ratio of first %lld%%, \n",
+		"Cutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%, \n",
 		s->firstcutoffs, s->cutoffs,
-		100 * s->firstcutoffs / (s->cutoffs + 1));
+		100 * s->firstcutoffs / (s->cutoffs + 1.0));
 	strcat(buff, bb);
 	sprintf(bb,
-		"Info: Moves before Cuttoffs %lld, Average %lld, Non cutoff moves %lld\n", s->moves_to_cutoff, (s->moves_to_cutoff/(s->cutoffs+1)),
+		"Moves before Cuttoffs %lld, Average %.2f%%, Non cutoff moves %lld\n", s->moves_to_cutoff, 100*(s->moves_to_cutoff/(s->cutoffs+1.0)),
 		s->non_cutoff_moves);
 	strcat(buff, bb);
 
 	sprintf(bb, 
-		"Info: Quiet Cutoffs: First move %lld, Any move %lld, Ratio of first %lld%%\n",
+		"Quiet Cutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%\n",
 		s->first_quiet_cuts, s->quiet_cuts,
-		100 * s->first_quiet_cuts / (s->quiet_cuts + 1));
+		100 * s->first_quiet_cuts / (s->quiet_cuts + 1.0));
 	strcat(buff, bb);
 	sprintf(bb,
-		"Info: Quiet Cutoffs after capture move %lld\n", s->quiet_cuts_cap);
+		"Quiet Cutoffs after capture move %lld\n", s->quiet_cuts_cap);
 	strcat(buff, bb);
 
 	sprintf(bb,
-		"Info: Futility: cuts %lld\n", s->FUT_cuts);
+		"Futility: cuts %lld\n", s->FUT_cuts);
 	strcat(buff, bb);
 	sprintf(bb,
-		"QCutoffs: First move %lld, Any move %lld, Ratio of first %lld%%, \n",
+		"QCutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%, \n",
 		s->qfirstcutoffs, s->qcutoffs,
-		100 * s->qfirstcutoffs / (s->qcutoffs + 1));
+		100 * s->qfirstcutoffs / (s->qcutoffs + 1.0));
 	strcat(buff, bb);
-	sprintf(buff, "QuiesceSEE: Tests %lld, Cuts %lld, Ratio %lld%%, \n",
+	sprintf(buff, "QuiesceSEE: Tests %lld, Cuts %lld, Ratio %.2f%%, \n",
 		s->qSEE_tests, s->qSEE_cuts,
-		100 * s->qSEE_cuts / (s->qSEE_tests + 1));
+		100 * s->qSEE_cuts / (s->qSEE_tests + 1.0));
 	strcat(buff, bb);
 	sprintf(bb,
-		"NULL MOVE: Tries %lld, Cuts %lld, Ratio %lld%%, Nodes under NULL %lld\n",
+		"NULL MOVE: Tries %lld, Cuts %lld, Ratio %.2f%%, Nodes under NULL %lld\n",
 		s->NMP_tries, s->NMP_cuts,
-		100 * s->NMP_cuts / (s->NMP_tries + 1), s->u_nullnodes);
+		100 * s->NMP_cuts / (s->NMP_tries + 1.0), s->u_nullnodes);
 	strcat(buff, bb);
-	sprintf(bb, "Info: Aspiration: Iterations %lld, Failed It %lld\n",
+	sprintf(bb, "Aspiration: Iterations %lld, Failed It %lld\n",
 		s->iterations, s->aspfailits);
 	strcat(buff, bb);
 	sprintf(buff,
-		"Info: Depth: Regular %d, Max %d, RegCum %lld, MaxCum %lld\n",
+		"Depth: Regular %d, Max %d, RegCum %lld, MaxCum %lld\n",
 		s->depth, s->depth_max, s->depth_sum, s->depth_max_sum);
 	strcat(buff, bb);
-	sprintf(bb, "Info: Time in: %dh, %dm, %ds, %dms\n",
+	sprintf(bb, "Time in: %dh, %dm, %ds, %dms\n",
 		(int) s->elaps / 3600000, (int) (s->elaps % 3600000) / 60000,
 		(int) (s->elaps % 60000) / 1000, (int) (s->elaps % 1000));
 	strcat(buff, bb);
-	sprintf(bb, "Info: Position Quality Tests %lld, Reductions %lld\n",
+	sprintf(bb, "Position Quality Tests %lld, Reductions %lld\n",
 		s->position_quality_tests, s->position_quality_cutoffs);
 	strcat(buff, bb);
 }

@@ -1172,6 +1172,8 @@ while (uci_state != 0) {
 			}
 			if (!strcasecmp(tok, "ucinewgame")) {
 				LOGGER_1("INFO: UCI game new\n");
+				L0("** Running TOTALS **\n");
+				printSearchStat(&(STATS[MAXPLY]));
 				handle_newgame(b);
 				b->uci_options->newgame=1;
 				position_setup = 1;

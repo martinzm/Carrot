@@ -1005,7 +1005,7 @@ int can_do_NullMove(board *b, attack_model *a, int alfa, int beta, int depth, in
  * LMR doesnt reduce captures, hashmove, killers, non captures with good history
  * checks not reduced normally, no pawn
  */
-int can_do_LMR(board *b, attack_model *a, int alfa, int beta, int depth, int move, int ply, int side, uint8_t phase, UNDO *u)
+int can_do_LMR(board *b, attack_model *a, int alfa, int beta, int depth, move_entry *move, int ply, int side, uint8_t phase, UNDO *u)
 {
 
 	int8_t from, movp, ToPos, rank;
@@ -1015,7 +1015,7 @@ int can_do_LMR(board *b, attack_model *a, int alfa, int beta, int depth, int mov
 // promotion
 	rank=getRank(u->from);
 	if (u->old == PAWN) {
-		if(((u->side==WHITE)&&(rank==RANKi7))||((u->side==BLACK)&&(rank==RANKi2))) return 0;
+		if((((u->side==WHITE)&&(rank==RANKi7))||((u->side==BLACK)&&(rank==RANKi2)))&& (move->phase<OTHER)) return 0;
 	}
 
 // king, stm low on material
@@ -1025,18 +1025,26 @@ int can_do_LMR(board *b, attack_model *a, int alfa, int beta, int depth, int mov
 	}
 #endif
 
-	reduce = b->pers->lmr_table[Min(64,depth)][Min(64,move)];
+	prio = checkHHTable(b->hht, side, u->old, u->to);
 
-#if 0
-	if (prio > (HHScale/2)) reduce--;
-	if (prio < -(HHScale/4)) reduce++;
+	reduce = b->pers->lmr_table[Min(64,depth)][Min(64,move->ord)];
+//	if(move->phase>=OTHER) reduce++;
+
+#if 1
+//	if (prio > (HHScale/2)) reduce--;
+//	if (prio < -(HHScale/2)) reduce++;
 #endif 
 
 #if 0
 // alternativa
 	if(prio > 5*HHScale/8) reduce = 0;
-	else if (prio > (HHScale/8)) reduce--;
-	else if (prio < -(HHScale/8)) reduce++;
+	else 
+	  if (prio > (HHScale/8)) reduce--;
+
+	else 
+#endif
+#if 0
+	  if (prio < -(HHScale/8)) reduce++;
 #endif
 
 #if 0
@@ -1518,7 +1526,7 @@ uint8_t phase=eval_phase(b, b->pers);
 			&& (u.whereCa == -1)
 			&& (u.old != PAWN)
 			){
-			int lmp_red = can_do_LMR(b, att, talfa, ttbeta, depth, MVS->count,ply, side, phase, &u);
+			int lmp_red = can_do_LMR(b, att, talfa, ttbeta, depth, m, ply, side, phase, &u);
 				if(lmp_red>0) {
 					b->stats->lmpcount++;
 					goto bypass;
@@ -1541,9 +1549,9 @@ int lmr_s=m->real_score;
 			&& ((u.whereCa == -1)
 				|| (m->phase>KILLER4))
 			){
-			int lmr_red = can_do_LMR(b, att, talfa, tbeta, depth, MVS->count, ply, side, phase, &u);
+			int lmr_red = can_do_LMR(b, att, talfa, tbeta, depth, m, ply, side, phase, &u);
 				if(lmr_red!=0) {
-				L4("depth %d, move %d, red %d\n", depth, MVS->count, lmr_red);
+				L4("depth %d, move %d, red %d\n", depth, m->order, lmr_red);
 				DEB_S2(m->state|=r_LMR;)
 					if(b->pers->LMR_sim==0) {
 						reduce += lmr_red;
@@ -2017,7 +2025,7 @@ rerun:
 		printPV_simple(b, tree, f, b->side, &s, b->stats);
 	}  //deepening finished here
 
-	dumpHHTable(b->hht);
+//	dumpHHTable(b->hht);
 	
 	b->stats->depth_sum += f;
 	b->stats->depth_max_sum += b->stats->depth_max;
@@ -2039,7 +2047,7 @@ rerun:
 	STATS[MAXPLY].depth_sum += b->stats->depth;
 	STATS[MAXPLY].depth_max_sum += b->stats->depth_max;
 	printPV_simple(b, tree,f,b->side,&s,b->stats);
-	DEB_1 (if((b->uci_options->engine_verbose>=1)) printSearchStat(b->stats);)
+//	DEB_1 (if((b->uci_options->engine_verbose>=1)) printSearchStat(b->stats);)
 	
 #endif 
 }

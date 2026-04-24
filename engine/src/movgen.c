@@ -53,7 +53,7 @@ int is_quiet_move(board const * const b, attack_model const * const a, move_entr
 //		if(((b->side==WHITE)&&(rank==RANKi7))||((b->side==BLACK)&&(rank==RANKi2))) return 0;
 //	}
 
-	if ((b->pieces[from]&PIECEMASK == PAWN) && (b->pieces[to] == ER_PIECE) && (prom>QUEEN)) return 1;
+	if (((b->pieces[from]&PIECEMASK) == PAWN) && (b->pieces[to] == ER_PIECE) && (prom>QUEEN)) return 1;
 	if ((b->pieces[to] == ER_PIECE))
 		return 1;
 	return 0;

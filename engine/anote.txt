@@ -37,6 +37,7 @@ mirne zlepseni pri pouziti psqt a pesimisticke LMR tabulky (skoro vzdy 1)
 zlepseni 
 - neredukovat tah krale kdyz strana na tahu ma 2 a mene figur (bez krale)
 - redukovat vsechno za killery dal i bad exchange
+- redukovat i spatne promotions
 
 zadna interakce s HH
 
