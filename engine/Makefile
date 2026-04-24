@@ -48,7 +48,7 @@ ifeq ($(MAKECMDGOALS), vnormal)
     LDFLAGS += -DDEBUG1 
 endif
 ifeq ($(MAKECMDGOALS), sedebug)
-    CFLAGS += -Wall -Og -DDEBUG1 -DSEDEBUG2 -Wno-unused-variable -Finline-functions -Winline -pedantic
+    CFLAGS += -Wall -Og -DDEBUG1 -DSEDEBUG -Wno-unused-variable -Finline-functions -Winline -pedantic
     LDFLAGS += -DDEBUG1
 endif
 ifeq ($(MAKECMDGOALS), release)

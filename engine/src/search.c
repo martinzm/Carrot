@@ -1031,9 +1031,9 @@ int can_do_LMR(board *b, attack_model *a, int alfa, int beta, int depth, move_en
 //	if(move->phase>=OTHER) reduce++;
 
 #if 1
-//	if (prio > (HHScale/2)) reduce--;
-//	if (prio < -(HHScale/2)) reduce++;
-#endif 
+	if (prio > (HHScale/3)) reduce--;
+	if (prio < -(HHScale/5)) reduce++;
+#endif
 
 #if 0
 // alternativa
@@ -1331,8 +1331,10 @@ uint8_t phase=eval_phase(b, b->pers);
 		UnMakeNullMove(b, &u);
 		LOGGER_SE("%*d, -S , NULL, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d, val %d\n", 2+ply, ply, aftermovecheck, depth, talfa, tbeta, mb->real_score, mt.real_score);
 
+	generateBitmaps(b, att, b->colormaps[b->side], b->side);
 		eval_king_checks_extU(b, &(att->ke[WHITE]), 0, b->king[WHITE]);
 		eval_king_checks_extU(b, &(att->ke[BLACK]), 1, b->king[BLACK]);
+	mvsfromk22(b, att, b->side);
 
 // engine stop protection?
 		if (b->search_abort != 0)

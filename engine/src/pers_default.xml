@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <configuration>
   <simple_EVAL>0</simple_EVAL>
-  <NMP_allowed>0</NMP_allowed>
+  <NMP_allowed>1</NMP_allowed>
   <NMP_reduction>1</NMP_reduction>
   <NMP_min_depth>2</NMP_min_depth>
-  <NMP_div>6</NMP_div>
+  <NMP_div>9999</NMP_div>
   <NMP_search_reduction>0</NMP_search_reduction>
   <quality_search_reduction>0</quality_search_reduction>
   <LMR_reduction>1</LMR_reduction>

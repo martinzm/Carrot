@@ -1205,7 +1205,7 @@ while (uci_state != 0) {
 					clearHHTable2(b->hht,b->pers->piecetosquare);
 				} else {
 					LOGGER_1("INFO: UCI game cont\n");
-					reduceHHTable(b->hht);
+//					reduceHHTable(b->hht);
 //					clearHHTable(b->hht);
 				}
 				handle_go(b, b2);

@@ -3775,7 +3775,7 @@ int d, m;
 			L0("%d:%d = %d\n", d,m, table[d][m]);
 			continue;
 		  }
-		  table[d][m] = (int) (1.0 + log(d)*log(m) / 15.0);
+		  table[d][m] = (int) (0.5 + log(d)*log(m) / 2.3);
 		  L0("%d:%d = %d\n", d,m, table[d][m]);
 		}
 }

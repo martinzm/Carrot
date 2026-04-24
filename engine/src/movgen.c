@@ -590,10 +590,10 @@ void generateCapturesN3(const board *const b, attack_model *a, move_entry **m, i
 // serialize captures
 void generateCapturesN2(const board *const b, attack_model *a, move_entry **m, int gen_u)
 {
-//	generateBitmaps(b, a, b->colormaps[b->side], b->side);
+	generateBitmaps(b, a, b->colormaps[b->side], b->side);
 //	a->att_by_side[WHITE] = KingAvoidSQAlt(b, a, WHITE);
 //	a->att_by_side[BLACK] = KingAvoidSQAlt(b, a, BLACK);
-//	mvsfromk22(b, a, b->side);
+	mvsfromk22(b, a, b->side);
 	generateCapturesN3(b, a, m, gen_u);
 }
 
