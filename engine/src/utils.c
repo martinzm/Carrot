@@ -39,7 +39,7 @@ FILE *debugf;
 
 int logger2(char *fmt, ...)
 {
-	char buf[512];
+	char buf[2048];
 	int n;
 	int hh, mm, ss, nn;
 	unsigned long long en;
@@ -55,7 +55,7 @@ int logger2(char *fmt, ...)
 	hh = (int) (en % 24);
 
 	va_start(ap, fmt);
-	vsnprintf(buf, 512, fmt, ap);
+	vsnprintf(buf, 2048, fmt, ap);
 	va_end(ap);
 	fprintf(debugf, "%02d:%02d:%02d:%04d  %s", hh, mm, ss, nn, buf);
 	return 0;

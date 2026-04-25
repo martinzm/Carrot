@@ -2,7 +2,7 @@ Aktualni razeni
 hlavni hledani
 - hash
 - Q promotion
-- N promotion pokud dava sach
+- N promotion pokud dava sach (v planu)
 - captures v poradi MVV-LVA, pozitivni
 - z ostatnich v poradi MVV-LVA, SEE>=0
 - tichy sach (v planu)
@@ -15,51 +15,55 @@ hlavni hledani
 
 quiescence
 - Q promotion
-- N promotion pokud dava sach
+- N promotion pokud dava sach (v planu)
 - captures v poradi MVV-LVA, pozitivni a neutralni
 - z ostatnich v poradi MVV-LVA, SEE>=0
 
 HH
 rozsah je +- 16000
-pocitaji se vsechny Quiet tahy i vcetne hashmove, ale jen pokud byl pouzit do move orderingu. Pokud znamenal okamzite ukonceni hledani, tak ne.
+pocitaji se vsechny Quiet tahy i vcetne hashmove, ale jen pokud byl pouzit do move orderingu.
+  Pokud znamenal okamzite ukonceni hledani, tak ne.
 Bonus je 10*depth a dostava jej jen tak na beta cutoff
 Malus je 20*depth a dostavaji jej vsechny tahy pred beta cutoffem
 Tabulka se maze pri nove hre.
 //aktualni "seed" pro vymazani jsou P..K 5,9,8,3,2,0
 aktualne seed je psqr
 
-LMR
+LMR:
 - nespousti se v sachu, kdyz dava sach, v PV, na captures, ktere jsou pred quiet tahy, na hashmove, killery
 - redukce 0.5+log(depth)*log(move)/2.3
-- nikdy se neredukuje promoce na Q, resp. ktera je zarazena brzy
-- neredukovat tah krale kdyz strana na tahu ma 2 a mene figur (bez krale)
+- nikdy se neredukuje promoce na Q, resp. promoce, ktera je zarazena brzy
+- neredukovat tah krale, kdyz strana na tahu ma 2 a mene figur (bez krale)
 - redukovat vsechno za killery dal i bad exchange
 HH interakce
-HH > 5000 redukce--
-HH < -3000 redukce++
-
-
-
+HH > +HH rozsah/3 (5333) redukce--
+HH < -HH rozsah/5 (-3200) redukce++
+a redukce aby byla nejvyse depth-2
 
 NMP:
-  R=3
+-- zadne dynamicke schema nechodilo, ani vetsi R
+  R=1
   ne sach
-  ne pokud mam jen pesce
-  advanced R += depth/3
-  ne v PV, ne v CUT node
+  ne pokud nemam figuru krome pescu
+  ne v PV
+  v depth>3
+  a staticke score (nebo z hash) >=beta
   
 
 RFP:
   ne sach
   ne PV
-  ne TT move neexistuje nebo je capture
+  ne kdyz je staticke score mat
+  ne kdyz mam jen pesce
+  a kdyz je depth <=3
+  a kdyz staticke score >= depth * PawnValue *1.2
   
-
-LMR:
-  ne depth < 3
-  nekdy ne tactical moves, pv, give check, in check, passed pawn, good relative history, extended tahy
-  advanced R roste s depth a poctem jiz testovanych tahu
-  Senpai R=1 pro prvnich 6 tahu a pak depth/3
+s PeSTO evaluaci 
+	je LMR re search rate 0.43%, 
+	PVS rate je 28 normalnich na jeden PV tah
+	First cutoffs 91%
+	First QuietCutoffs 83%
+	
   
 
 hledani:

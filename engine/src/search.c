@@ -1264,7 +1264,7 @@ uint8_t phase=eval_phase(b, b->pers);
 // asi necutovat kdyz mam jen pesce
 	int pstatef = ((GT_M0(b, b->pers, side, PIECES) == 0) && (GT_M0(b, b->pers, side, PAWN) > 0));
 
-		if ((depth < b->pers->futility_depth)
+		if ((depth <= b->pers->futility_depth)
 			&& (incheck == 0)
 			&& !isPV 
 			&& !pstatef
@@ -1274,13 +1274,14 @@ uint8_t phase=eval_phase(b, b->pers);
 
 			{
 //				if(sco >= ( tbeta + b->pers->futility_cut[depth] )) {
-				if(sco >= ( tbeta + depth*pvalue * 1.2 )) {
+				if(sco >= ( tbeta + (int)(depth*pvalue * 1.2) )) {
 					b->stats->FUT_cuts++;
 					if(b->pers->futility_sim==1) {
 						L0("alfa %d, beta %d, talfa %d, tbeta %d, mat_eval %d, depth %d, fcut value %d, est score %d\n", alfa, beta, talfa, tbeta, sco, depth,b->pers->futility_cut[depth], sco - b->pers->futility_cut[depth]);
 						futility_sim_flag=1;
 					} else {
-						mb->real_score=sco - b->pers->futility_cut[depth];
+//						mb->real_score=sco - b->pers->futility_cut[depth];
+						mb->real_score=sco - (int)(depth*pvalue * 1.2);
 						DEB_S2( MVS->def.real_score=sco; MVS->def.state|=r_FUT;)
 						goto ABFINISH2;
 					}
@@ -1303,8 +1304,13 @@ uint8_t phase=eval_phase(b, b->pers);
 		LOGGER_SE("%*d, +S , NULL, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d\n", 2+ply, ply, aftermovecheck, depth, talfa, tbeta, mb->real_score);
 		
 		b->stats->NMP_tries++;
-// null move reduction
-		reduce = b->pers->NMP_reduction + div(depth, b->pers->NMP_div).quot;
+// null move reduction, divisor interaction not working
+
+		reduce = b->pers->NMP_reduction;
+//		reduce = b->pers->NMP_reduction + div(depth, b->pers->NMP_div).quot;
+
+//		reduce = depth > 9 ? 2:1;
+
 		ext = depth - reduce - 1; //!!!
 // save stats, to get info how many nodes were visited due to NULL move...
 		nodes_stat = b->stats->nodes;
