@@ -39,6 +39,41 @@ BITVAR isInCheck_Eval(board *b, attack_model *a, int side)
 	return a->ke[side].attackers;
 }
 
+// is move to be played delivering a check?
+int CheckingMove(board *b, attack_model *a,int side, move_entry const * const m){
+
+	int to, from, prom;
+	int rank;
+	int opside = Flip(side);
+	BITVAR map;
+
+	to = UnPackTo(m->move);
+	from = UnPackFrom(m->move);
+//	prom = UnPackProm(m->move);
+
+	switch((b->pieces[from]&PIECEMASK)) {
+	case PAWN:
+		map = a->ke[opside].pn_pot_att_pos;
+		break;
+	case KNIGHT:
+		map = a->ke[opside].kn_pot_att_pos;
+		break;
+	case BISHOP:
+		map = a->ke[opside].di_blocker_ray;
+		break;
+	case ROOK:
+		map = a->ke[opside].cr_blocker_ray;
+		break;
+	case QUEEN:
+		map = a->ke[opside].di_blocker_ray | a->ke[opside].cr_blocker_ray;
+		break;
+	default:
+		return 0;
+		break;
+	}
+	return map & NORMM(to);
+}
+
 int is_quiet_move(board const * const b, attack_model const * const a, move_entry const * const m)
 {
 	int to, from, prom;

@@ -1881,7 +1881,7 @@ int timed_driver_eval(int t, int d, int max, personality *pers_init, int sts_mod
 			results[i].passed = ev - ev2;
 			if (ev != ev2) {
 				writeEPD_FEN(&b, fen, 0, "");
-				logger2("%s\n", fen);
+				L0("%s\n", fen);
 			}
 			i++;
 		}
@@ -1954,22 +1954,22 @@ void timed2Test(char *filename, int max_time, int max_depth, int max_positions)
 	}
 
 //reporting
-	logger2("Details  \n====================\n");
-	logger2("Run#1 Results %d/%d, , Time: %dh, %dm, %ds,, %lld\n", p1, i1,
+	L0("Details  \n====================\n");
+	L0("Run#1 Results %d/%d, , Time: %dh, %dm, %ds,, %lld\n", p1, i1,
 		(int) t1 / 3600000, (int) (t1 % 3600000) / 60000,
 		(int) (t1 % 60000) / 1000, t1);
-	logger2("Stats\n");
+	L0("Stats\n");
 	i = i1;
 	for (f = 0; f < i; f++) {
-		logger2("====================\n");
+		L0("====================\n");
 		t1 = r1[f].time;
-		logger2("RUN #1, Position %d, , Time: %dh, %dm, %ds,, %lld\n",
+		L0("RUN #1, Position %d, , Time: %dh, %dm, %ds,, %lld\n",
 			f, (int) t1 / 3600000, (int) (t1 % 3600000) / 60000,
 			(int) (t1 % 60000) / 1000, t1);
-		logger2("========\n");
+		L0("========\n");
 		printSearchStat(&(r1[f].stats));
 	}
-	logger2("====================\n");
+	L0("====================\n");
 
 	cleanup: free(r1);
 	free(pi);
@@ -2010,11 +2010,11 @@ void timed2Test_IQ(char *filename, int max_time, int max_depth, int max_position
 	LOGGER_0("computed\n");
 	score = p1 * 670.0f / f + 1995.0f;
 //reporting
-	logger2("Details  \n====================\n");
-	logger2("Run#1 Results %d/%d, , Time: %dh, %dm, %ds,, %lld\n", p1, i1,
+	L0("Details  \n====================\n");
+	L0("Run#1 Results %d/%d, , Time: %dh, %dm, %ds,, %lld\n", p1, i1,
 		(int) t1 / 3600000, (int) (t1 % 3600000) / 60000,
 		(int) (t1 % 60000) / 1000, t1);
-	logger2("IQ score %lf\n", score);
+	L0("IQ score %lf\n", score);
 
 	cleanup: free(r1);
 	free(pi);
@@ -2047,8 +2047,8 @@ void timed2Test_x(char *filename, int max_time, int max_depth, int max_positions
 	}
 
 //reporting
-	logger2("Details  \n====================\n");
-	logger2("Run#1 Results passed %d/%d\n", p1, i1);
+	L0("Details  \n====================\n");
+	L0("Run#1 Results passed %d/%d\n", p1, i1);
 
 	for (f = 0; f < i1; f++) {
 		if (r1[f].passed != 0)
@@ -2158,7 +2158,7 @@ void timed2STS(int max_time, int max_depth, int max_positions, char *per1, char 
 		}
 
 //reporting
-		logger2("Details  \n====================\n");
+		L0("Details  \n====================\n");
 		if (per2 == NULL)
 			printf("Details  \n====================\n");
 		index = 0;
@@ -2166,7 +2166,7 @@ void timed2STS(int max_time, int max_depth, int max_positions, char *per1, char 
 			f = tests_setup[index++];
 			if (tests_setup[index++] <= 0)
 				continue;
-			logger2(
+			L0(
 				"Run#%d Results for STS:%d %d/%d, value %d/%d (%d), %lld\n",
 				q, f + 1, p1[q][f], i1[q][f], v1[q][f],
 				vt1[q][f], v1[q][f] * 100 / vt1[q][f],
@@ -2232,7 +2232,7 @@ void timed2STS(int max_time, int max_depth, int max_positions, char *per1, char 
 	}
 	
 	strcat(b, "\n");
-	logger2("%s", b);
+	L0("%s", b);
 	printf("%s", b);
 
 	index = 0;
@@ -2251,7 +2251,7 @@ void timed2STS(int max_time, int max_depth, int max_positions, char *per1, char 
 			strcat(b, b2);
 		}
 		printf("%s\n", b);
-		logger2("%s\n", b);
+		L0("%s\n", b);
 	}
 	sprintf(b, "%s", "Tot");
 	for (q = 0; q < maximum_t; q++) {
@@ -2259,7 +2259,7 @@ void timed2STS(int max_time, int max_depth, int max_positions, char *per1, char 
 		strcat(b, b2);
 	}
 	printf("%s\n", b);
-	logger2("%s\n", b);
+	L0("%s\n", b);
 	
 	if (per2 != NULL) {
 		strcpy(b, "\nSEC");
@@ -2268,7 +2268,7 @@ void timed2STS(int max_time, int max_depth, int max_positions, char *per1, char 
 			strcat(b, b2);
 		}
 		strcat(b, "\n");
-		logger2("%s", b);
+		L0("%s", b);
 		printf("%s", b);
 
 		index = 0;
@@ -2283,7 +2283,7 @@ void timed2STS(int max_time, int max_depth, int max_positions, char *per1, char 
 				strcat(b, b2);
 			}
 			printf("%s\n", b);
-			logger2("%s\n", b);
+			L0("%s\n", b);
 		}
 	}
 
@@ -2424,7 +2424,7 @@ sts_s pp[10];
 		fclose(h1);
 
 //reporting when just single personality 
-		logger2("Details  \n====================\n");
+		L0("Details  \n====================\n");
 		if (p_max==1)
 			printf("Details  \n====================\n");
 		index = 0;
@@ -2432,7 +2432,7 @@ sts_s pp[10];
 			f = tests_setup[index++];
 			if (tests_setup[index++] <= 0)
 				continue;
-			logger2(
+			L0(
 				"Run#%d Results for STS:%d %d/%d, value %d/%d (%d), %lld\n",
 				q, f + 1, pp[1].p[q][f], pp[1].i[q][f], pp[1].v[q][f],
 				pp[1].t[q][f], pp[1].v[q][f] * 100 / pp[1].t[q][f],
@@ -2499,7 +2499,7 @@ sts_s pp[10];
 	}
 	
 	strcat(b, "\n");
-	logger2("%s", b);
+	L0("%s", b);
 	printf("%s", b);
 // for first personality
 	index = 0;
@@ -2518,7 +2518,7 @@ sts_s pp[10];
 			strcat(b, b2);
 		}
 		printf("%s\n", b);
-		logger2("%s\n", b);
+		L0("%s\n", b);
 	}
 	sprintf(b, "%s", "Tot");
 	for (q = 0; q < i_t; q++) {
@@ -2526,7 +2526,7 @@ sts_s pp[10];
 		strcat(b, b2);
 	}
 	printf("%s\n", b);
-	logger2("%s\n", b);
+	L0("%s\n", b);
 
 // reporting for second personality
 	if (p_max == 2) {
@@ -2537,7 +2537,7 @@ sts_s pp[10];
 			p1m[q] = i1m[q] = v1m[q] = vt1m[q] = 0;
 		}
 		strcat(b, "\n");
-		logger2("%s", b);
+		L0("%s", b);
 		printf("%s", b);
 
 		index = 0;
@@ -2556,7 +2556,7 @@ sts_s pp[10];
 				strcat(b, b2);
 			}
 			printf("%s\n", b);
-			logger2("%s\n", b);
+			L0("%s\n", b);
 		}
 
 // reporting summary
@@ -2568,7 +2568,7 @@ sts_s pp[10];
 			strcat(b, b2);
 		}
 		printf("%s\n", b);
-		logger2("%s\n", b);
+		L0("%s\n", b);
 
 	}
 
@@ -2640,19 +2640,19 @@ void timed2Test_comp(char *filename, int max_time, int max_depth, int max_positi
 	}
 
 //reporting
-	logger2("Details  \n====================\n");
-	logger2("Run#1 Results %d/%d, , Time: %dh, %dm, %ds,, %lld\n", p1, i1,
+	L0("Details  \n====================\n");
+	L0("Run#1 Results %d/%d, , Time: %dh, %dm, %ds,, %lld\n", p1, i1,
 		(int) t1 / 3600000, (int) (t1 % 3600000) / 60000,
 		(int) (t1 % 60000) / 1000, t1);
-	logger2("Run#2 Results %d/%d, , Time: %dh, %dm, %ds,, %lld\n", p2, i2,
+	L0("Run#2 Results %d/%d, , Time: %dh, %dm, %ds,, %lld\n", p2, i2,
 		(int) t2 / 3600000, (int) (t2 % 3600000) / 60000,
 		(int) (t2 % 60000) / 1000, t2);
 	if (i1 != i2) {
-		logger2("Different number of tests %d:%d!\n", i1, i2);
+		L0("Different number of tests %d:%d!\n", i1, i2);
 	} else {
 		for (f = 0; f < i2; f++) {
 			if (r1[f].passed != r2[f].passed) {
-				logger2(
+				L0(
 					"Test %d results %d:%d, time %dh, %dm, %ds, %dh, %dm, %ds\n",
 					f, r1[f].passed, r2[f].passed,
 					(int) r1[f].time / 3600000,
@@ -2664,24 +2664,24 @@ void timed2Test_comp(char *filename, int max_time, int max_depth, int max_positi
 			}
 		}
 	}
-	logger2("Stats\n");
+	L0("Stats\n");
 	i = i1 > i2 ? i2 : i1;
 	for (f = 0; f < i; f++) {
-		logger2("====================\n");
+		L0("====================\n");
 		t1 = r1[f].time;
 		t2 = r2[f].time;
-		logger2("RUN #1, Position %d, , Time: %dh, %dm, %ds,, %lld\n",
+		L0("RUN #1, Position %d, , Time: %dh, %dm, %ds,, %lld\n",
 			f, (int) t1 / 3600000, (int) (t1 % 3600000) / 60000,
 			(int) (t1 % 60000) / 1000, t1);
-		logger2("RUN #2, Position %d, , Time: %dh, %dm, %ds,, %lld\n",
+		L0("RUN #2, Position %d, , Time: %dh, %dm, %ds,, %lld\n",
 			f, (int) t2 / 3600000, (int) (t2 % 3600000) / 60000,
 			(int) (t2 % 60000) / 1000, t2);
-		logger2("========\n");
+		L0("========\n");
 		printSearchStat(&(r1[f].stats));
-		logger2("====\n");
+		L0("====\n");
 		printSearchStat(&(r2[f].stats));
 	}
-	logger2("====================\n");
+	L0("====================\n");
 
 	cleanup: free(r1);
 	free(r2);
@@ -3025,7 +3025,7 @@ void print_pawn_analysis(board *b, attack_model *a, PawnStore *ps, personality *
 		f = 0;
 		from = ps->pawns[s][f];
 		while (from != -1) {
-			logger2(
+			L0(
 				"Side: %d, from %d, pas %d, stop %d, block %d, double %d, outp %d, outp_d %d, prot FR %d, prot BH %d, prot DIR %d\n",
 				s, from, ps->pas_d[s][f], ps->stop_d[s][f],
 				ps->block_d[s][f], ps->double_d[s][f],

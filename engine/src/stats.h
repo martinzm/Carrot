@@ -18,8 +18,10 @@
 
 #ifndef STATS_H
 #define STATS_H
+#include "defines.h"
 
 struct _statistics {
+#if 0
 	long long failnorm;  // node normalni
 	long long faillow;  // node neprekonal alfa
 	long long failhigh;  // node prekonal beta
@@ -75,7 +77,7 @@ struct _statistics {
 	long long hashStoreInPlace;
 	long long hashStoreHits;
 
-	long long hashPawnStores;
+//	long long hashPawnStores;
 	long long hashPawnStoreColl;
 	long long hashPawnAttempts;
 	long long hashPawnHits;
@@ -88,10 +90,12 @@ struct _statistics {
 	long long position_quality_tests;
 	long long position_quality_cutoffs;
 
-	int depth;
-	int depth_max;
+	long long depth;
+	long long depth_max;
 	long long depth_sum;
 	long long depth_max_sum;
+#endif
+	long long s[S_MAX_COLL];
 };
 
 void clearSearchCnt(struct _statistics*);

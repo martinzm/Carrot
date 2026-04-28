@@ -21,539 +21,173 @@
 #include "stats.h"
 #include "bitmap.h"
 #include "utils.h"
+#include "defines.h"
+#include "globals.h"
 
 void clearSearchCnt(struct _statistics *s)
 {
-	s->faillow = 0;
-	s->failhigh = 0;
-	s->failnorm = 0;
-	s->failhashlow = 0;
-	s->failhashhigh = 0;
-	s->failhashnorm = 0;
-	s->nodes = 0;
-// doopravdy otestovanych tahu
-	s->movestested = 0;
-	s->qmovestested = 0;
-// all possible moves from visited position
-	s->possiblemoves = 0;
-	s->qpossiblemoves = 1;
-// zero window run
-	s->zerototal = 0;
-// zero window rerun/ alpha improved in zero
-	s->zerorerun = 0;
-	s->lmrtotal = 0;
-	s->lmrrerun = 0;
-	s->lmpcount = 0;
-// quiesce zero rerun
-	s->quiesceoverrun = 0;
-	s->positionsvisited = 0;
-	s->qposvisited = 0;
-	s->fhflcount = 0;
-	s->firstcutoffs = 0;
-	s->cutoffs = 0;
-	s->moves_to_cutoff = 0;
-	s->non_cutoff_moves = 0;
-	s->first_quiet_cuts = 0;
-	s->quiet_cuts = 0;
-	s->quiet_cuts_cap = 0;
-
-	s->qfirstcutoffs = 0;
-	s->qcutoffs = 0;
-	s->FUT_cuts = 0;
-	s->NMP_tries = 0;
-	s->NMP_cuts = 0;
-	s->qSEE_tests = 0;
-	s->qSEE_cuts = 0;
-	s->hashStores = 0;
-	s->hashStoreColl = 0;
-	s->hashAttempts = 0;
-	s->hashHits = 0;
-	s->hashColls = 0;
-	s->hashMiss = 0;
-	s->hashStoreMiss = 0;
-	s->hashStoreInPlace = 0;
-	s->hashStoreHits = 0;
-
-	s->hashPawnStores = 0;
-	s->hashPawnStoreColl = 0;
-	s->hashPawnAttempts = 0;
-	s->hashPawnHits = 0;
-	s->hashPawnColls = 0;
-	s->hashPawnMiss = 0;
-	s->hashPawnStoreMiss = 0;
-	s->hashPawnStoreInPlace = 0;
-	s->hashPawnStoreHits = 0;
-
-	s->poswithmove = 0;
-	s->ebfnodes = 0;
-	s->ebfnodespri = 0;
-	s->elaps = 0;
-	s->u_nullnodes = 0;
-	s->iterations = 0;
-	s->aspfailits = 0;
-
-	s->depth = 0;
-	s->depth_max = 0;
-	s->depth_sum = 0;
-	s->depth_max_sum = 0;
-
-	s->position_quality_tests = 0;
-	s->position_quality_cutoffs = 0;
-	
-	s->zerorerunnodes=0;
-	s->lmrrerunnodes=0;
-	
+	for(int f=0;f<S_MAX_COLL; f++) { s->s[f]=0; }
 }
 
 // do prvniho parametru je pricten druhy
 void AddSearchCnt(struct _statistics *s, struct _statistics *b)
 {
+long long depth, depth_max;
 
-	s->faillow += b->faillow;
-	s->failhigh += b->failhigh;
-	s->failnorm += b->failnorm;
-	s->failhashlow += b->failhashlow;
-	s->failhashhigh += b->failhashhigh;
-	s->failhashnorm += b->failhashnorm;
-	s->nodes += b->nodes;
-	s->movestested += b->movestested;
-	s->qmovestested += b->qmovestested;
-	s->possiblemoves += b->possiblemoves;
-	s->qpossiblemoves += b->qpossiblemoves;
-	s->zerototal += b->zerototal;
-	s->zerorerun += b->zerorerun;
-	s->lmrtotal += b->lmrtotal;
-	s->lmrrerun += b->lmrrerun;
-	s->lmpcount += b->lmpcount;
-	s->quiesceoverrun += b->quiesceoverrun;
-	s->positionsvisited += b->positionsvisited;
-	s->qposvisited += b->qposvisited;
-	s->fhflcount += b->fhflcount;
-	s->firstcutoffs += b->firstcutoffs;
-	s->cutoffs += b->cutoffs;
-	s->moves_to_cutoff += b->moves_to_cutoff;
-	s->non_cutoff_moves += b->non_cutoff_moves;
-	s->first_quiet_cuts += b->first_quiet_cuts;
-	s->quiet_cuts += b->quiet_cuts;
-	s->quiet_cuts_cap += b->quiet_cuts_cap;
+	depth = s->s[S_depth];
+	depth_max = s->s[S_depth_max];
+	for(int f=0;f<S_MAX_COLL; f++) { s->s[f] += b->s[f]; }
 
-	s->qfirstcutoffs += b->qfirstcutoffs;
-	s->qcutoffs += b->qcutoffs;
-	s->NMP_tries += b->NMP_tries;
-	s->NMP_cuts += b->NMP_cuts;
-	s->FUT_cuts += b->FUT_cuts;
-	s->qSEE_tests += b->qSEE_tests;
-	s->qSEE_cuts += b->qSEE_cuts;
-	s->hashStores += b->hashStores;
-	s->hashStoreColl += b->hashStoreColl;
-	s->hashAttempts += b->hashAttempts;
-	s->hashHits += b->hashHits;
-	s->hashColls += b->hashColls;
-	s->hashMiss += b->hashMiss;
-	s->hashStoreMiss += b->hashStoreMiss;
-	s->hashStoreInPlace += b->hashStoreInPlace;
-	s->hashStoreHits += b->hashStoreHits;
-
-	s->hashPawnStores += b->hashPawnStores;
-	s->hashPawnStoreColl += b->hashPawnStoreColl;
-	s->hashPawnAttempts += b->hashPawnAttempts;
-	s->hashPawnHits += b->hashPawnHits;
-	s->hashPawnColls += b->hashPawnColls;
-	s->hashPawnMiss += b->hashPawnMiss;
-	s->hashPawnStoreMiss += b->hashPawnStoreMiss;
-	s->hashPawnStoreInPlace += b->hashPawnStoreInPlace;
-	s->hashPawnStoreHits += b->hashPawnStoreHits;
-
-	s->poswithmove += b->poswithmove;
-	s->ebfnodes += b->ebfnodes;
-	s->ebfnodespri += b->ebfnodespri;
-	s->elaps += b->elaps;
-	s->u_nullnodes += b->u_nullnodes;
-	s->iterations += b->iterations;
-	s->aspfailits += b->aspfailits;
-
-	s->position_quality_tests += b->position_quality_tests;
-	s->position_quality_cutoffs += b->position_quality_cutoffs;
-
-	s->depth_sum += b->depth_sum;
-	s->depth_max_sum += b->depth_max_sum;
-	s->zerorerunnodes += b->zerorerunnodes;
-	s->lmrrerunnodes += b->lmrrerunnodes;
+// vyresit depth a depth_max
+	s->s[S_depth] = depth;
+	s->s[S_depth_max] = depth_max;
 
 }
 
 // do prvniho parametru je skopirovan druhy
 void CopySearchCnt(struct _statistics *s, struct _statistics *b)
 {
-	s->faillow = b->faillow;
-	s->failhigh = b->failhigh;
-	s->failnorm = b->failnorm;
-	s->failhashlow = b->failhashlow;
-	s->failhashhigh = b->failhashhigh;
-	s->failhashnorm = b->failhashnorm;
-	s->nodes = b->nodes;
-	s->movestested = b->movestested;
-	s->qmovestested = b->qmovestested;
-	s->possiblemoves = b->possiblemoves;
-	s->qpossiblemoves = b->qpossiblemoves;
-	s->zerototal = b->zerototal;
-	s->zerorerun = b->zerorerun;
-	s->lmrtotal = b->lmrtotal;
-	s->lmrrerun = b->lmrrerun;
-	s->lmpcount = b->lmpcount;
-	s->quiesceoverrun = b->quiesceoverrun;
-	s->positionsvisited = b->positionsvisited;
-	s->qposvisited = b->qposvisited;
-	s->fhflcount = b->fhflcount;
-	s->firstcutoffs = b->firstcutoffs;
-	s->cutoffs = b->cutoffs;
-	s->moves_to_cutoff = b->moves_to_cutoff;
-	s->non_cutoff_moves = b->non_cutoff_moves;
-	s->first_quiet_cuts = b->first_quiet_cuts;
-	s->quiet_cuts = b->quiet_cuts;
-	s->quiet_cuts_cap = b->quiet_cuts_cap;
-
-	s->qfirstcutoffs = b->qfirstcutoffs;
-	s->qcutoffs = b->qcutoffs;
-	s->FUT_cuts = b->FUT_cuts;
-	s->NMP_tries = b->NMP_tries;
-	s->NMP_cuts = b->NMP_cuts;
-	s->qSEE_tests = b->qSEE_tests;
-	s->qSEE_cuts = b->qSEE_cuts;
-	s->hashStores = b->hashStores;
-	s->hashStoreColl = b->hashStoreColl;
-	s->hashAttempts = b->hashAttempts;
-	s->hashHits = b->hashHits;
-	s->hashColls = b->hashColls;
-	s->hashMiss = b->hashMiss;
-	s->hashStoreMiss = b->hashStoreMiss;
-	s->hashStoreInPlace = b->hashStoreInPlace;
-	s->hashStoreHits = b->hashStoreHits;
-
-	s->hashPawnStores = b->hashPawnStores;
-	s->hashPawnStoreColl = b->hashPawnStoreColl;
-	s->hashPawnAttempts = b->hashPawnAttempts;
-	s->hashPawnHits = b->hashPawnHits;
-	s->hashPawnColls = b->hashPawnColls;
-	s->hashPawnMiss = b->hashPawnMiss;
-	s->hashPawnStoreMiss = b->hashPawnStoreMiss;
-	s->hashPawnStoreInPlace = b->hashPawnStoreInPlace;
-	s->hashPawnStoreHits = b->hashPawnStoreHits;
-
-	s->poswithmove = b->poswithmove;
-	s->ebfnodes = b->ebfnodes;
-	s->ebfnodespri = b->ebfnodespri;
-	s->elaps = b->elaps;
-	s->u_nullnodes = b->u_nullnodes;
-	s->iterations = b->iterations;
-	s->aspfailits = b->aspfailits;
-
-	s->position_quality_tests = b->position_quality_tests;
-	s->position_quality_cutoffs = b->position_quality_cutoffs;
-
-#if 1
-	s->depth = b->depth;
-	s->depth_max = b->depth_max;
-	s->depth_sum = b->depth_sum;
-	s->depth_max_sum = b->depth_max_sum;
-#endif
-
-	s->zerorerunnodes = b->zerorerunnodes;
-	s->lmrrerunnodes = b->lmrrerunnodes;
-
-
+	for(int f=0;f<S_MAX_COLL; f++) { s->s[f] = b->s[f]; }
 }
 
 // od prvniho je odecten druhy a vlozen do tretiho
 void DecSearchCnt(struct _statistics *s, struct _statistics *b, struct _statistics *r)
 {
-	r->faillow = s->faillow - b->faillow;
-	r->failhigh = s->failhigh - b->failhigh;
-	r->failnorm = s->failnorm - b->failnorm;
-	r->failhashlow = s->failhashlow - b->failhashlow;
-	r->failhashhigh = s->failhashhigh - b->failhashhigh;
-	r->failhashnorm = s->failhashnorm - b->failhashnorm;
-	r->nodes = s->nodes - b->nodes;
-	r->movestested = s->movestested - b->movestested;
-	r->qmovestested = s->qmovestested - b->qmovestested;
-	r->possiblemoves = s->possiblemoves - b->possiblemoves;
-	r->qpossiblemoves = s->qpossiblemoves - b->qpossiblemoves;
-	r->zerototal = s->zerototal - b->zerototal;
-	r->zerorerun = s->zerorerun - b->zerorerun;
-	r->lmrtotal = s->lmrtotal - b->lmrtotal;
-	r->lmrrerun = s->lmrrerun - b->lmrrerun;
-	r->lmpcount = s->lmpcount - b->lmpcount;
-	r->quiesceoverrun = s->quiesceoverrun - b->quiesceoverrun;
-	r->positionsvisited = s->positionsvisited - b->positionsvisited;
-	r->qposvisited = s->qposvisited - b->qposvisited;
-	r->fhflcount = s->fhflcount - b->fhflcount;
-	r->firstcutoffs = s->firstcutoffs - b->firstcutoffs;
-	r->cutoffs = s->cutoffs - b->cutoffs;
-	r->moves_to_cutoff = s->moves_to_cutoff - b->moves_to_cutoff;
-	r->non_cutoff_moves = s->non_cutoff_moves - b->non_cutoff_moves;
-	r->first_quiet_cuts = s->first_quiet_cuts - b->first_quiet_cuts;
-	r->quiet_cuts = s->quiet_cuts - b->quiet_cuts;
-	r->quiet_cuts_cap = s->quiet_cuts_cap - b->quiet_cuts_cap;
-	r->qfirstcutoffs = s->qfirstcutoffs - b->qfirstcutoffs;
-	r->qcutoffs = s->qcutoffs - b->qcutoffs;
-	r->NMP_tries = s->NMP_tries - b->NMP_tries;
-	r->NMP_cuts = s->NMP_cuts - b->NMP_cuts;
-	r->FUT_cuts = s->FUT_cuts - b->FUT_cuts;
-
-	r->qSEE_tests = s->qSEE_tests - b->qSEE_tests;
-	r->qSEE_cuts = s->qSEE_cuts - b->qSEE_cuts;
-	r->hashStores = s->hashStores - b->hashStores;
-	r->hashStoreColl = s->hashStoreColl - b->hashStoreColl;
-	r->hashAttempts = s->hashAttempts - b->hashAttempts;
-	r->hashHits = s->hashHits - b->hashHits;
-	r->hashColls = s->hashColls - b->hashColls;
-	r->hashMiss = s->hashMiss - b->hashMiss;
-	r->hashStoreMiss = s->hashStoreMiss - b->hashStoreMiss;
-	r->hashStoreInPlace = s->hashStoreInPlace - b->hashStoreInPlace;
-	r->hashStoreHits = s->hashStoreHits - b->hashStoreHits;
-
-	r->hashPawnStores = s->hashPawnStores - b->hashPawnStores;
-	r->hashPawnStoreColl = s->hashPawnStoreColl - b->hashPawnStoreColl;
-	r->hashPawnAttempts = s->hashPawnAttempts - b->hashPawnAttempts;
-	r->hashPawnHits = s->hashPawnHits - b->hashPawnHits;
-	r->hashPawnColls = s->hashPawnColls - b->hashPawnColls;
-	r->hashPawnMiss = s->hashPawnMiss - b->hashPawnMiss;
-	r->hashPawnStoreMiss = s->hashPawnStoreMiss - b->hashPawnStoreMiss;
-	r->hashPawnStoreInPlace = s->hashPawnStoreInPlace
-		- b->hashPawnStoreInPlace;
-	r->hashPawnStoreHits = s->hashPawnStoreHits - b->hashPawnStoreHits;
-
-	r->poswithmove = s->poswithmove - b->poswithmove;
-	r->ebfnodes = s->ebfnodes - b->ebfnodes;
-	r->ebfnodespri = s->ebfnodespri - b->ebfnodespri;
-	r->elaps = s->elaps - b->elaps;
-	r->u_nullnodes = s->u_nullnodes - b->u_nullnodes;
-	r->iterations = s->iterations - b->iterations;
-	r->aspfailits = s->aspfailits - b->aspfailits;
-
-	r->position_quality_tests = s->position_quality_tests
-		- b->position_quality_tests;
-	r->position_quality_cutoffs = s->position_quality_cutoffs
-		- b->position_quality_cutoffs;
-
-#if 0
-	r->depth=s->depth-b->depth;
-	r->depth_max=s->depth_max-b->depth_max;
-#endif
-	r->depth_sum = s->depth_sum - b->depth_sum;
-	r->depth_max_sum = s->depth_max_sum - b->depth_max_sum;
-
-	r->zerorerunnodes = s->zerorerunnodes - b->zerorerunnodes;
-	r->lmrrerunnodes = s->lmrrerunnodes - b->lmrrerunnodes;
-
+	for(int f=0;f<S_MAX_COLL; f++) { r->s[f] = s->s[f] - b->s[f]; }
 }
 
+#define LX(out, off, len, ...) { off += snprintf(out+off, Max(0, len-off), __VA_ARGS__); }
+
+void dumpEBF()
+{
+	int f, mx=Min(MAXPLY, 64);
+	for(f=1;f<mx;f++) {
+		L0("Depth %d, N1/N-1 %lld/%lld, ebf %.2f\n",
+		f, STATS[f].s[S_ebfnodes], STATS[f].s[S_ebfnodespri], STATS[f].s[S_ebfnodes]/(STATS[f].s[S_ebfnodespri]+1.0));
+	}
+}
+
+// posklada vystup do bufferu o, ktery ma delku l
+void printSearchStat3(struct _statistics *s, char *o, int l)
+{
+int c=0;
+
+
+	LX(o,c,l,
+		"Info: Positions visited %lld, PV %lld (%.2f%%), nonPV %lld, with movgen %lld\n"
+		"Info: Resolutions Exact %lld (%.2f%%), High %lld (%.2f%%), Low %lld (%.2f%%), TTExact %lld (%.2f%%), TTHigh %lld (%.2f%%), TTLow %lld (%.2f%%)\n"
+		"Info: NMP Tries %lld / Cuts %lld (%.2f%%), RFP cuts %lld (%.2f%%)\n",
+		s->s[S_positionsvisited], s->s[S_PV_positions], 100*s->s[S_PV_positions]/(s->s[S_positionsvisited]+1.0), s->s[S_positionsvisited] - s->s[S_PV_positions],
+		s->s[S_poswithmove],
+		s->s[S_failnorm], 100*s->s[S_failnorm]/(s->s[S_positionsvisited]+1.0), s->s[S_failhigh], 100*s->s[S_failhigh]/(s->s[S_positionsvisited]+1.0),
+		s->s[S_faillow], 100*s->s[S_faillow]/(s->s[S_positionsvisited]+1.0),
+		s->s[S_failhashnorm], 100*s->s[S_failhashnorm]/(s->s[S_failnorm]+1.0),
+		s->s[S_failhashhigh], 100*s->s[S_failhashhigh]/(s->s[S_failhigh]+1.0), 
+		s->s[S_failhashlow], 100*s->s[S_failhashlow]/(s->s[S_faillow]+1.0), 
+		
+		s->s[S_NMP_tries], s->s[S_NMP_cuts], 100 * s->s[S_NMP_cuts] / (s->s[S_NMP_tries] + 1.0),
+		s->s[S_FUT_cuts], 100*s->s[S_FUT_cuts]/(s->s[S_positionsvisited]+1.0));
+// PVS moves???
+	LX(o,c,l,
+		"Info: Moves tested %lld (%.2f%%), generated %lld, PVS %lld, PVS in %.2f moves\n", 
+		s->s[S_movestested], 100*s->s[S_movestested]/(s->s[S_possiblemoves] + 1.0),s->s[S_possiblemoves],
+		s->s[S_movestested]-s->s[S_zerototal], ((s->s[S_movestested]+1.0)/(s->s[S_movestested]-s->s[S_zerototal])));
+	LX(o,c,l,
+			"Info: LmrN %lld, LmrRerun %lld (%.2f%%), LMP cuts %lld, FhFlCount: %lld\n",
+		s->s[S_lmrtotal], s->s[S_lmrrerun], 100*s->s[S_lmrrerun]/(s->s[S_lmrtotal]+1.0), s->s[S_lmpcount], s->s[S_fhflcount]);
+	LX(o,c,l,
+			"Info: ZeroN %lld, ZeroRerun %lld, Zero Rate %.2f%%\n",
+		s->s[S_zerototal], s->s[S_zerorerun],  100*s->s[S_zerorerun]/(s->s[S_zerototal]+1.0));
+	LX(o,c,l,
+	"HASH: TTHits %lld, PosRes %lld (%.2f%%), Move Ordering %lld (%.2f%%)\n",
+		s->s[S_hashHits], s->s[S_failhashnorm]+s->s[S_failhashhigh]+s->s[S_failhashlow], 
+		100 *(s->s[S_failhashnorm]+s->s[S_failhashhigh]+s->s[S_failhashlow])/(s->s[S_hashHits]+1.0),
+		(s->s[S_hashHits]-s->s[S_failhashnorm]-s->s[S_failhashhigh]-s->s[S_failhashlow]),
+		100 *(s->s[S_hashHits]-s->s[S_failhashnorm]-s->s[S_failhashhigh]-s->s[S_failhashlow])/(s->s[S_hashHits]+1.0));
+
+	LX(o,c,l,
+	"Info: NMP run node %lld, ZeroRerunMoves %lld, LmrRerunMoves %lld\n", s->s[S_u_nullnodes], s->s[S_zerorerunnodes], s->s[S_lmrrerunnodes]);
+	LX(o,c,l,
+			"Info: Cutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%\n",
+		s->s[S_firstcutoffs], s->s[S_cutoffs], 100 * s->s[S_firstcutoffs] / (s->s[S_cutoffs] + 1.0));
+	LX(o,c,l,
+			"Info: Moves before Cuttoffs %lld, Average %.2f%%, Non cutoff moves %lld\n", s->s[S_moves_to_cutoff],100*(s->s[S_moves_to_cutoff]/(s->s[S_cutoffs]+1.0)),
+		s->s[S_non_cutoff_moves]);
+	LX(o,c,l,
+			"Info: Quiet Cutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%\n",
+		s->s[S_first_quiet_cuts], s->s[S_quiet_cuts],
+		100 * s->s[S_first_quiet_cuts] / (s->s[S_quiet_cuts] + 1.0));
+	LX(o,c,l,
+			"Info: Quiet Cutoffs after capture move %lld\n", s->s[S_quiet_cuts_cap]);
+#if 0
+	LX(o,c,l,
+		"Info: Positions with movegen %lld, last It EBF: %f, speed %f kNPS/s, nodes %lld\n",
+		s->s[S_poswithmove],
+		(float )s->s[S_ebfnodes] / (float )(s->s[S_ebfnodespri] + 1),
+		(float ) (s->s[S_positionsvisited] + s->s[S_qposvisited])
+			/ (float )(s->s[S_elaps] + 1), s->s[S_nodes]);
+#endif
+	LX(o,c,l,
+	"HASH: Get:%lld, GHit:%lld (%.2f%%), GMiss:%lld, GCol: %lld\n",
+		s->s[S_hashAttempts], s->s[S_hashHits],
+		s->s[S_hashHits] * 100 / (s->s[S_hashAttempts] + 1.0), s->s[S_hashMiss], s->s[S_hashColls]);
+	LX(o,c,l,
+			"HASH: Stores:%lld, SHit:%lld, SInPlace:%lld, SMiss:%lld SCCol:%lld\n",
+		s->s[S_hashStores], s->s[S_hashStoreHits], s->s[S_hashStoreInPlace],
+		s->s[S_hashStoreMiss], s->s[S_hashColls]);
+	LX(o,c,l,
+	"PHSH: Get:%lld, GHit:%lld (%.2f%%), GMiss:%lld, GCol: %lld\n",
+		s->s[S_hashPawnAttempts], s->s[S_hashPawnHits],
+		s->s[S_hashPawnHits] * 100 / (s->s[S_hashPawnAttempts] + 1.0),
+		s->s[S_hashPawnMiss], s->s[S_hashPawnColls]);
+	LX(o,c,l,
+			"PHSH: Stores:%lld, SHit:%lld, SInPlace:%lld, SMiss:%lld SCCol:%lld\n",
+		s->s[S_hashPawnStores], s->s[S_hashPawnStoreHits],
+		s->s[S_hashPawnStoreInPlace], s->s[S_hashPawnStoreMiss],
+		s->s[S_hashPawnColls]);
+	LX(o,c,l,
+	"HASH: TTNormal %lld, TTHigh %lld,TTLow %lld\n",
+		s->s[S_failhashnorm], s->s[S_failhashhigh], s->s[S_failhashlow]);
+	LX(o,c,l,
+			"Info: QPositions %lld, QMovesSearched %lld (%.2f%%) of %lld QTotalMovesAvail\n",
+		s->s[S_qposvisited], s->s[S_qmovestested],
+		s->s[S_qmovestested] * 100 / (s->s[S_qpossiblemoves] + 1.0), s->s[S_qpossiblemoves]);
+	LX(o,c,l,
+			"Info: QCutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%\n",
+		s->s[S_qfirstcutoffs], s->s[S_qcutoffs],
+		100 * s->s[S_qfirstcutoffs] / (s->s[S_qcutoffs] + 1.0));
+	LX(o,c,l,
+	"Info: QuiesceSEE: Tests %lld, Cuts %lld, Ratio %.2f%%\n",
+		s->s[S_qSEE_tests], s->s[S_qSEE_cuts],
+		100 * s->s[S_qSEE_cuts] / (s->s[S_qSEE_tests] + 1.0));
+	LX(o,c,l,
+	"Info: Aspiration: Iterations %lld, Failed It %lld\n",
+		s->s[S_iterations], s->s[S_aspfailits]);
+	LX(o,c,l,
+	"Info: Search runs %lld, Average Depth %.2f, Average SelDepth %.2f\n",
+		s->s[S_ITsearch], s->s[S_depth_sum]/(s->s[S_ITsearch]+0.0), s->s[S_depth_max_sum]/(s->s[S_ITsearch]+0.0));
+	LX(o,c,l,
+	"Info: Time in: %dh, %dm, %ds, %dms\n",
+		(int ) s->s[S_elaps] / 3600000, (int ) (s->s[S_elaps] % 3600000) / 60000,
+		(int ) (s->s[S_elaps] % 60000) / 1000, (int ) (s->s[S_elaps] % 1000));
+#if 0
+	LX(o,c,l,
+	"Info: Position Quality Tests %lld, Reductions %lld\n",
+		s->s[S_position_quality_tests], s->s[S_position_quality_cutoffs]);
+#endif
+}
+
+
+#undef LX
+
+// generate all into buffer
+// print buffer into file
 void printSearchStat(struct _statistics *s)
 {
-	LOGGER_0(
-		"Info: Low %lld, High %lld, Normal %lld, Positions %lld, MovesSearched %lld (%lld%%) of %lld TotalMovesAvail. Branching %f, %f\n",
-		s->faillow, s->failhigh, s->failnorm, s->positionsvisited,
-		s->movestested, (s->movestested * 100 / (s->possiblemoves + 1)),
-		s->possiblemoves,
-		((float )s->movestested / ((float )s->positionsvisited + 1)),
-		((float )s->possiblemoves / ((float )s->positionsvisited + 1)));
-	LOGGER_0(
-		"Info: Positions with movegen %lld, last It EBF: %f, speed %f kNPS/s, nodes %lld\n",
-		s->poswithmove,
-		(float )s->ebfnodes / (float )(s->ebfnodespri + 1),
-		(float ) (s->positionsvisited + s->qposvisited)
-			/ (float )(s->elaps + 1), s->nodes);
-	LOGGER_0("HASH: Get:%lld, GHit:%lld,%%%lld, GMiss:%lld, GCol: %lld\n",
-		s->hashAttempts, s->hashHits,
-		s->hashHits * 100 / (s->hashAttempts + 1), s->hashMiss,
-		s->hashColls);
-	LOGGER_0(
-		"HASH: Stores:%lld, SHit:%lld, SInPlace:%lld, SMiss:%lld SCCol:%lld\n",
-		s->hashStores, s->hashStoreHits, s->hashStoreInPlace,
-		s->hashStoreMiss, s->hashColls);
-	LOGGER_0("PHSH: Get:%lld, GHit:%lld,%%%lld, GMiss:%lld, GCol: %lld\n",
-		s->hashPawnAttempts, s->hashPawnHits,
-		s->hashPawnHits * 100 / (s->hashPawnAttempts + 1),
-		s->hashPawnMiss, s->hashPawnColls);
-	LOGGER_0(
-		"PHSH: Stores:%lld, SHit:%lld, SInPlace:%lld, SMiss:%lld SCCol:%lld\n",
-		s->hashPawnStores, s->hashPawnStoreHits,
-		s->hashPawnStoreInPlace, s->hashPawnStoreMiss,
-		s->hashPawnColls);
-	LOGGER_0("HASH: TTLow %lld, TTHigh %lld, TTNormal %lld\n",
-		s->failhashlow, s->failhashhigh, s->failhashnorm);
-	LOGGER_0(
-		"Info: QPositions %lld, QMovesSearched %lld,(%lld%%) of %lld QTotalMovesAvail\n",
-		s->qposvisited, s->qmovestested,
-		(s->qmovestested * 100 / (s->qpossiblemoves + 1)),
-		s->qpossiblemoves);
-	LOGGER_0(
-		"Info: ZeroN %lld, ZeroRerun %lld, Zero Rate %.2f%%, QZoverRun %lld\n",
-		s->zerototal, s->zerorerun,  100*s->zerorerun/(s->zerototal+1.0), s->quiesceoverrun);
-	LOGGER_0(
-		"Info: LmrN %lld, LmrRerun %lld, Lmr Rate %.2f%%,  FhFlCount: %lld\n",
-		s->lmrtotal, s->lmrrerun, 100*s->lmrrerun/(s->lmrtotal+1.0), s->fhflcount);
-
-	LOGGER_0(
-		"Info: PVS %lld, PVS in %.2f moves\n",
-		s->movestested-s->zerototal, ((s->movestested+1.0)/(s->movestested-s->zerototal)));
-
-	LOGGER_0("Info: ZeroRerunMoves %lld, LmrRerunMoves %lld\n", s->zerorerunnodes, s->lmrrerunnodes);
-	LOGGER_0(
-		"Info: LMP: count %lld\n", s->lmpcount);
-	LOGGER_0(
-		"Info: Cutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%\n",
-		s->firstcutoffs, s->cutoffs,
-		100 * s->firstcutoffs / (s->cutoffs + 1.0));
-	LOGGER_0(
-		"Info: Moves before Cuttoffs %lld, Average %.2f%%, Non cutoff moves %lld\n", s->moves_to_cutoff,100*(s->moves_to_cutoff/(s->cutoffs+1.0)),
-		s->non_cutoff_moves);
-
-	LOGGER_0(
-		"Info: Quiet Cutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%\n",
-		s->first_quiet_cuts, s->quiet_cuts,
-		100 * s->first_quiet_cuts / (s->quiet_cuts + 1.0));
-	LOGGER_0(
-		"Info: Quiet Cutoffs after capture move %lld\n", s->quiet_cuts_cap);
-		
-	LOGGER_0(
-		"Info: Futility: cuts %lld\n", s->FUT_cuts);
-
-	LOGGER_0(
-		"Info: QCutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%\n",
-		s->qfirstcutoffs, s->qcutoffs,
-		100 * s->qfirstcutoffs / (s->qcutoffs + 1.0));
-	LOGGER_0("Info: QuiesceSEE: Tests %lld, Cuts %lld, Ratio %.2f%%\n",
-		s->qSEE_tests, s->qSEE_cuts,
-		100 * s->qSEE_cuts / (s->qSEE_tests + 1.0));
-	LOGGER_0(
-		"Info: NULL MOVE: Tries %lld, Cuts %lld, Ratio %.2f%%, Nodes under NULL %lld\n",
-		s->NMP_tries, s->NMP_cuts,
-		100 * s->NMP_cuts / (s->NMP_tries + 1.0), s->u_nullnodes);
-	LOGGER_0("Info: Aspiration: Iterations %lld, Failed It %lld\n",
-		s->iterations, s->aspfailits);
-	LOGGER_0("Info: Depth: Regular %d, Max %d, RegCum %lld, MaxCum %lld\n",
-		s->depth, s->depth_max, s->depth_sum, s->depth_max_sum);
-	LOGGER_0("Info: Time in: %dh, %dm, %ds, %dms\n",
-		(int ) s->elaps / 3600000, (int ) (s->elaps % 3600000) / 60000,
-		(int ) (s->elaps % 60000) / 1000, (int ) (s->elaps % 1000));
-	LOGGER_0("Info: Position Quality Tests %lld, Reductions %lld\n",
-		s->position_quality_tests, s->position_quality_cutoffs);
-}
-
-void printSearchStat2(struct _statistics *s, char *buff)
-{
-	char bb[2048];
-	sprintf(buff,
-		"Low %lld, High %lld, Normal %lld, Positions %lld, MovesSearched %lld (%lld%%) of %lld TotalMovesAvail. Branching %f, %f\n",
-		s->faillow, s->failhigh, s->failnorm, s->positionsvisited,
-		s->movestested, (s->movestested * 100 / (s->possiblemoves + 1)),
-		s->possiblemoves,
-		((float) s->movestested / ((float) s->positionsvisited + 1)),
-		((float) s->possiblemoves / ((float) s->positionsvisited + 1)));
-	strcat(buff, bb);
-	sprintf(buff,
-		"Positions with movegen %lld, last It EBF: %f, speed %f kNPS/s, nodes %lld\n",
-		s->poswithmove,
-		(float) s->ebfnodes / ((float) s->ebfnodespri + 1),
-		(float) (s->positionsvisited + s->qposvisited)
-			/ (float) (s->elaps + 1), s->nodes);
-	strcat(buff, bb);
-	sprintf(bb, "Get:%lld, GHit:%lld,%%%lld, GMiss:%lld, GCol: %lld\n",
-		s->hashAttempts, s->hashHits,
-		s->hashHits * 100 / (s->hashAttempts + 1), s->hashMiss,
-		s->hashColls);
-	strcat(buff, bb);
-	sprintf(bb,
-		"Stores:%lld, SHit:%lld, SInPlace:%lld, SMiss:%lld SCCol:%lld\n",
-		s->hashStores, s->hashStoreHits, s->hashStoreInPlace,
-		s->hashStoreMiss, s->hashColls);
-	strcat(buff, bb);
-	sprintf(bb, "Get:%lld, GPHit:%lld,%%%lld, GPMiss:%lld, GPCol: %lld\n",
-		s->hashPawnAttempts, s->hashPawnHits,
-		s->hashPawnHits * 100 / (s->hashPawnAttempts + 1),
-		s->hashPawnMiss, s->hashPawnColls);
-	strcat(buff, bb);
-	sprintf(bb,
-		"Stores:%lld, SPHit:%lld, SPInPlace:%lld, SPMiss:%lld SPCCol:%lld\n",
-		s->hashPawnStores, s->hashPawnStoreHits,
-		s->hashPawnStoreInPlace, s->hashPawnStoreMiss,
-		s->hashPawnColls);
-	strcat(buff, bb);
-	sprintf(bb, "HASH: TTLow %lld, TTHigh %lld, TTNormal %lld\n",
-		s->failhashlow, s->failhashhigh, s->failhashnorm);
-	strcat(buff, bb);
-	sprintf(bb,
-		"QPositions %lld, QMovesSearched %lld,(%lld%%) of %lld QTotalMovesAvail\n",
-		s->qposvisited, s->qmovestested,
-		(s->qmovestested * 100 / (s->qpossiblemoves + 1)),
-		s->qpossiblemoves);
-	strcat(buff, bb);
-	sprintf(bb,
-		"ZeroN %lld, ZeroRerun %lld, Zero Rate %.2f%%, QZoverRun %lld\n"
-		"LmrN %lld, LmrRerun %lld, Lmr Rate %.2f%%,  FhFlCount: %lld\n"
-		"PVS %lld, PVS in %.2f moves\n",
-		s->zerototal, s->zerorerun,  100*s->zerorerun/(s->zerototal+1.0), s->quiesceoverrun,
-		s->lmrtotal, s->lmrrerun, 100*s->lmrrerun/(s->lmrtotal+1.0), s->fhflcount,
-		s->movestested-s->zerototal, (s->movestested+1.0)/(s->movestested-s->zerototal));
-	strcat(buff, bb);
-	
-	sprintf(bb, "ZeroRerunMoves %lld, LmrRerunMoves %lld\n", s->zerorerunnodes, s->lmrrerunnodes);
-	strcat(buff, bb);
-	
-	sprintf(bb,
-		"LMP: count %lld\n", s->lmpcount);
-	strcat(buff, bb);
-	sprintf(bb,
-		"Cutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%, \n",
-		s->firstcutoffs, s->cutoffs,
-		100 * s->firstcutoffs / (s->cutoffs + 1.0));
-	strcat(buff, bb);
-	sprintf(bb,
-		"Moves before Cuttoffs %lld, Average %.2f%%, Non cutoff moves %lld\n", s->moves_to_cutoff, 100*(s->moves_to_cutoff/(s->cutoffs+1.0)),
-		s->non_cutoff_moves);
-	strcat(buff, bb);
-
-	sprintf(bb, 
-		"Quiet Cutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%\n",
-		s->first_quiet_cuts, s->quiet_cuts,
-		100 * s->first_quiet_cuts / (s->quiet_cuts + 1.0));
-	strcat(buff, bb);
-	sprintf(bb,
-		"Quiet Cutoffs after capture move %lld\n", s->quiet_cuts_cap);
-	strcat(buff, bb);
-
-	sprintf(bb,
-		"Futility: cuts %lld\n", s->FUT_cuts);
-	strcat(buff, bb);
-	sprintf(bb,
-		"QCutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%, \n",
-		s->qfirstcutoffs, s->qcutoffs,
-		100 * s->qfirstcutoffs / (s->qcutoffs + 1.0));
-	strcat(buff, bb);
-	sprintf(buff, "QuiesceSEE: Tests %lld, Cuts %lld, Ratio %.2f%%, \n",
-		s->qSEE_tests, s->qSEE_cuts,
-		100 * s->qSEE_cuts / (s->qSEE_tests + 1.0));
-	strcat(buff, bb);
-	sprintf(bb,
-		"NULL MOVE: Tries %lld, Cuts %lld, Ratio %.2f%%, Nodes under NULL %lld\n",
-		s->NMP_tries, s->NMP_cuts,
-		100 * s->NMP_cuts / (s->NMP_tries + 1.0), s->u_nullnodes);
-	strcat(buff, bb);
-	sprintf(bb, "Aspiration: Iterations %lld, Failed It %lld\n",
-		s->iterations, s->aspfailits);
-	strcat(buff, bb);
-	sprintf(buff,
-		"Depth: Regular %d, Max %d, RegCum %lld, MaxCum %lld\n",
-		s->depth, s->depth_max, s->depth_sum, s->depth_max_sum);
-	strcat(buff, bb);
-	sprintf(bb, "Time in: %dh, %dm, %ds, %dms\n",
-		(int) s->elaps / 3600000, (int) (s->elaps % 3600000) / 60000,
-		(int) (s->elaps % 60000) / 1000, (int) (s->elaps % 1000));
-	strcat(buff, bb);
-	sprintf(bb, "Position Quality Tests %lld, Reductions %lld\n",
-		s->position_quality_tests, s->position_quality_cutoffs);
-	strcat(buff, bb);
+char buf[5120];
+	printSearchStat3(s, buf, sizeof(buf));
+	blogger2b(1, buf);
+	dumpEBF();
 }
 
 void clearALLSearchCnt(struct _statistics *s)

@@ -13,8 +13,8 @@
   <LMR_prog_start_move>9999</LMR_prog_start_move>
   <LMR_prog_mod>9999</LMR_prog_mod>
   <LMR_sim>0</LMR_sim>
-  <LMP_enable>0</LMP_enable>
-  <LMP_start_move>10</LMP_start_move>
+  <LMP_enable>1</LMP_enable>
+  <LMP_start_move>3</LMP_start_move>
   <LMP_depth>3</LMP_depth>
   <IID_remain_depth>9999</IID_remain_depth>
   <quiesce_phase_limit>256</quiesce_phase_limit>
@@ -41,7 +41,7 @@
   <eval_BIAS_e>0</eval_BIAS_e>
   <move_tempo gamestage="0">0</move_tempo>
   <move_tempo gamestage="1">0</move_tempo>
-  <futility_depth>0</futility_depth>
+  <futility_depth>3</futility_depth>
   <futility_cut>0,240,360,480,600,720,2000,2400,2800</futility_cut>
   <futility_sim>0</futility_sim>
   <mobility_protect>1</mobility_protect>

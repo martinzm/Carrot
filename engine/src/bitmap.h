@@ -102,6 +102,7 @@ typedef enum _LVA_SORT {
 
 } LVA_SORT;
 
+
 typedef enum _SCORES {
 	NO_NULL = 0, FAILLOW_SC, EXACT_SC, FAILHIGH_SC, ER_SC
 } SCORES;

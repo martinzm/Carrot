@@ -64,6 +64,18 @@ s PeSTO evaluaci
 	First cutoffs 91%
 	First QuietCutoffs 83%
 	
+LMP:
+	ne v sachu
+	ne pesec na 6 a 7 rade
+	ne kdyz dava sach
+	po 3 +2*depth*depth klidnych tazich
+	hlouka 3 a mene
+	ne brani
+	ne PV
+	
+  
+  
+  
   
 
 hledani:

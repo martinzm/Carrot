@@ -37,61 +37,99 @@
 
 FILE *debugf;
 
-int logger2(char *fmt, ...)
+// put into buffer
+
+int blogger2(int state,char *out, int len, const char *fmt, va_list args)
 {
 	char buf[2048];
+	char dat[256]="", odat[512];
+	char *line, *st;
 	int n;
 	int hh, mm, ss, nn;
 	unsigned long long en;
-	va_list ap;
 
-	en = readClock();
-	nn = (int) (en % 1000);
-	en = en / 1000;
-	ss = (int) (en % 60);
-	en = en / 60;
-	mm = (int) (en % 60);
-	en = en / 60;
-	hh = (int) (en % 24);
-
-	va_start(ap, fmt);
-	vsnprintf(buf, 2048, fmt, ap);
-	va_end(ap);
-	fprintf(debugf, "%02d:%02d:%02d:%04d  %s", hh, mm, ss, nn, buf);
+// date time
+	if(state==1) {
+		en = readClock();
+		nn = (int) (en % 1000);
+		en = en / 1000;
+		ss = (int) (en % 60);
+		en = en / 60;
+		mm = (int) (en % 60);
+		en = en / 60;
+		hh = (int) (en % 24);
+		snprintf(dat,256, "%02d:%02d:%02d:%04d ",hh, mm, ss, nn);
+	}
+// process parameters
+	vsnprintf(buf, sizeof(buf), fmt, args);
+// put it into log
+	line = strtok_r(buf, "\n", &st);
+	out[0]='\0';
+	int off=0;
+	while(line!=NULL) {
+//		printf("%s\n", buf);
+//		printf("%s\n", line);
+		off += snprintf(out + off, Max(0,(len-off)), "%s%s\n", dat, line);
+		line = strtok_r(NULL, "\n", &st);
+	}
 	return 0;
 }
 
-int nlogger2(char *fmt, ...)
+// add log info to buffer
+int pblogger2(int state,char *out, int len, char *buf)
 {
-	char buf[512];
+	char dat[256]="", odat[512];
+	char *line, *st;
 	int n;
-	va_list ap;
-
-	va_start(ap, fmt);
-	vsnprintf(buf, 512, fmt, ap);
-	va_end(ap);
-	fprintf(debugf, "%s", buf);
-	return 0;
-}
-
-int logger(char *p, char *s, char *a)
-{
 	int hh, mm, ss, nn;
 	unsigned long long en;
-	en = readClock();
 
-	nn = (int) (en % 1000);
+// date time
+	if(state==1) {
+		en = readClock();
+		nn = (int) (en % 1000);
+		en = en / 1000;
+		ss = (int) (en % 60);
+		en = en / 60;
+		mm = (int) (en % 60);
+		en = en / 60;
+		hh = (int) (en % 24);
+		snprintf(dat,256, "%02d:%02d:%02d:%04d ",hh, mm, ss, nn);
+	}
+// process parameters
+// put it into log
+	line = strtok_r(buf, "\n", &st);
+	out[0]='\0';
+	int off=0;
+	while(line!=NULL) {
+		off += snprintf(out + off, Max(0,(len-off)), "%s%s\n", dat, line);
+		line = strtok_r(NULL, "\n", &st);
+	}
+	return 0;
+}
 
-	en = en / 1000;
-	ss = (int) (en % 60);
+int blogger2f(int state, const char *fmt, ...)
+{
+char o[5120];
+	va_list args;
+	va_start(args, fmt);
+	blogger2(state, o, sizeof(o), fmt, args);
+	va_end(args);
+	fprintf(debugf, "%s", o);
+	return 0;
+}
 
-	en = en / 60;
-	mm = (int) (en % 60);
-
-	en = en / 60;
-	hh = (int) (en % 24);
-
-	fprintf(debugf, "%02d:%02d:%02d:%04d  %s%s%s", hh, mm, ss, nn, p, s, a);
+int blogger2b(int state, const char *buf)
+{
+char o[5120];
+char i[5120];
+	if(state==1) {
+		strncpy(i, buf, sizeof(i)-1);
+		pblogger2(state, o, sizeof(o), i);
+		fprintf(debugf, "%s", o);
+	} else {
+		fprintf(debugf, "%s", buf);
+	}
 	return 0;
 }
 

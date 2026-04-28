@@ -3772,10 +3772,10 @@ int d, m;
 	  for(m=0;m<64;m++) {
 		  if(d==0||m==0){
 			table[d][m]=0;
-			L0("%d:%d = %d\n", d,m, table[d][m]);
+//			L0("%d:%d = %d\n", d,m, table[d][m]);
 			continue;
 		  }
 		  table[d][m] = (int) (0.5 + log(d)*log(m) / 2.3);
-		  L0("%d:%d = %d\n", d,m, table[d][m]);
+//		  L0("%d:%d = %d\n", d,m, table[d][m]);
 		}
 }

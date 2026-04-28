@@ -262,18 +262,18 @@ void printPV_simple(board *b, tree_store *tree, int depth, int side, struct _sta
 	
 	if (mi == -1) {
 		sprintf(b2,
-			"info depth %d seldepth %d nodes %lld score cp %d time %lld pv ",
-			depth, s2->depth_max,
-			s2->positionsvisited + s2->qposvisited,
+			"info depth %d seldepth %lld nodes %lld score cp %d time %lld pv ",
+			depth, s2->s[S_depth_max],
+			s2->s[S_positionsvisited] + s2->s[S_qposvisited],
 			tree->tree[0][0].score / 10, tno);
 		strcat(b2, buff);
 	} else {
 		if (isMATE(tree->tree[0][0].score) < 0)
 			mi = 0 - mi;
 		sprintf(b2,
-			"info depth %d seldepth %d nodes %lld score mate %d time %lld pv ",
-			depth, s2->depth_max,
-			s2->positionsvisited + s2->qposvisited, mi, tno);
+			"info depth %d seldepth %lld nodes %lld score mate %d time %lld pv ",
+			depth, s2->s[S_depth_max],
+			s2->s[S_positionsvisited] + s2->s[S_qposvisited], mi, tno);
 		strcat(b2, buff);
 	}
 	tell_to_engine(b2);
@@ -317,11 +317,11 @@ int update_status(board *b)
 {
 	long long int tnow, tpsd, nrun, npsd;
 	long long int passed, frem;
-	LOGGER_4("Nodes at check %d, mask %d, crit %d\n",b->stats->nodes, b->run.nodes_mask, b->run.time_crit);
+	LOGGER_4("Nodes at check %d, mask %d, crit %d\n",b->stats->s[S_nodes], b->run.nodes_mask, b->run.time_crit);
 	b->search_abort=engine_stop;
 	if (b->run.time_crit == 0) return 0;
 	if (b->uci_options->nodes > 0) {
-		if (b->stats->positionsvisited >= b->uci_options->nodes) {
+		if (b->stats->s[S_positionsvisited] >= b->uci_options->nodes) {
 		b->search_abort=3;
 		return 3;
 		}
@@ -355,7 +355,7 @@ int update_status(board *b)
 			return 32;
 		}
 	}
-	npsd = b->stats->nodes - b->run.nodes_at_iter_start + 1;
+	npsd = b->stats->s[S_nodes] - b->run.nodes_at_iter_start + 1;
 	if ((b->depth_run > 3) && (npsd > 512) && (frem > 0)) {
 
 		// modify check counter
@@ -405,7 +405,7 @@ int search_finished(board *b)
 
 // moznosti ukonceni hledani
 	if ((b->uci_options->nodes > 0)
-		&& (b->stats->positionsvisited >= b->uci_options->nodes)){
+		&& (b->stats->s[S_positionsvisited] >= b->uci_options->nodes)){
 		b->search_abort=1;
 		LOGGER_4("SearchF NODES stop\n");
 		return 1;
@@ -430,7 +430,7 @@ int search_finished(board *b)
 // normally next iteration needs 3times more time, than just finished one.
 
 	if ((frem * 4) < (tpsd * 11)) {
-		LOGGER_4("INFO: Time out movetime - RUN1, plan: %lld, crit: %lld, iter: %lld, left: %llu, elaps: %lld, frem %lld: %lld < %lld\n", b->run.time_move, b->run.time_crit, tpsd, remain, (tnow-b->run.time_start), frem, frem*b->stats->ebfnodespri, tpsd*b->stats->ebfnodes);
+		LOGGER_4("INFO: Time out movetime - RUN1, plan: %lld, crit: %lld, iter: %lld, left: %llu, elaps: %lld, frem %lld: %lld < %lld\n", b->run.time_move, b->run.time_crit, tpsd, remain, (tnow-b->run.time_start), frem, frem*b->stats->s[S_ebfnodespri], tpsd*b->stats->s[S_ebfnodes]);
 		b->search_abort=33;
 		return 33;
 	}
@@ -442,7 +442,7 @@ int search_finished(board *b)
 
 	FINISH:
 	b->run.iter_start = tnow;
-	b->run.nodes_at_iter_start = b->stats->nodes;
+	b->run.nodes_at_iter_start = b->stats->s[S_nodes];
 	return 0;
 }
 int position_quality(board *b, attack_model *a, int alfa, int beta, int depth, int ply, int side)
@@ -530,18 +530,18 @@ int QuiesceCheckN(board *b, int talfa, int tbeta, int depth, int ply, int side, 
 	
 	int aftermovecheck = 0;
 
-	b->stats->nodes++;
-	b->stats->qposvisited++;
+	b->stats->s[S_nodes]++;
+	b->stats->s[S_qposvisited]++;
 
-	if (!(b->stats->nodes & b->run.nodes_mask)) {
+	if (!(b->stats->s[S_nodes] & b->run.nodes_mask)) {
 		if(update_status(b)!=0) {
 //			tree->tree[ply][ply].move = NA_MOVE;
 			return 0;
 		}
 	}
 
-	if (b->stats->depth_max < ply) {
-		b->stats->depth_max = ply;
+	if (b->stats->s[S_depth_max] < ply) {
+		b->stats->s[S_depth_max] = ply;
 		if (ply >= MAXPLY - 1) {
 			tree->tree[ply][ply].move = NA_MOVE;
 			return tbeta;
@@ -605,9 +605,9 @@ int QuiesceCheckN(board *b, int talfa, int tbeta, int depth, int ply, int side, 
 		LOGGER_SE("%*d, -C , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d, val %d\n", 2+ply, ply, b2, aftermovecheck, depth, talfa, tbeta, mb->real_score, m->real_score);
 		if (m->real_score >= tbeta) {
 			if (m == mvs.move)
-				b->stats->qfirstcutoffs++;
-			b->stats->qcutoffs++;
-			b->stats->failhigh++;
+				b->stats->s[S_qfirstcutoffs]++;
+			b->stats->s[S_qcutoffs]++;
+			b->stats->s[S_Qfailhigh]++;
 			mb = m;
 			goto ESTOP;
 		}
@@ -625,13 +625,13 @@ int QuiesceCheckN(board *b, int talfa, int tbeta, int depth, int ply, int side, 
 	tree->tree[ply][ply].move = mb->move;
 
 	if (mb->real_score <= talfa) {
-		b->stats->faillow++;
+		b->stats->s[S_Qfaillow]++;
 	} else
-		b->stats->failnorm++;
+		b->stats->s[S_Qfailnorm]++;
 
 ESTOP:
-	b->stats->qmovestested += mvs.count;
-	b->stats->qpossiblemoves += ((mvs.lastp - mvs.move));
+	b->stats->s[S_qmovestested] += mvs.count;
+	b->stats->s[S_qpossiblemoves] += ((mvs.lastp - mvs.move));
 
 	return mb->real_score;
 }
@@ -658,20 +658,20 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 		if (gmr <= alfa) return alfa;
 		return beta;
 	}
-	b->stats->nodes++;
-	b->stats->qposvisited++;
+	b->stats->s[S_nodes]++;
+	b->stats->s[S_qposvisited]++;
 	
 	LOGGER_SE("%*d, *Q , EEEE, amove ch:X, depth %d, alfa %d, beta %d\n", 2+ply, ply, depth, alfa, beta);
 	
-	if (!(b->stats->nodes & b->run.nodes_mask)) {
+	if (!(b->stats->s[S_nodes] & b->run.nodes_mask)) {
 		if(update_status(b)!=0){
 //			tree->tree[ply][ply].move = NA_MOVE;
 			return 0;
 		}
 	}
 
-	if (b->stats->depth_max < ply) {
-		b->stats->depth_max = ply;
+	if (b->stats->s[S_depth_max] < ply) {
+		b->stats->s[S_depth_max] = ply;
 	}
 
 	opside = Flip(side);
@@ -806,9 +806,9 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 		LOGGER_SE("%*d, -Q , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d, val %d\n", 2+ply, ply, b2, aftermcheck, depth, talfa, tbeta, mb->real_score, m->real_score);
 		if (m->real_score >= tbeta) {
 			if (m == mvs.move)
-				b->stats->qfirstcutoffs++;
-			b->stats->qcutoffs++;
-			b->stats->failhigh++;
+				b->stats->s[S_qfirstcutoffs]++;
+			b->stats->s[S_qcutoffs]++;
+			b->stats->s[S_Qfailhigh]++;
 			mb = m;
 			goto ESTOP;
 		}
@@ -828,7 +828,7 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 	if((checks>0) && (mb->real_score<talfa)&&(b->search_abort==0)&&(incheck==0)) {
 //	tree->tree[ply][ply+1].move=NA_MOVE;
 
-		b->stats->qmovestested+=mvs.count;
+		b->stats->s[S_qmovestested]+=mvs.count;
 		sortMoveListNew_Init(b, att, &mvs);
 		while ((getNextCheckin(b, att, &mvs, ply, side, incheck, &m, tree)!=0)&&(b->search_abort==0)) {
 //			tree->tree[ply][ply].move=m->move;
@@ -864,8 +864,8 @@ DEB_SE(
 
 			LOGGER_SE("%*d, -G , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d, val %d\n", 2+ply, ply, b2, 1, depth, talfa, tbeta, mb->real_score, m->real_score);
 			if(m->real_score>=tbeta) {
-				b->stats->qcutoffs++;
-				b->stats->failhigh++;
+				b->stats->s[S_qcutoffs]++;
+				b->stats->s[S_Qfailhigh]++;
 				mb=m;
 				goto ESTOP;
 			}
@@ -890,13 +890,13 @@ DEB_SE(
 	tree->tree[ply][ply].move = mb->move;
 
 	if (mb->real_score <= alfa) {
-		b->stats->faillow++;
+		b->stats->s[S_Qfaillow]++;
 		tree->tree[ply][ply + 1].move = ALL_NODE;
-	} else b->stats->failnorm++;
+	} else b->stats->s[S_failnorm]++;
 
 ESTOP:
-	b->stats->qmovestested += mvs.count;
-	b->stats->qpossiblemoves += ((mvs.lastp - mvs.move));
+	b->stats->s[S_qmovestested] += mvs.count;
+	b->stats->s[S_qpossiblemoves] += ((mvs.lastp - mvs.move));
 	return mb->real_score;
 }
 
@@ -911,7 +911,7 @@ int SearchMoveNew(board *b, int talfa, int tbeta, int ttbeta, int depth, int ply
 //		if(reduce>0) LOGGER_0("XXX depth %d, extend %d, reduce %d, talfa %d, tbeta %d\n", depth, extend, reduce, talfa, tbeta);
 
 	isPV = (talfa != (tbeta - 1));
-	b->stats->zerototal += (1 - isPV);
+	b->stats->s[S_zerototal] += (1 - isPV);
 	ext = depth - reduce + extend - 1;
 	val = talfa;
 //	int check_depth = isPV ? b->pers->quiesce_check_depth_limit : 0;
@@ -921,13 +921,13 @@ int SearchMoveNew(board *b, int talfa, int tbeta, int ttbeta, int depth, int ply
 			nulls, att);
 //	unexpected over alpha? - rerun as it might be because of reduced depth
 		if ((val > talfa) && (reduce>0)) {
-			lmrrmoves=b->stats->movestested;
+			lmrrmoves=b->stats->s[S_movestested];
 			val = -ABNew(b, -ttbeta, -talfa, depth - 1,
 				ply + 1, opside, tree, nulls, att);
-				b->stats->lmrrerun++;
+				b->stats->s[S_lmrrerun]++;
 				if (val <= talfa)
-					b->stats->fhflcount++;
-				b->stats->lmrrerunnodes += b->stats->movestested - lmrrmoves;
+					b->stats->s[S_fhflcount]++;
+				b->stats->s[S_lmrrerunnodes] += b->stats->s[S_movestested] - lmrrmoves;
 		}
 	} else {
 		val = -QuiesceNew(b, -ttbeta, -talfa, ext, ply + 1, opside,
@@ -938,8 +938,8 @@ int SearchMoveNew(board *b, int talfa, int tbeta, int ttbeta, int depth, int ply
 	if (((val > talfa && val < tbeta && ttbeta < tbeta))
 	&& (b->search_abort == 0)) {
 		ext = depth + extend - 1;
-		b->stats->zerorerun++;
-		zerormoves=b->stats->movestested;
+		b->stats->s[S_zerorerun]++;
+		zerormoves=b->stats->s[S_movestested];
 		if (ext > 0)
 			val = -ABNew(b, -tbeta, -talfa, ext, ply + 1, opside, tree, nulls, att);
 		else
@@ -947,10 +947,10 @@ int SearchMoveNew(board *b, int talfa, int tbeta, int ttbeta, int depth, int ply
 				opside, tree,
 				b->pers->quiesce_check_depth_limit, att);
 		if (val <= talfa)
-			b->stats->fhflcount++;
-		b->stats->zerorerunnodes += b->stats->movestested - zerormoves;
+			b->stats->s[S_fhflcount]++;
+		b->stats->s[S_zerorerunnodes] += b->stats->s[S_movestested] - zerormoves;
 //		if (reduce > 0)
-//			b->stats->lmrrerun++;
+//			b->stats->s[S_lmrrerun]++;
 	}
 	return val;
 }
@@ -983,6 +983,29 @@ int can_do_NullMove(board *b, attack_model *a, int alfa, int beta, int depth, in
 //			&& (GT_M0(b, p, b->side, PAWN) < 6))
 			return 0;
 	} else return 1;
+	return 1;
+}
+
+int can_do_LMP(board *b, attack_model *a, int alfa, int beta, int depth, move_entry *m, int ply, int side, uint8_t phase)
+{
+	int8_t from, to, rank;
+	int prio, reduce;
+	
+	if(CheckingMove(b, a, side, m)) return 0;
+	int isPV = (alfa != (beta - 1));
+
+	to = UnPackTo(m->move);
+	from = UnPackFrom(m->move);
+//	prom = UnPackProm(m->move);
+
+// promotion
+	rank=getRank(from);
+	if ((b->pieces[from]&PIECEMASK) == PAWN) {
+		if((((side==WHITE)&&(rank==RANKi7||rank==RANKi6))
+		||((side==BLACK)&&(rank==RANKi2||rank==RANKi3)))) return 0;
+	}
+	if ((b->pieces[to]) != ER_PIECE) return 0;
+
 	return 1;
 }
 
@@ -1109,7 +1132,6 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 	unsigned long long nodes_stat, null_stat;
 	hashEntry hash;
 	BITVAR pld, rr;
-//	DEB_SE( char b2[256];)
 	char b2[256];
 
 	UNDO u;
@@ -1117,12 +1139,14 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 
 	MVS = ply== 0 ? &tree->root_c : &mvs;
 	
-	b->stats->nodes++;
-	b->stats->positionsvisited++;
+	b->stats->s[S_nodes]++;
+	b->stats->s[S_positionsvisited]++;
+	b->stats->s[S_PV_positions]+=isPV;
+	
 	tree->tree[ply][ply].move = NA_MOVE;
 	
 	mb = &mdum;
-	if (!(b->stats->nodes & b->run.nodes_mask)) {
+	if (!(b->stats->s[S_nodes] & b->run.nodes_mask)) {
 		if(update_status(b)!=0) {
 			return 0;
 		}
@@ -1136,12 +1160,12 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 	gmr = -mb->real_score;
 
 	if (gmr <= alfa) {
-		b->stats->faillow++;
+		b->stats->s[S_faillow]++;
 		DEB_S2(MVS->def.state|=r_ALFA;)
 		return alfa;
 	}
 	if (-gmr >= beta) {
-		b->stats->failhigh++;
+		b->stats->s[S_failhigh]++;
 		DEB_S2(MVS->def.state|=r_BETA;)
 		return beta;
 	}
@@ -1157,11 +1181,11 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 		mb->move = tree->tree[ply][ply].move = DRAW_M;
 		mb->real_score = 0;
 		if (mb->real_score <= alfa)
-			b->stats->faillow++;
+			b->stats->s[S_faillow]++;
 		else if (mb->real_score >= beta)
-			b->stats->failhigh++;
+			b->stats->s[S_failhigh]++;
 		else
-			b->stats->failnorm++;
+			b->stats->s[S_failnorm]++;
 		DEB_S2(MVS->def.state|=r_DRAW;)
 		goto ABFINISH2;
 	}
@@ -1200,20 +1224,20 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 					tree->tree[ply][ply].score = mt.real_score;
 					if ((hash.scoretype != FAILHIGH_SC) && (mt.move != NULL_MOVE)
 						&& (mt.real_score <= talfa)) {
-						b->stats->faillow++;
-						b->stats->failhashlow++;
+						b->stats->s[S_faillow]++;
+						b->stats->s[S_failhashlow]++;
 						mb = &mt;
 						goto ABFINISH2;
 					} else if ((hash.scoretype != FAILLOW_SC)
 						&& (mt.real_score >= tbeta)) {
-						b->stats->failhigh++;
-						b->stats->failhashhigh++;
-						b->stats->cutoffs++;
-						b->stats->firstcutoffs++;
+						b->stats->s[S_failhigh]++;
+						b->stats->s[S_failhashhigh]++;
+						b->stats->s[S_cutoffs]++;
+//						b->stats->s[S_firstcutoffs]++;
 						mb = &mt;
 						goto ABFINISH2;
 					} else if (hash.scoretype == EXACT_SC) {
-						b->stats->failhashnorm++;
+						b->stats->s[S_failhashnorm]++;
 						if ((b->pers->use_hash)) {
 // fix situation where exactPV contains repetition and shows PV, beyond 3rd repetition
 							if((mt.real_score>talfa) && (mt.real_score<tbeta)) {
@@ -1222,7 +1246,7 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 								ply, tree);
 							copyTree(tree, ply);
 							}
-							b->stats->failnorm++;
+							b->stats->s[S_failnorm]++;
 							mb = &mt;
 							goto ABFINISH2;
 						} else {
@@ -1275,7 +1299,7 @@ uint8_t phase=eval_phase(b, b->pers);
 			{
 //				if(sco >= ( tbeta + b->pers->futility_cut[depth] )) {
 				if(sco >= ( tbeta + (int)(depth*pvalue * 1.2) )) {
-					b->stats->FUT_cuts++;
+					b->stats->s[S_FUT_cuts]++;
 					if(b->pers->futility_sim==1) {
 						L0("alfa %d, beta %d, talfa %d, tbeta %d, mat_eval %d, depth %d, fcut value %d, est score %d\n", alfa, beta, talfa, tbeta, sco, depth,b->pers->futility_cut[depth], sco - b->pers->futility_cut[depth]);
 						futility_sim_flag=1;
@@ -1303,7 +1327,7 @@ uint8_t phase=eval_phase(b, b->pers);
 
 		LOGGER_SE("%*d, +S , NULL, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d\n", 2+ply, ply, aftermovecheck, depth, talfa, tbeta, mb->real_score);
 		
-		b->stats->NMP_tries++;
+		b->stats->s[S_NMP_tries]++;
 // null move reduction, divisor interaction not working
 
 		reduce = b->pers->NMP_reduction;
@@ -1313,8 +1337,8 @@ uint8_t phase=eval_phase(b, b->pers);
 
 		ext = depth - reduce - 1; //!!!
 // save stats, to get info how many nodes were visited due to NULL move...
-		nodes_stat = b->stats->nodes;
-		null_stat = b->stats->u_nullnodes;
+		nodes_stat = b->stats->s[S_nodes];
+		null_stat = b->stats->s[S_u_nullnodes];
 
 		eval_king_checks_extU(b, &(att->ke[WHITE]), 0, b->king[WHITE]);
 		eval_king_checks_extU(b, &(att->ke[BLACK]), 1, b->king[BLACK]);
@@ -1345,11 +1369,11 @@ uint8_t phase=eval_phase(b, b->pers);
 // engine stop protection?
 		if (b->search_abort != 0)
 			goto ABFINISH2;
-		b->stats->u_nullnodes = null_stat
-			+ (b->stats->nodes - nodes_stat);
+		b->stats->s[S_u_nullnodes] = null_stat
+			+ (b->stats->s[S_nodes] - nodes_stat);
 		if ((mt.real_score >= tbeta)
 		&& (isMATE(mt.real_score)==0)) { //!!!!
-			b->stats->NMP_cuts++;
+			b->stats->s[S_NMP_cuts]++;
 			hash.key = b->key;
 			hash.depth = (int16_t) depth;
 			hash.value = mt.real_score;
@@ -1359,7 +1383,7 @@ uint8_t phase=eval_phase(b, b->pers);
 				storeHash(b->hs, &hash, side, ply, ext, b->norm, 
 					b->stats);
 			if (b->pers->NMP_search_reduction == 0) {
-				b->stats->failhigh++;
+				b->stats->s[S_failhigh]++;
 				mb = &mt;
 				DEB_S2( MVS->def.real_score=mt.real_score; MVS->def.state|=r_NULL; MVS->def.re=ext; )
 				goto ABFINISH2;
@@ -1402,9 +1426,9 @@ uint8_t phase=eval_phase(b, b->pers);
 	if ((incheck != 1) && (b->pers->quality_search_reduction != 0)
 		&& (ply > 4)) {
 		qual = position_quality(b, att, talfa, tbeta, depth, ply, side);
-		b->stats->position_quality_tests++;
+		b->stats->s[S_position_quality_tests]++;
 		if (qual == 0) {
-			b->stats->position_quality_cutoffs++;
+			b->stats->s[S_position_quality_cutoffs]++;
 			if (b->pers->quality_search_reduction == -1) {
 				tree->tree[ply][ply].move = FAILLOW_SC;
 				tree->tree[ply][ply].score = -iINFINITY;
@@ -1421,7 +1445,9 @@ uint8_t phase=eval_phase(b, b->pers);
 		MVS->hash.move = DRAW_M;
 	else
 		MVS->hash.move = mt.move;
-	b->stats->poswithmove++;
+	b->stats->s[S_poswithmove]++;
+
+	int lmr_sim_flag=0;
 
 // main loop
 	LOGGER_SE("%*d, *S , XXXX, amove ch:X, depth %d, talfa %d, tbeta %d,incheck %d, best %d\n", 2+ply, ply, depth, talfa, tbeta, incheck, mb->real_score);
@@ -1448,6 +1474,27 @@ uint8_t phase=eval_phase(b, b->pers);
 		extend = extend_o;
 		reduce = reduce_o;
 		tree->tree[ply][ply].move = m->move;
+
+// check for LMP conditions based on depth
+// !extended !incheck !isPV !first_move use_lmp move mvs.actph >= NORMAL !MATEd
+// check after move is done in can_do_LMP as well as promotion
+
+//		if ((MVS->count > (b->pers->LMP_start_move + 2*depth*depth))
+		if (((MVS->quiet_pr) > b->pers->LMP_start_move + 2*depth*depth)
+			&& (b->pers->LMP_enable > 0)
+			&& (depth <= b->pers->LMP_depth)
+			&& (incheck == 0) 
+//			&& (extend == extend_o)
+			&& (m->phase>KILLER4)
+			&& !isPV
+//			&& (u.whereCa == -1)
+			){
+			int lmp_red = can_do_LMP(b, att, talfa, ttbeta, depth, m, ply, side, phase);
+				if(lmp_red>0) {
+					b->stats->s[S_lmpcount]++;
+					goto bypass2;
+				}
+		}
 
 #if 0
 // check for Futility pruning conditions, based on depth
@@ -1477,7 +1524,7 @@ uint8_t phase=eval_phase(b, b->pers);
 // perform move & setup node counting
 
 		MakeMoveNew(b, m->move, pos, &u);
-		m->nodes = -(b->stats->movestested+b->stats->qmovestested);
+		m->nodes = -(b->stats->s[S_movestested]+b->stats->s[S_qmovestested]);
 		
 // makemove switches board sides, b->side changes during makemove, now b->side==opside
 
@@ -1517,29 +1564,29 @@ uint8_t phase=eval_phase(b, b->pers);
 				LOGGER_0("%*d, +S , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d\n", 2+ply, ply, b2, aftermovecheck, depth, talfa, tbeta, mb->real_score);
 		)
 
-	int lmr_sim_flag=0;
 
+/*
 // check for LMP conditions based on depth
 // !extended !incheck !isPV !first_move use_lmp move mvs.actph >= NORMAL !MATEd
 
-		if ((MVS->count > (b->pers->LMP_start_move + 2*depth*depth))
-//		if (((MVS->quiet_pr) > b->pers->LMP_start_move*depth)
+//		if ((MVS->count > (b->pers->LMP_start_move + 2*depth*depth))
+		if (((MVS->quiet_pr) > b->pers->LMP_start_move + 2*depth*depth)
 			&& (b->pers->LMP_enable > 0)
 			&& (depth <= b->pers->LMP_depth)
 			&& (incheck == 0) 
 			&& (aftermovecheck == 0)
 //			&& (extend == extend_o)
-			&& (m->phase==NORMAL)
+			&& (m->phase>KILLER4)
 			&& !isPV
 			&& (u.whereCa == -1)
-			&& (u.old != PAWN)
 			){
-			int lmp_red = can_do_LMR(b, att, talfa, ttbeta, depth, m, ply, side, phase, &u);
+			int lmp_red = can_do_LMP(b, att, talfa, ttbeta, depth, m, ply, side, phase, &u);
 				if(lmp_red>0) {
-					b->stats->lmpcount++;
+					b->stats->s[S_lmpcount]++;
 					goto bypass;
 				}
 		}
+*/
 
 int lmr_a=talfa;
 int lmr_b=tbeta;
@@ -1567,11 +1614,12 @@ int lmr_s=m->real_score;
 					} else {
 						lmr_sim_flag=1;
 					}
-					b->stats->lmrtotal++;
+					b->stats->s[S_lmrtotal]++;
 				}
 		}
 
 // ttbeta - temporary beta, either talfa+1 or tbeta !!!!
+		b->stats->s[S_movestested]++;
 		m->real_score = SearchMoveNew(b, talfa, tbeta, ttbeta, depth,
 			ply, extend, reduce, side, tree, nulls, att);
 bypass:
@@ -1585,7 +1633,7 @@ bypass:
 		att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
 		mvsfromk22(b, att, side);
 		mvsfromk22(b, att, opside);
-		m->nodes+=(b->stats->movestested+b->stats->qmovestested);
+		m->nodes+=(b->stats->s[S_movestested]+b->stats->s[S_qmovestested]);
 
 bypass2:
 		if (b->search_abort != 0)
@@ -1603,13 +1651,13 @@ bypass2:
 				printBoardNice(b);
 			}
 
-			b->stats->cutoffs++;
+			b->stats->s[S_cutoffs]++;
 			if ((m->ord == 0))
-				b->stats->firstcutoffs++;
+				b->stats->s[S_firstcutoffs]++;
 			if (is_quiet_move(b, att, m)) {
-				b->stats->quiet_cuts++;
-				if(MVS->cap_pr!=0) b->stats->quiet_cuts_cap++;
-				if((MVS->quiet_pr==1)||(m->ord==0)) b->stats->first_quiet_cuts++;
+				b->stats->s[S_quiet_cuts]++;
+				if(MVS->cap_pr!=0) b->stats->s[S_quiet_cuts_cap]++;
+				if((MVS->quiet_pr==1)||(m->ord==0)) b->stats->s[S_first_quiet_cuts]++;
 				
 				if ((b->pers->use_killer >= 1)) {
 					if ((m->phase>=KILLER1 && m->phase<OTHER)) {
@@ -1625,7 +1673,7 @@ bypass2:
 			
 			mb = m;
 //				copyTree(tree, ply);
-			b->stats->moves_to_cutoff+=m->ord;
+			b->stats->s[S_moves_to_cutoff]+=m->ord;
 			break;
 		}
 		DEB_S2({ if (m->real_score <= talfa) m->state|=r_ALFA; else if(m->real_score < tbeta) m->state|=r_IWIN;} )
@@ -1633,6 +1681,7 @@ bypass2:
 			mb = m;
 			if (mb->real_score > talfa) {
 				if((b->pers->LMR_sim!=0) && (lmr_sim_flag>0)){
+					lmr_sim_flag=0;
 					sprintfMoveSimple(m->move, b2);
 					L0("Invalid MOVE %s, score %d, talfa %d, tbeta %d\n",b2, m->real_score, talfa, tbeta);
 					printBoardNice(b);
@@ -1652,9 +1701,6 @@ bypass2:
 			mb->move = DRAW_M;
 		}
 	}
-//	tree->tree[ply][ply].move = mb->move;
-//	tree->tree[ply][ply].score = mb->real_score;
-
 	// update stats & store Hash
 
 	hash.key = b->key;
@@ -1662,7 +1708,7 @@ bypass2:
 	hash.value = mb->real_score;
 	hash.bestmove = mb->move;
 	if (mb->real_score > alfa && mb->real_score < beta) {
-		b->stats->failnorm++;
+		b->stats->s[S_failnorm]++;
 		hash.scoretype = EXACT_SC;
 		if ((b->hs != NULL) && (b->pers->use_hash == 1) && (depth > 0)
 			&& (b->search_abort == 0)) {
@@ -1672,27 +1718,15 @@ bypass2:
 			tree->tree[ply][ply].key = b->key;
 			tree->tree[ply][ply].ver = b->norm;
 			storeExactPV(b->hs, b->key, b->norm, tree, ply);
-/*
-			if (b->pers->use_killer >= 1) {
-// update over alpha history table if the best is quiet move
-					if(mb->phase==NORMAL) {
-						updateHHTableGood(b, b->hht, mb, 0, side, depth, ply);
-						if(MVS->quiet!=NULL)
-//							for(mn=MVS->lastp-1; mn>=MVS->quiet; mn--) 
-							for(mn=mb-1; mn>=MVS->quiet; mn--) 
-								if((mb!=mn) && (mn->phase==NORMAL)) updateHHTableBad(b, b->hht, mn, 0, side, depth, ply);
-					}
-			}
-*/
 		}
 	} else {
 		if (mb->real_score >= beta) {
-			b->stats->failhigh++;
+			b->stats->s[S_failhigh]++;
 			hash.scoretype = FAILHIGH_SC;
 		} else {
-			b->stats->faillow++;
+			b->stats->s[S_faillow]++;
 			hash.scoretype = FAILLOW_SC;
-			b->stats->non_cutoff_moves+=MVS->count;
+			b->stats->s[S_non_cutoff_moves]+=MVS->count;
 		}
 		if ((b->hs != NULL) && (depth > 0))
 			storeHash(b->hs, &hash, side, ply, depth, b->norm, b->stats);
@@ -1701,8 +1735,8 @@ ABFINISH:
 	tree->tree[ply][ply].move = mb->move;
 	tree->tree[ply][ply].score = mb->real_score;
 
-	b->stats->movestested += MVS->count;
-	b->stats->possiblemoves += ((MVS->lastp - MVS->move));
+//	b->stats->s[S_movestested] += MVS->count;
+	b->stats->s[S_possiblemoves] += ((MVS->lastp - MVS->move));
 ABFINISH2:
 
 	if((b->pers->futility_sim!=0) && (futility_sim_flag>0)) {
@@ -1762,7 +1796,7 @@ unsigned long long tstart, ebfnodesold, tnow;
 	copyBoard(b, &(tree->tree_board));
 
 	b->run.iter_start = b->run.time_start;
-	b->run.nodes_at_iter_start = b->stats->nodes;
+	b->run.nodes_at_iter_start = b->stats->s[S_nodes];
 	b->run.nodes_mask = (1ULL << b->pers->check_nodes_count) - 1;
 	b->search_abort=0;
 
@@ -1828,7 +1862,7 @@ unsigned long long tstart, ebfnodesold, tnow;
 	}
 	// iterate and increase depth gradually
 	oldPVcheck = 0;
-	clearSearchCnt(b->stats);
+//	clearSearchCnt(b->stats);
 
 	talfa=alfa;
 	tbeta=beta;
@@ -1837,18 +1871,15 @@ unsigned long long tstart, ebfnodesold, tnow;
 	 * b->stats, complete stats for all iterations
 	 * s stats at beginning of iteration
 	 */
-	clearSearchCnt(&s);
-	clearSearchCnt(&s2);
+//	clearSearchCnt(&s);
+//	clearSearchCnt(&s2);
 	clearSearchCnt(b->stats);
 
-	b->stats->poswithmove++;
 	ebfnodesold = 1;
 
 	tstart = readClock();
 	if (depth > MAXPLY)
 		depth = MAXPLY;
-
-//	clearHHTable(b->hht);
 
 	if (depth >= MAXPLY) depth = MAXPLY - 1;
 	b->search_dif = (incheck) ? MISc : MISn;
@@ -1863,11 +1894,12 @@ unsigned long long tstart, ebfnodesold, tnow;
 			invalidateHash(b->hs);
 			invalidatePawnHash(b->hps);
 		}
+		
+		b->stats->s[S_ebfnodes]=0;
+		b->stats->s[S_ebfnodespri]=0;
 		CopySearchCnt(&s, b->stats);
 		if (b->hs != NULL) installHashPV(&b->p_pv, b, f - 1, b->stats);
 		clear_killer_moves(b->kmove);
-//!!!!		
-//		clearHHTable(b->hht);
 
 		alow=ahigh=0;
 
@@ -1892,7 +1924,7 @@ rerun:
 	if (b->search_abort == 0) {
 // was not stopped during last iteration 
 
-		b->stats->iterations++;
+		b->stats->s[S_iterations]++;
 
 // handle aspiration if used
 // check for problems
@@ -1908,12 +1940,12 @@ rerun:
 						tree->root_c.move[ply] = tmp;
 					}
 				}
-				b->stats->aspfailits++;
+				b->stats->s[S_aspfailits]++;
 				ahigh++;
 				goto rerun;
 			}
 			else if(best<=talfa) {
-					b->stats->aspfailits++;
+					b->stats->s[S_aspfailits]++;
 					alow++;
 				goto rerun;
 			}
@@ -1965,24 +1997,6 @@ rerun:
 		DEB_S2( move_cont_dump(b, att, &(tree->root_c)); )
 //		dumpHHTable(b->hht);
 		
-#if 0
-		if (((&tree->root_c)->count)>1) {
-		
-// some move was found
-			bestmove = tree->tree[ply][ply].move;
-			best = tree->tree[ply][ply].score;
-//			t1pbest = best;
-//			t1pbestmove = bestmove;
-		} else if (f > start_depth) {
-//			t1pbestmove = b->p_pv.line[0].move;
-//			t1pbest = b->p_pv.line[0].score;
-			restore_PV_tree(&b->p_pv, tree);
-		} else {
-			t1pbestmove = tree->root_c.move[0].move;
-			t1pbest = -MATEMAX;
-		}
-#endif
-
 		if ((((&tree->root_c)->count)>1) && (tree->tree[ply][ply].move!=NA_MOVE)) {
 			old_score = best;
 			bestmove = tree->tree[ply][ply].move;
@@ -2003,24 +2017,26 @@ rerun:
 	oldPVcheck = 1;
 
 	tnow = readClock();
-	b->stats->elaps += (tnow - tstart);
+	b->stats->s[S_elaps] += (tnow - tstart);
 
 	if (b->search_abort == 0) {
-		b->stats->ebfnodespri = ebfnodesold;
-//		ebfnodesold = (b->stats->nodes - s.nodes);
-		ebfnodesold = (b->stats->positionsvisited - s.positionsvisited);
-		b->stats->ebfnodes = ebfnodesold;
+		b->stats->s[S_ebfnodespri] = ebfnodesold;
+//		ebfnodesold = (b->stats->s[S_nodes] - s.nodes);
+//		ebfnodesold = (b->stats->s[S_positionsvisited] - s.s[S_positionsvisited]);
+		ebfnodesold = (b->stats->s[S_positionsvisited]);
+		b->stats->s[S_ebfnodes] = ebfnodesold;
 // calculate only finished iterations
-		b->stats->depth = f;
-//		L0("Iter %d, time %d, nodes %lld, prev it nodes %lld, EBF=%f, speed=%f\n", f, tnow-tstart, b->stats->ebfnodes, b->stats->ebfnodespri, 
-//		(float)b->stats->ebfnodes/(float)(b->stats->ebfnodespri+1), (float) b->stats->ebfnodes/(float)(tnow-tstart));
+		b->stats->s[S_depth] = f;
+//		L0("Iter %d, time %d, nodes %lld, prev it nodes %lld, EBF=%f, speed=%f\n", f, tnow-tstart, b->stats->s[S_ebfnodes], b->stats->s[S_ebfnodespri], 
+//		(float)b->stats->s[S_ebfnodes]/(float)(b->stats->s[S_ebfnodespri]+1), (float) b->stats->s[S_ebfnodes]/(float)(tnow-tstart));
 		tstart = tnow;
 	}
+// compute difference betweem start and end of an iteration
 	DecSearchCnt(b->stats, &s, &r);
 
 #pragma omp critical
-{
 
+{
 // update stats how f-ply search has performed
 	AddSearchCnt(&(STATS[f]), &r);
 	AddSearchCnt(&(STATS[MAXPLY]), &r);
@@ -2033,31 +2049,39 @@ rerun:
 		printPV_simple(b, tree, f, b->side, &s, b->stats);
 	}  //deepening finished here
 
+
 //	dumpHHTable(b->hht);
 	
-	b->stats->depth_sum += f;
-	b->stats->depth_max_sum += b->stats->depth_max;
+// only finished depths
+	if ((b->search_abort != 0)) f--;
+// accumulate depths over runs
+	b->stats->s[S_depth_sum] += f;
+	b->stats->s[S_depth_max_sum] += b->stats->s[S_depth_max];
 
 #pragma omp critical
 {
-// global stats
-#if 1
-	if (STATS[f].depth < b->stats->depth)
-		STATS[f].depth = b->stats->depth;
-	if (STATS[f].depth_max < b->stats->depth_max)
-		STATS[f].depth_max = b->stats->depth_max;
-	STATS[f].depth_sum += b->stats->depth;
-	STATS[f].depth_max_sum += b->stats->depth_max;
-	if (STATS[MAXPLY].depth < b->stats->depth)
-		STATS[MAXPLY].depth = b->stats->depth;
-	if (STATS[MAXPLY].depth_max < b->stats->depth_max)
-		STATS[MAXPLY].depth_max = b->stats->depth_max;
-	STATS[MAXPLY].depth_sum += b->stats->depth;
-	STATS[MAXPLY].depth_max_sum += b->stats->depth_max;
+// global stats - update move related
+#if 0
+	if (STATS[f].s[S_depth] < b->stats->s[S_depth])
+		STATS[f].s[S_depth] = b->stats->s[S_depth];
+	if (STATS[f].s[S_depth_max] < b->stats->s[S_depth_max])
+		STATS[f].s[S_depth_max] = b->stats->s[S_depth_max];
+	STATS[f].s[S_depth_sum] += b->stats->s[S_depth];
+	STATS[f].s[S_depth_max_sum] += b->stats->s[S_depth_max];
+#endif
+
+	if (STATS[MAXPLY].s[S_depth] < b->stats->s[S_depth])
+		STATS[MAXPLY].s[S_depth] = b->stats->s[S_depth];
+	if (STATS[MAXPLY].s[S_depth_max] < b->stats->s[S_depth_max])
+		STATS[MAXPLY].s[S_depth_max] = b->stats->s[S_depth_max];
+	STATS[MAXPLY].s[S_depth_sum] += b->stats->s[S_depth];
+	STATS[MAXPLY].s[S_depth_max_sum] += b->stats->s[S_depth_max];
+	STATS[MAXPLY].s[S_ITsearch]++;
+
 	printPV_simple(b, tree,f,b->side,&s,b->stats);
+
 //	DEB_1 (if((b->uci_options->engine_verbose>=1)) printSearchStat(b->stats);)
 	
-#endif 
 }
 	return b->bestscore;
 }

@@ -168,7 +168,7 @@ void printmask(BITVAR m, char *s)
 	char buf[100], b2[20];
 
 	if (s != NULL)
-		logger("", s, "\n");
+		NL0("", s, "\n");
 	q = 1ULL << 56;
 	for (f = 8; f >= 1; f--) {
 		z = q;
@@ -181,17 +181,17 @@ void printmask(BITVAR m, char *s)
 			strcat(buf, b2);
 			q <<= 1;
 		}
-		logger("", buf, "\n");
+		NL0("", buf, "\n");
 		q = z >> 8;
 	}
-	logger("", "  ABCDEFGH\n", "");
+	NL0("", "  ABCDEFGH\n", "");
 }
 
 void mask2print(char *b[9])
 {
 	int f;
 	for (f = 0; f < 9; f++) {
-		logger2("line %d %s\n", f, b[f]);
+		L0("line %d %s\n", f, b[f]);
 	}
 }
 
@@ -254,7 +254,7 @@ void printmask90(BITVAR m, char *s)
 	char buf[100], b2[20];
 
 	if (s != NULL)
-		logger("", s, "\n");
+		NL0("", s, "\n");
 	for (f = 8; f >= 1; f--) {
 		sprintf(buf, "%d ", f);
 		q = 1ULL << (f - 1);
@@ -266,9 +266,9 @@ void printmask90(BITVAR m, char *s)
 			strcat(buf, b2);
 			q <<= 8;
 		}
-		logger("", buf, "\n");
+		NL0("", buf, "\n");
 	}
-	logger("", "  ABCDEFGH\n", "");
+	NL0("", "  ABCDEFGH\n", "");
 }
 
 void printmask45R(BITVAR m, char *s)

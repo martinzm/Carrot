@@ -23,9 +23,9 @@
 #include "bitmap.h"
 #include <wchar.h>
 
-int logger(char *p, char *s, char *a);
-int logger2(char*, ...);
-int nlogger2(char*, ...);
+int blogger2f(int state, const char *fmt, ...);
+int blogger2b(int state, const char *buf);
+
 int open_log(char *filename);
 int close_log(void);
 int flush_log(void);

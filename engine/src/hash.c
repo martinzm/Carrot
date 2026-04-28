@@ -165,7 +165,7 @@ void storeHashX(hashStore *hs, BITVAR key, BITVAR pld, BITVAR ver, struct _stati
 	BITVAR f, hi;
 	hashBucket *h;
 
-	s->hashStores++;
+	s->s[S_hashStores]++;
 	f = key & (BITVAR) (hs->hashlen - 1);
 	hi = key;
 	h=hs->hash+f*HASHPOS;
@@ -177,8 +177,8 @@ void storeHashX(hashStore *hs, BITVAR key, BITVAR pld, BITVAR ver, struct _stati
 		if(((UNPACKHASHAGE(h[i].pld))) !=0) 
 		  if ((hi == h[i].key) && (h[i].ver==ver)) {
 // mame nas zaznam
-			s->hashStoreHits++;
-			s->hashStoreInPlace++;
+			s->s[S_hashStoreHits]++;
+			s->s[S_hashStoreInPlace]++;
 			c = i;
 			if(pld==h[i].pld) return;
 			goto replace;
@@ -319,7 +319,7 @@ int retrieveHash(hashStore *hs, hashEntry *hash, int side, int ply, int depth, i
 	BITVAR f, hi, pld;
 	hashBucket *h;
 	
-	s->hashAttempts++;
+	s->s[S_hashAttempts]++;
 	f = hash->key & (BITVAR) (hs->hashlen - 1);
 	hi = hash->key;
 	h=hs->hash+ f*HASHPOS;
@@ -335,14 +335,14 @@ int retrieveHash(hashStore *hs, hashEntry *hash, int side, int ply, int depth, i
 		}
 	}
 	if (i >= HASHPOS) {
-		s->hashMiss++;
+		s->s[S_hashMiss]++;
 		return 0;
 	}
 	
 	pld=h[i].pld;
 	UNPACKHASH(pld, hash->bestmove, hash->value, hash->depth, hash->scoretype, hash->age);
 	UPDATEHASHAGE(h[i].pld, hs->hashValidId);
-	s->hashHits++;
+	s->s[S_hashHits]++;
 
 	hash->value -= ply*(isMATE(hash->value));
 /*
@@ -595,15 +595,15 @@ hashPawnEntry* storePawnHash(hashPawnStore *hs, hashPawnEntry *hash, BITVAR ver,
 	int i, c;
 	BITVAR f, hi;
 
-	s->hashPawnStores++;
+	s->s[S_hashPawnStores]++;
 	f = hash->key % (BITVAR) hs->hashlen;
 	hi = hash->key / (BITVAR) hs->hashlen;
 
 	for (i = 0; i < HASHPAWNPOS; i++) {
 		if ((hi == hs->hash[f].e[i].key)) {
 // mame nas zaznam
-			s->hashPawnStoreHits++;
-			s->hashPawnStoreInPlace++;
+			s->s[S_hashPawnStoreHits]++;
+			s->s[S_hashPawnStoreInPlace]++;
 			c = i;
 			goto replace;
 		}
@@ -651,7 +651,7 @@ hashPawnEntry* retrievePawnHash(hashPawnStore *hs, hashPawnEntry *hash, BITVAR v
 {
 	int i;
 	BITVAR f, hi;
-	s->hashPawnAttempts++;
+	s->s[S_hashPawnAttempts]++;
 	f = hash->key % (BITVAR) hs->hashlen;
 	hi = hash->key / (BITVAR) hs->hashlen;
 	for (i = 0; i < HASHPAWNPOS; i++) {
@@ -660,10 +660,10 @@ hashPawnEntry* retrievePawnHash(hashPawnStore *hs, hashPawnEntry *hash, BITVAR v
 			break;
 	}
 	if (i == HASHPAWNPOS) {
-		s->hashPawnMiss++;
+		s->s[S_hashPawnMiss]++;
 		return NULL;
 	}
-	s->hashPawnHits++;
+	s->s[S_hashPawnHits]++;
 	return &(hs->hash[f].e[i]);
 }
 

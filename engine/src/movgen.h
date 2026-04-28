@@ -70,6 +70,8 @@ typedef struct __changed {
 int isMoveValid(board*, MOVESTORE, const attack_model*, int, tree_store*);
 
 BITVAR isInCheck_Eval(board *b, attack_model *a, int side);
+int CheckingMove(board *b, attack_model *a,int side, move_entry const * const m);
+
 void generateCapturesN(const board *const b, attack_model *a, move_entry **m, int gen_u);
 void generateMovesN(const board *const b, attack_model *a, move_entry **m);
 void generateInCheckMovesN(const board *const b, attack_model *a, move_entry **m, int gen_u);
