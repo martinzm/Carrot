@@ -574,6 +574,7 @@ int QuiesceCheckN(board *b, int talfa, int tbeta, int depth, int ply, int side, 
 		att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
 		mvsfromk22(b, att, side);
 		mvsfromk22(b, att, opside);
+#if 1
 		if (isInCheck_Eval(b, att, opside)) {
 			tree->tree[ply][ply].move |= CHECKFLAG;
 			aftermovecheck = 1;
@@ -582,12 +583,12 @@ int QuiesceCheckN(board *b, int talfa, int tbeta, int depth, int ply, int side, 
 				sprintfMoveSimple(m->move, b2);
 				LOGGER_0("%*d, +C , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d\n", 2+ply, ply, b2, aftermovecheck, depth, talfa, tbeta, mb->real_score);
 		)
-
 		if (((checks > 0)) && (aftermovecheck != 0))
 			m->real_score = -QuiesceCheckN(b, -tbeta, -talfa,
 				depth - 1, ply + 1, opside, tree, checks - 1,
 				att);
 		else
+#endif
 			if(checks > 0)
 				m->real_score = -QuiesceNew(b, -tbeta, -talfa, depth - 1, ply + 1, opside, tree, checks - 1, att);
 			else 
@@ -677,8 +678,8 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 	opside = Flip(side);
 	mb = &mdum;
 
-// opside attacked squares
-	incheck = (UnPackCheck(tree->tree[ply-1][ply-1].move) != 0);
+//	incheck = (UnPackCheck(tree->tree[ply-1][ply-1].move) != 0);
+	incheck = (isInCheck_Eval(b, att, side)!=0);
 
 	if ((checks > 0) && (is_draw(b, att, b->pers) > 0) && (!incheck)) {
 //	if ((is_draw(b, att, b->pers) > 0) && (!incheck)) {
@@ -719,7 +720,7 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 	if (att->att_by_side[side] & normmark[b->king[opside]])
 // i have captured king!
 //		tree->tree[ply][ply].move = NA_MOVE;
-		return -gmr;
+		return beta;
 
 	LOGGER_SE("%*d, *Q , QQQQ, amove ch:X, depth %d, talfa %d, tbeta %d, best %d\n", 2+ply, ply, depth, talfa, tbeta, mb->real_score);
 	
@@ -783,17 +784,22 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 			}
 		}
 #endif
-		if (((checks > 0) || ((checks <= 0) && (mb == &mdum)))
-//		if (((checks > 0) )
+#if 0
+//		if (((checks > 0) || ((checks <= 0) && (mb == &mdum)))
+		if (((checks > 0) )
 			&& (aftermcheck))
 			m->real_score = -QuiesceCheckN(b, -tbeta, -talfa,
 				depth - 1, ply + 1, opside, tree, checks - 1,
 				att);
 		else
+#endif
+#if 0
 			if(checks > 0)
 				m->real_score = -QuiesceNew(b, -tbeta, -talfa, depth - 1, ply + 1, opside, tree, checks - 1, att);
 			else
 				m->real_score = -QuiesceNew(b, -tbeta, -talfa, depth - 1, ply + 1, opside, tree, 0, att);
+#endif
+		m->real_score = -QuiesceNew(b, -tbeta, -talfa, depth - 1, ply + 1, opside, tree, Max(checks - 1, 0), att);
 		UnMakeMoveNew(b, &u, pos);
 		rr = ChangesToMove(b, att, &u);
 		generateBitmaps(b, att, rr, BLACK);
@@ -901,7 +907,7 @@ ESTOP:
 }
 
 // ttbeta 
-int SearchMoveNew(board *b, int talfa, int tbeta, int ttbeta, int depth, int ply, int extend, int reduce, int side, tree_store *tree, int nulls, const attack_model *att)
+int SearchMoveNew(board *b, int talfa, int tbeta, int ttbeta, int depth, int ply, int extend, int reduce, int check, int side, tree_store *tree, int nulls, const attack_model *att)
 {
 	int val, ext;
 	int isPV;
@@ -914,9 +920,9 @@ int SearchMoveNew(board *b, int talfa, int tbeta, int ttbeta, int depth, int ply
 	b->stats->s[S_zerototal] += (1 - isPV);
 	ext = depth - reduce + extend - 1;
 	val = talfa;
-//	int check_depth = isPV ? b->pers->quiesce_check_depth_limit : 0;
-	int check_depth = b->pers->quiesce_check_depth_limit;
-	if (((ext > 0) && (ply < MAXPLY))) {
+	int check_depth = isPV ? b->pers->quiesce_check_depth_limit : 0;
+//	int check_depth = b->pers->quiesce_check_depth_limit;
+	if (((ext > 0) && (ply < MAXPLY))||(check!=0)) {
 		val = -ABNew(b, -ttbeta, -talfa, ext, ply + 1, opside, tree,
 			nulls, att);
 //	unexpected over alpha? - rerun as it might be because of reduced depth
@@ -940,7 +946,7 @@ int SearchMoveNew(board *b, int talfa, int tbeta, int ttbeta, int depth, int ply
 		ext = depth + extend - 1;
 		b->stats->s[S_zerorerun]++;
 		zerormoves=b->stats->s[S_movestested];
-		if (ext > 0)
+		if (ext > 0 || (check!=0))
 			val = -ABNew(b, -tbeta, -talfa, ext, ply + 1, opside, tree, nulls, att);
 		else
 			val = -QuiesceNew(b, -tbeta, -talfa, ext, ply + 1,
@@ -1032,7 +1038,7 @@ int can_do_LMR(board *b, attack_model *a, int alfa, int beta, int depth, move_en
 {
 
 	int8_t from, movp, ToPos, rank;
-	int prio, reduce;
+	int prio, reduce, sval;
 	int isPV = (alfa != (beta - 1));
 
 // promotion
@@ -1054,9 +1060,17 @@ int can_do_LMR(board *b, attack_model *a, int alfa, int beta, int depth, move_en
 //	if(move->phase>=OTHER) reduce++;
 
 #if 1
-	if (prio > (HHScale/3)) reduce--;
-	if (prio < -(HHScale/5)) reduce++;
+	if (prio > (HHScale/4)) reduce--;
+	if (prio > (2*HHScale/3)) reduce--;
+	if (prio < -(HHScale/4)) reduce++;
 #endif
+
+#if 1
+	if(u->whereCa != -1) {
+		sval = SEE0(b, u->to, side, u->captured);
+		if(sval<0) reduce+=2;
+	}
+#endif 
 
 #if 0
 // alternativa
@@ -1114,6 +1128,7 @@ int can_do_LMR(board *b, attack_model *a, int alfa, int beta, int depth, move_en
  * - val - hodnota prave spocitaneho tahu
  */
 
+// when in check is can be entered with depth <= 0
 int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store *tree, int nulls, attack_model *att)
 // depth - jak hluboko mam jeste jit, 0 znamena pouze evaluaci pozice, zadne dalsi pultahy
 // ply - jak jsem hluboko, 0 jsem v root pozici
@@ -1172,6 +1187,7 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 
 //!!!
 	incheck = (isInCheck_Eval(b, att, side)!=0);
+	assert(depth>0||incheck!=0);
 //	incheck = (UnPackCheck(tree->tree[ply-1][ply-1].move) != 0);
 	DEB_S2(if (incheck) MVS->def.state|=r_CHECK;)
 	opside = Flip(side);
@@ -1288,12 +1304,13 @@ uint8_t phase=eval_phase(b, b->pers);
 // asi necutovat kdyz mam jen pesce
 	int pstatef = ((GT_M0(b, b->pers, side, PIECES) == 0) && (GT_M0(b, b->pers, side, PAWN) > 0));
 
-		if ((depth <= b->pers->futility_depth)
+		if ((depth <= b->pers->futility_depth && b->pers->futility_depth>0)
 			&& (incheck == 0)
 			&& !isPV 
 			&& !pstatef
 //			&& (hresult==0)
 			&& (isMATE2(tbeta) == 0)
+			&& (depth>0)
 			)
 
 			{
@@ -1343,8 +1360,6 @@ uint8_t phase=eval_phase(b, b->pers);
 		eval_king_checks_extU(b, &(att->ke[WHITE]), 0, b->king[WHITE]);
 		eval_king_checks_extU(b, &(att->ke[BLACK]), 1, b->king[BLACK]);
 
-//		if(ext<1) ext=1; //!!!!
-		
 		if (ext > 0) {
 			LOGGER_SE("%*d, *S , NULL, AB, alfa %d, beta %d, ext %d, ply %d, nulls %d\n", 2+ply, ply, -tbeta, -tbeta+1, ext, ply+1, nulls-1);
 			mt.real_score = -ABNew(b, -tbeta, -tbeta + 1, ext,
@@ -1483,6 +1498,7 @@ uint8_t phase=eval_phase(b, b->pers);
 		if (((MVS->quiet_pr) > b->pers->LMP_start_move + 2*depth*depth)
 			&& (b->pers->LMP_enable > 0)
 			&& (depth <= b->pers->LMP_depth)
+			&& (depth > 0) // depth <= 0 is happenning only when incheck
 			&& (incheck == 0) 
 //			&& (extend == extend_o)
 			&& (m->phase>KILLER4)
@@ -1541,14 +1557,16 @@ uint8_t phase=eval_phase(b, b->pers);
 
 		if (isInCheck_Eval(b, att, opside)) {
 // idea from Crafty - extend only SAFE moves
-		if (b->pers->check_extension > 0) {
+#if 1
+		if (b->pers->check_extension > 0 && depth>1) {
 				pval =
-					(u.captured < ER_PIECE) ? b->pers->Values[1][u.captured] :
-						0;
+					(u.captured < ER_PIECE) ? u.captured : 0;
 				sval = SEE0(b, UnPackTo(m->move), side, pval);
 				if (sval >= 0)
 					extend += b->pers->check_extension;
 			}
+#endif 
+//		extend++;
 			tree->tree[ply][ply].move |= CHECKFLAG;
 			aftermovecheck = 1;
 			DEB_S2(m->state|=r_CHECK; )
@@ -1621,7 +1639,7 @@ int lmr_s=m->real_score;
 // ttbeta - temporary beta, either talfa+1 or tbeta !!!!
 		b->stats->s[S_movestested]++;
 		m->real_score = SearchMoveNew(b, talfa, tbeta, ttbeta, depth,
-			ply, extend, reduce, side, tree, nulls, att);
+			ply, extend, reduce, aftermovecheck, side, tree, nulls, att);
 bypass:
 		DEB_S2(m->a=talfa; m->b=ttbeta; m->re=extend-reduce; m->depth=depth; )
 
@@ -1726,6 +1744,7 @@ bypass2:
 		} else {
 			b->stats->s[S_faillow]++;
 			hash.scoretype = FAILLOW_SC;
+// poresit statistiku
 			b->stats->s[S_non_cutoff_moves]+=MVS->count;
 		}
 		if ((b->hs != NULL) && (depth > 0))
@@ -1991,7 +2010,7 @@ rerun:
 			}
 			SelectBestO(&(tree->root_c));
 		}  // finished iteration
-//		dumpHHTable(b->hht);
+   DEB_1 (if(b->uci_options->engine_verbose>=2) dumpHHTable(b->hht);)
 	} else {
 // last iteration was not finished properly
 		DEB_S2( move_cont_dump(b, att, &(tree->root_c)); )
@@ -2047,10 +2066,11 @@ rerun:
 	if (b->uci_options->engine_verbose >= 1)
 #pragma omp critical
 		printPV_simple(b, tree, f, b->side, &s, b->stats);
+//		printSearchStat(&STATS[MAXPLY]);
 	}  //deepening finished here
 
 
-//	dumpHHTable(b->hht);
+//   DEB_1 (if(b->uci_options->engine_verbose>=2) dumpHHTable(b->hht);)
 	
 // only finished depths
 	if ((b->search_abort != 0)) f--;

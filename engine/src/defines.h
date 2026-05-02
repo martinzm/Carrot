@@ -101,6 +101,8 @@ typedef enum _STATS_COLL {
 #define LOGGER_0(...) blogger2f(1, __VA_ARGS__)
 #define NLOGGER_0(...) blogger2f(0, __VA_ARGS__)
 
+#define LX(out, off, len, ...) { off += snprintf(out+off, Max(0, len-off), __VA_ARGS__); }
+
 #define L0 LOGGER_0 
 #define L1 LOGGER_1
 #define L2 LOGGER_2 

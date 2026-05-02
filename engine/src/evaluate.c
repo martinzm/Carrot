@@ -3631,11 +3631,12 @@ int SEEx(board *b, MOVESTORE m)
 
  */
 
-int SEE0(board *b, int to, int side, int val)
+int SEE0(board *b, int to, int side, int pp)
 {
 	int v[]={ 1000, 3250, 3250, 5000, 9750, 888888 };
 	int d, attacker, piece;
 	int gain[32];
+	int val=v[pp];
 	BITVAR ignore, bto, ppromote;
 
 	ignore = FULLBITMAP;

@@ -63,4 +63,8 @@ void analyzer_1(char *, int, int, int, int, int, char*);
 void eval_qui_checker(char *filein, char *fileout, int max_positions);
 
 int movegensort_test(char *, char *);
+int test_hh(char*, char*);
+
+
+
 #endif

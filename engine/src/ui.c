@@ -101,12 +101,12 @@ int uci_send_bestmove(MOVESTORE b)
 void* engine_thread(void *arg)
 {
 	tree_store *moves;
-	struct _statistics *stat;
+//	struct _statistics *stat;
 	board *b;
 
 	moves = (tree_store*) malloc(sizeof(tree_store));
-	stat = allocate_stats(1);
-	moves->tree_board.stats = (stat);
+//	stat = allocate_stats(1);
+	moves->tree_board.stats = NULL;
 	b = (board*) arg;
 	engine_stop = 1;
 	LOGGER_4("THREAD: started\n");
@@ -136,7 +136,7 @@ void* engine_thread(void *arg)
 			break;
 		}
 	}
-	deallocate_stats(stat);
+//	deallocate_stats(stat);
 	free(moves);
 	LOGGER_4("THREAD: quit\n");
 	return arg;
@@ -816,13 +816,10 @@ board *b;
 b = malloc(sizeof(board) * 1);
  
 b->stats = allocate_stats(1);
-clearALLSearchCnt(STATS);
 b->uci_options = malloc(sizeof(struct _ui_opt));
 strncpy(b->uci_options->oldfen, "XXXXX", 99);
-
 b->hht = allocateHHTable();
 b->kmove = allocateKillerStore();
-engine_state = STOPPED;
 return b;
 }
 
@@ -840,10 +837,8 @@ return 0;
 int stop_threads(board *b)
 {
 void *status;
-engine_state = MAKE_QUIT;
 sleep_ms(10);
 pthread_join(b->run.engine_thread, &status);
-DEB_1(printALLSearchCnt(STATS);)
 
 return 0;
 }
@@ -883,6 +878,8 @@ inp_len = INPUT_BUFFER_SIZE;
 LOGGER_4("INFO: UCI started\n");
 
 b = allocate_board();
+clearALLSearchCnt(STATS);
+engine_state = STOPPED;
 
 /*
  *setup personality
@@ -1096,6 +1093,10 @@ while (uci_state != 0) {
 					"pers2.xml");
 				break;
 			}
+			if (!strcmp(tok, "tthh")) {
+				test_hh("../tests/test_hh.epd", "pers.xml");
+				break;
+			}
 #ifdef TUNING
 			if (!strcmp(tok, "texel")) {
 				texel_test(b2);
@@ -1224,7 +1225,10 @@ while (uci_state != 0) {
 		}
 	}
 } LOGGER_4("INFO: exiting...\n");
+
+engine_state = MAKE_QUIT;
 stop_threads(b);
+DEB_1(printALLSearchCnt(STATS);)
 deallocate_tables(b);
 free(b->pers);
 deallocate_board(b);

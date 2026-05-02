@@ -56,8 +56,6 @@ void DecSearchCnt(struct _statistics *s, struct _statistics *b, struct _statisti
 	for(int f=0;f<S_MAX_COLL; f++) { r->s[f] = s->s[f] - b->s[f]; }
 }
 
-#define LX(out, off, len, ...) { off += snprintf(out+off, Max(0, len-off), __VA_ARGS__); }
-
 void dumpEBF()
 {
 	int f, mx=Min(MAXPLY, 64);
@@ -71,7 +69,6 @@ void dumpEBF()
 void printSearchStat3(struct _statistics *s, char *o, int l)
 {
 int c=0;
-
 
 	LX(o,c,l,
 		"Info: Positions visited %lld, PV %lld (%.2f%%), nonPV %lld, with movgen %lld\n"
@@ -176,9 +173,6 @@ int c=0;
 		s->s[S_position_quality_tests], s->s[S_position_quality_cutoffs]);
 #endif
 }
-
-
-#undef LX
 
 // generate all into buffer
 // print buffer into file

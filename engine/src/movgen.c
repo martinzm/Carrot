@@ -2793,6 +2793,7 @@ int fromPos, piece;
 		while ((mv->next < mv->lastp) && (mv->tcnt > 0)) {
 			mv->tcnt--;
 			SelectBest(mv);
+#if 0
 			if(mv->next->qorder == A_CA_PROM_N) {
 				fromPos = UnPackFrom(mv->next->move);
 				piece = b->pieces[fromPos] & PIECEMASK;
@@ -2800,6 +2801,7 @@ int fromPos, piece;
 				&& (attack.maps[KNIGHT][b->king[Flip(side)]] & attack.maps[KNIGHT][fromPos]))
 				mv->next->qorder = A_CA_PROM_Q-1;
 			}
+#endif
 			if ((mv->next->qorder < A_OR_N)
 			&& (SEEx(b, mv->next->move) < 0)
 			) {

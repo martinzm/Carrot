@@ -51,6 +51,7 @@ int compareBoardSilent(board *source, board *dest);
 int copyBoard(board *source, board *dest);
 void printboard(board *b);
 void printBoardNice(board const *b);
+void printBoardNiceS(board const *b);
 int boardCheck(board *b, char *name);
 void eval_dump(board const *, attack_model *, personality const *);
 void move_cont_dump(board const *, attack_model *, move_cont *);

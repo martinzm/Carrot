@@ -3945,8 +3945,6 @@ int driver_move_gen_checker(personality *pers_init, CBACK, void *cdata)
 	return ocount;
 }
 
-
-
 void move_gen_checker(char *filein, int max_positions)
 {
 	FILE *o;
@@ -3968,6 +3966,152 @@ void move_gen_checker(char *filein, int max_positions)
 
 	cleanup: free(pi);
 }
+
+int test_hh_checker(personality *pers_init, CBACK, void *cdata, int depth, int time)
+{
+	int stop, ocount;
+
+	ocount=0;
+	
+	int prc, i;
+	board *b;
+	struct _statistics *stat;
+	char fens[512];
+	char feni[100];
+	int  fsts[1024];
+	int  pres[1024];
+	int  outs[1024], out_s;
+	char fen[100];
+	char bx[512];
+	char cm9[1024][10];
+	char *name;
+	move_cont mvs;
+	int hi,lo;
+	int incheck, opside, ccc, count;
+	int max;
+	MOVESTORE bans[20], aans[20], cans[20];
+	int bm_count;
+	char bm[10][CMTLEN];
+
+	int pos[4];
+	UNDO u;
+	attack_model a;
+	
+	tree_store *moves;
+	moves = (tree_store*) malloc(sizeof(tree_store));
+
+	b = allocate_board();
+	b->pers=pers_init;
+	
+	allocate_tables(b);
+	//start_threads(b);
+	
+	prc = cback(fens, cdata);
+	while (prc) {
+		if (parseEPD(fens, feni, NULL, bm, NULL, NULL, NULL, NULL, &name) > 0) {
+			bm_count=parseEDPMoves(b, &a, bans, bm, 10);
+
+// setup position on board
+			printf("Loading %s", name);
+			L0("Loading %s", name);
+			if(bm_count>0) {
+				printf(", bm");
+				L0("bm");
+				
+				for(int f=0;f<bm_count;f++) { printf(" %s", bm[f]); L0(" %s", bm[f]); }
+			}
+			printf("\n");
+			L0("\n");
+			setup_FEN_board(b, feni);
+			printBoardNiceS(b);
+			printBoardNice(b);
+
+// setup everything
+			b->run.time_start = readClock();
+			b->uci_options->engine_verbose = 2;
+
+			b->uci_options->binc = 0;
+			b->uci_options->btime = 0;
+// depth limit
+			b->uci_options->depth = depth;
+// run forever
+			b->uci_options->infinite = 1;
+			b->uci_options->mate = 0;
+			b->uci_options->movestogo = 0;
+			b->uci_options->movetime = 0;
+			b->uci_options->ponder = 0;
+			b->uci_options->winc = 0;
+			b->uci_options->wtime = 0;
+			b->uci_options->search_moves[0] = 0;
+// infinite nodes
+			b->uci_options->nodes = 0;
+// or run this amount of ms
+			if(time!=-1) {
+				b->uci_options->movetime = time;
+				b->uci_options->infinite = 0;
+			}
+
+
+			b->run.time_move = 0;
+			b->run.time_crit = 0;
+
+			b->move_ply_start = b->move;
+			b->pers->start_depth = 1;
+
+			invalidateHash(b->hs);
+			invalidatePawnHash(b->hps);
+//			reduceHHTable(b->hht);
+//			clearHHTable(b->hht);
+			clearHHTable2(b->hht,b->pers->piecetosquare);
+			
+			engine_stop=0;
+			b->search_abort=0;
+			
+			IterativeSearchN(b, 0 - iINFINITY, iINFINITY,
+				b->uci_options->depth, b->side,
+				b->pers->start_depth, moves);
+
+				L0("** Running TOTALS **\n");
+				printSearchStat(&(STATS[MAXPLY]));
+
+			free(name);
+		} else break;
+		prc = cback(fens, cdata);
+	}
+
+//	stop_threads(b);
+	deallocate_tables(b);
+	deallocate_board(b);
+	free(moves);
+	LOGGER_2("INFO: UCI stopped\n");
+	return ocount;
+}
+
+
+int test_hh(char *filein, char *pers)
+{
+	perft2_cb_data cb;
+	personality *pi;
+
+	printf("HH start\n");
+	pi = (personality*) init_personality(pers);
+	if ((cb.handle = fopen(filein, "r")) == NULL) {
+		printf("File %s is missing\n", filein);
+		goto cleanup;
+	}
+	cb.lo=0;
+	cb.loops = 1;
+	test_hh_checker(pi, perft2_cback, &cb, 25, -1);
+	fclose(cb.handle);
+	printf("HH finish\n");
+
+	cleanup: free(pi);
+	return 1;
+}
+
+
+
+
 
 
 int movegensort_test(char *pos, char *pers)

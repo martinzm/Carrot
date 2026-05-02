@@ -121,8 +121,8 @@ char o[5120];
 
 int blogger2b(int state, const char *buf)
 {
-char o[5120];
-char i[5120];
+char o[5220];
+char i[5220];
 	if(state==1) {
 		strncpy(i, buf, sizeof(i)-1);
 		pblogger2(state, o, sizeof(o), i);
@@ -598,7 +598,7 @@ void printboard(board *b)
 	printmask(b->colormaps[BLACK], "Black");
 }
 
-void printBoardNice(board const *b)
+void QQprintBoardNice(board const *b)
 {
 	int f, n;
 	int pw, pb, nw, nb, bwl, bwd, bbl, bbd, rw, rb, qw, qb;
@@ -686,6 +686,117 @@ void printBoardNice(board const *b)
 	qb = (b->mindex % PW_MI) / QB_MI;
 	LOGGER_0("%d, %d, %d, %d, %d, %d\n", pw, nw, bwl, bwd, rw, qw);
 	LOGGER_0("%d, %d, %d, %d, %d, %d\n", pb, nb, bbl, bbd, rb, qb);
+}
+
+void printBoardNiceBuffer(board const *b, char *o, int l)
+{
+int c=0;
+	int f, n;
+	int pw, pb, nw, nb, bwl, bwd, bbl, bbd, rw, rb, qw, qb;
+	char buff[1024];
+	char x, ep[3];
+	char row[8];
+	if (b->ep != 0) {
+		sprintf(ep, "%c%c", b->ep % 8 + 'A', b->ep / 8 + '1');
+	} else
+		ep[0] = '\0';
+	LX(o,c,l,
+			"Move %d, Side to Move %s, e.p. %s, CastleW:%i B:%i, HashKey 0x%016llX, MIdx:%d\n",
+		b->move / 2, (b->side == 0) ? "White" : "Black", ep,
+		b->castle[WHITE], b->castle[BLACK],
+		(unsigned long long ) b->key, b->mindex);
+	x = ' ';
+	for (f = 7; f >= 0; f--) {
+		for (n = 0; n < 8; n++) {
+			switch (b->pieces[f * 8 + n]) {
+			case ER_PIECE:
+				x = ' ';
+				break;
+			case BISHOP:
+				x = 'B';
+				break;
+			case KNIGHT:
+				x = 'N';
+				break;
+			case PAWN:
+				x = 'P';
+				break;
+			case QUEEN:
+				x = 'Q';
+				break;
+			case KING:
+				x = 'K';
+				break;
+			case ROOK:
+				x = 'R';
+				break;
+			case BISHOP | BLACKPIECE:
+				x = 'b';
+				break;
+			case KNIGHT | BLACKPIECE:
+				x = 'n';
+				break;
+			case PAWN | BLACKPIECE:
+				x = 'p';
+				break;
+			case QUEEN | BLACKPIECE:
+				x = 'q';
+				break;
+			case KING | BLACKPIECE:
+				x = 'k';
+				break;
+			case ROOK | BLACKPIECE:
+				x = 'r';
+				break;
+			}
+			row[n] = x;
+		}
+		LX(o,c,l,
+	  "  +---+---+---+---+---+---+---+---+\n");
+		LX(o,c,l,
+	  "%c | %c | %c | %c | %c | %c | %c | %c | %c |\n",
+			f + '1', row[0], row[1], row[2], row[3], row[4], row[5],
+			row[6], row[7]);
+	}
+	LX(o,c,l,
+"  +---+---+---+---+---+---+---+---+\n");
+	LX(o,c,l,
+"    A   B   C   D   E   F   G   H  \n");
+	writeEPD_FEN(b, buff, 0, "");
+	LX(o,c,l,
+	  "%s\n", buff);
+
+	pw = (b->mindex % PB_MI) / PW_MI;
+	pb = (b->mindex % XX_MI) / PB_MI;
+	
+	nw = (b->mindex % NB_MI) / NW_MI;
+	nb = (b->mindex % BWL_MI) / NB_MI;
+	bwl = (b->mindex % BWD_MI) / BWL_MI;
+	bwd = (b->mindex % BBL_MI) / BWD_MI;
+	bbl = (b->mindex % BBD_MI) / BBL_MI;
+	bbd = (b->mindex % RW_MI) / BBD_MI;
+	rw = (b->mindex % RB_MI) / RW_MI;
+	rb = (b->mindex % QW_MI) / RB_MI;
+	qw = (b->mindex % QB_MI) / QW_MI;
+	qb = (b->mindex % PW_MI) / QB_MI;
+	LX(o,c,l,
+	  "%d, %d, %d, %d, %d, %d\n", pw, nw, bwl, bwd, rw, qw);
+	LX(o,c,l,
+	  "%d, %d, %d, %d, %d, %d\n", pb, nb, bbl, bbd, rb, qb);
+}
+
+void printBoardNice(board const *b)
+{
+char buf[5120];
+	printBoardNiceBuffer(b, buf, sizeof(buf));
+	blogger2b(1, buf);
+}
+
+void printBoardNiceS(board const *b)
+{
+char buf[5120];
+	printBoardNiceBuffer(b, buf, sizeof(buf));
+	printf("%s\n",buf);
 }
 
 int kingCheck(board *b)

@@ -60,7 +60,7 @@ void init_lmr_table(int table[64][64]);
 
 int SEE(board *b, MOVESTORE m);
 int SEEx(board *b, MOVESTORE m);
-int SEE0(board *b, int to, int side, int val);
+int SEE0(board *b, int to, int side, int pp);
 int PSQSearch(int, int, int, int, int, personality*);
 
 #define NW_MI 1

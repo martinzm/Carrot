@@ -221,7 +221,8 @@ void storeHash(hashStore *hs, hashEntry *hash, int side, int ply, int depth, BIT
 	default:
 		break;
 	}
-	pld=PACKHASH(hash->bestmove, hash->value, hash->depth, hash->scoretype, hs->hashValidId);
+// fix for depth <= 0, can happen when searching in check
+	pld=PACKHASH(hash->bestmove, hash->value, Max(0, hash->depth), hash->scoretype, hs->hashValidId);
 	storeHashX(hs, hash->key, pld, ver, s);
 	hash->pld=pld;
 }
@@ -767,10 +768,10 @@ int updateHHTable2(board *b, hhTable *hh, move_entry *m, int cutoff, int side, i
 }
 
 int updateHHTableGood(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int depth, int ply){
-	return updateHHTable2(b, hh, m, cutoff, side, Min(10*depth*depth, HHScale));
+	return updateHHTable2(b, hh, m, cutoff, side, Min(100*depth, HHScale));
 }
 int updateHHTableBad(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int depth, int ply){
-	return updateHHTable2(b, hh, m, cutoff, side, -Min(20*depth*depth, HHScale));
+	return updateHHTable2(b, hh, m, cutoff, side, -Min(100*depth, HHScale));
 }
 
 int checkHHTable(hhTable *hh, int side, int piece, int square)
@@ -788,7 +789,7 @@ int reduceHHTable(hhTable *hh)
 	return 0;
 }
 
-int dumpHHTable(hhTable *hh)
+int dumpHHTable2(hhTable *hh)
 {
 char buf[2048];
 char bf2[2048];
@@ -797,7 +798,53 @@ char bf2[2048];
 		for (q = PAWN; q < ER_PIECE; q++) { 
 			sprintf(buf,"Side: %d, Piece %d, Vals=",s, q);
 			for (f = 0; f < 64; f++) {
-				sprintf(bf2, "%d ",hh->val[s][q][f]);
+				sprintf(bf2, "%4d ",hh->val[s][q][f]);
+				strcat(buf, bf2);
+			}
+			L0("%s\n", buf);
+		}
+	return 0;
+}
+
+int dumpHHTable(hhTable *hh)
+{
+#define TTOP 32
+char buf[10000];
+char bf2[10000];
+int b[TTOP],w[TTOP];
+int bv[TTOP],wv[TTOP];
+	int f, q, x, r;
+	dumpHHTable2(hh);
+	
+	for (int s=0;s<=1;s++)
+		for (q = PAWN; q < ER_PIECE; q++) { 
+			for(f=0;f<TTOP;f++) { b[f]=f; w[f]=f; bv[f]=-999999; wv[f]=999999; }
+			
+			sprintf(buf,"Side: %d, Piece %d ",s, q);
+			for (f = 0; f < 64; f++) {
+			// best update
+				for (x=TTOP-1; x>=0; x--) if(hh->val[s][q][f]< bv[x]) break;
+				x++;
+				for (r=TTOP-1; r>x; r--) {b[r]=b[r-1]; bv[r]=bv[r-1];}
+				if(x<TTOP) { b[x]=f; bv[x]=hh->val[s][q][f]; }
+			
+			// worst update
+				for (x=TTOP-1; x>=0; x--) if(hh->val[s][q][f]> wv[x]) break;
+				x++;
+				for (r=TTOP-1; r>x; r--) {w[r]=w[r-1]; wv[r]=wv[r-1];}
+				if(x<TTOP) { w[x]=f; wv[x]=hh->val[s][q][f]; }
+				
+			}
+			sprintf(bf2, "Best ");
+			strcat(buf, bf2);
+			for(x=0;x<TTOP;x++) {
+				sprintf(bf2, "%c%c: %6d ",getFile(b[x])+'A', getRank(b[x])+'1',hh->val[s][q][ b[x] ]);
+				strcat(buf, bf2);
+			}
+			sprintf(bf2, "   Worst ");
+			strcat(buf, bf2);
+			for(x=0;x<TTOP;x++) {
+				sprintf(bf2, "%c%c: %6d ",getFile(w[x])+'A', getRank(w[x])+'1',hh->val[s][q][ w[x] ]);
 				strcat(buf, bf2);
 			}
 			L0("%s\n", buf);
