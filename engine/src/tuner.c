@@ -204,7 +204,7 @@ DEB_X(for(sq=0;sq<=7;sq++) {
       MAT_DUO(mat[i], mat[i+1], p, pawn_issues_penalty[0][WHITE][sq], pawn_issues_penalty[1][WHITE][sq], i, map);
       MAT_DUO_ADD(mat[i], mat[i+1], p, pawn_issues_penalty[0][BLACK][sq], pawn_issues_penalty[1][BLACK][sq], map);
       i+=2; } )
-DEB_X(
+DEB_0(
 		 ii=0; 
 		 while(pieces_in[ii]!=-1) {
 		 pi=pieces_in[ii];
@@ -233,7 +233,7 @@ DEB_X(
 		 ii++;
 		 )
 
-DEB_X(
+DEB_0(
 		 ii=0;
 		 while(pieces_in3[ii]!=-1) { 
 		 pi=pieces_in3[ii]; 
@@ -295,7 +295,7 @@ DEB_X(for(sq=0;sq<=7;sq++) {
 				MAT_DUO_ADD(mat[i], mat[i+1], p, pawn_prot_over_penalty[0][BLACK][sq], pawn_prot_over_penalty[1][BLACK][sq], map);
 				i+=2;})
 
-DEB_X(
+DEB_0(
 	ii = 0;
 	while (pieces_in[ii] != -1) {
 		sq = pieces_nP[ii];

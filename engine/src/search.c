@@ -1092,6 +1092,8 @@ int can_do_LMR(board *b, attack_model *a, int alfa, int beta, int depth, move_en
 	if(phase<=64) reduce--;
 #endif
 
+	if(depth>=4 && move->ord > 10 && !isPV) reduce++;
+
 	return CLAMP(reduce, 0, depth-2);
 //	return reduce;
 }
@@ -1337,7 +1339,7 @@ uint8_t phase=eval_phase(b, b->pers);
 		&& (incheck == 0)
 		&& (can_do_NullMove(b, att, talfa, tbeta, depth, ply, side) != 0)
 		&& (depth > b->pers->NMP_min_depth)
-		&& sco >= tbeta
+		&& sco >= (tbeta + 500)
 		) {
 		tree->tree[ply][ply].move = NULL_MOVE;
 		MakeNullMove(b, &u);
@@ -1347,10 +1349,10 @@ uint8_t phase=eval_phase(b, b->pers);
 		b->stats->s[S_NMP_tries]++;
 // null move reduction, divisor interaction not working
 
-		reduce = b->pers->NMP_reduction;
+//		reduce = b->pers->NMP_reduction;
 //		reduce = b->pers->NMP_reduction + div(depth, b->pers->NMP_div).quot;
 
-//		reduce = depth > 9 ? 2:1;
+		reduce = depth >=5 ? 3:1;
 
 		ext = depth - reduce - 1; //!!!
 // save stats, to get info how many nodes were visited due to NULL move...
@@ -1495,7 +1497,7 @@ uint8_t phase=eval_phase(b, b->pers);
 // check after move is done in can_do_LMP as well as promotion
 
 //		if ((MVS->count > (b->pers->LMP_start_move + 2*depth*depth))
-		if (((MVS->quiet_pr) > b->pers->LMP_start_move + 2*depth*depth)
+		if (((MVS->quiet_pr) > b->pers->LMP_start_move + 2*depth)
 			&& (b->pers->LMP_enable > 0)
 			&& (depth <= b->pers->LMP_depth)
 			&& (depth > 0) // depth <= 0 is happenning only when incheck

@@ -36,19 +36,21 @@ LMR:
 - neredukovat tah krale, kdyz strana na tahu ma 2 a mene figur (bez krale)
 - redukovat vsechno za killery dal i bad exchange
 HH interakce
-HH > +HH rozsah/3 (5333) redukce--
-HH < -HH rozsah/5 (-3200) redukce++
+HH > +HH_rozsah/4 redukce--
+HH > +2*HH_rozsah/3 redukce--
+HH < -HH_rozsah/4 redukce++
+bad capture reduce +=2
+depth >=4 poradi tahu > 10 redukce++
 a redukce aby byla nejvyse depth-2
 
 NMP:
 -- zadne dynamicke schema nechodilo, ani vetsi R
-  R=1
+  R= (depth>=5) 3:1
   ne sach
   ne pokud nemam figuru krome pescu
   ne v PV
   v depth>3
-  a staticke score (nebo z hash) >=beta
-  
+  a staticke score (nebo z hash) >= (beta + 1/2 Pawn)
 
 RFP:
   ne sach
@@ -57,22 +59,52 @@ RFP:
   ne kdyz mam jen pesce
   a kdyz je depth <=3
   a kdyz staticke score >= depth * PawnValue *1.2
+  a jen depth > 0
   
-s PeSTO evaluaci 
+s PeSTO evaluaci -- uz nepouzivam PeSTO uz vlastnim tunerem naladene Values,PSQT a mobilita
 	je LMR re search rate 0.43%, 
 	PVS rate je 28 normalnich na jeden PV tah
 	First cutoffs 91%
 	First QuietCutoffs 83%
 	
+S vlastnimi hodnotami
+	LMR rate 0.43%
+	NMP rate 69.51%
+	PVS rate 23.55
+	First Cut 64%
+	First Quiet 78.48%
+
+	cca 2350 ELO
+
 LMP:
+	jeste pred makemove
 	ne v sachu
 	ne pesec na 6 a 7 rade
 	ne kdyz dava sach
-	po 3 +2*depth*depth klidnych tazich
-	hlouka 3 a mene
+	po 3 +2*depth klidnych tazich
+	hloubka 3 a mene
 	ne brani
 	ne PV
-	
+	depth > 0
+  
+  
+  
+  
+  
+architektura
+hlavni seach
+pokud pri depth <= 1 sach tak se pusti hlavni search s depth-- (a rekurzivne). Redukce jsou vypnuty pri depth<1 (a vetsina i pri sachu)
+QS
+  
+  
+NAPADY
+quiet chess tahy do moveorderingu
+hranice ruznych cuts pocitat dynamicky z aktualnich hodnot figur a faze - mit v tabulce
+
+
+  
+  
+  
   
   
   
