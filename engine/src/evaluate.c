@@ -113,7 +113,7 @@ BITVAR pmap;
 
 	black=0;
 	for(int side=0;side<=1;side++){
-		for(int f=0; f<4; f++) {
+		for(int f=0; f<=4; f++) {
 			int piece = ptype[f];
 			pmap = b->maps[piece]& b->colormaps[side];
 			while(pmap) {
@@ -291,7 +291,7 @@ int analyze_pawn(board const *b, attack_model const *a, PawnStore *ps, int side,
 		ps->issue_d[side][f] = 0;
 
 // passer, distance to promotion !!!!
-//		L0("%d, file %d, rank %d\n", f, file, rank);
+//		L0("PAWN: %d, file %d, rank %d\n", f, file, rank);
 //		printmask(ps->spans[side][f][0],"0");
 //		printmask(ps->spans[side][f][1],"1");
 //		printmask(ps->spans[side][f][2],"2");
@@ -2726,7 +2726,6 @@ int eval_pawn(board const *b, attack_model *a, PawnStore const *ps, int side, pe
  */
 
 
-#if 1
 	msk = p->mobility_protect == 1 ? FULLBITMAP : ~b->colormaps[side];
 
 	assert(a->pos_c[piece]<8 && a->pos_c[piece]>=-1);
@@ -2744,7 +2743,7 @@ int eval_pawn(board const *b, attack_model *a, PawnStore const *ps, int side, pe
 	ADD_STACKER(st, mob_val[MG][side][PAWN][idx], 1, BAs, side, 0)
 	ADD_STACKER(st, mob_val[EG][side][PAWN][idx], 1, BAs, side, 1)
 #endif
-	}
+
 
 // eval passed pawn protection from my and opposite Kings
 		x=NORMM(from);
@@ -2769,10 +2768,43 @@ int eval_pawn(board const *b, attack_model *a, PawnStore const *ps, int side, pe
 		ADD_STACKER(st, passer_op_king_penalty[EG][side][opk], 1, BAs, side, 1)
 #endif
 
+		// if no opposing pieces - only king and pawns give passer bonus for being out of opp king reach
+			if ((GT_M0(b, p, Flip(side), PIECES) == 0)) {
+				int n=0;
+				int ds;
+				int pp=ps->pawns[side][n];
+				while(pp!=-1) {
+					if(pp==from) break;
+					pp=ps->pawns[side][++n];
+				}
+				assert(pp!=-1);
+				ds=ps->pas_d[side][n];
+				if(side!=b->side) ds++;
+				if(ds<=opk) {
+					a->specs[side][PAWN].sqr_b += p->passer_unstop_bonus[MG];
+					a->specs[side][PAWN].sqr_e += p->passer_unstop_bonus[EG];
+					a->scc[from].sqr_b += p->passer_unstop_bonus[MG];
+					a->scc[from].sqr_e += p->passer_unstop_bonus[EG];
+#ifdef TUNING
+					ADD_STACKER(st, passer_unstop_bonus[MG], 1, BAs, side, 0)
+					ADD_STACKER(st, passer_unstop_bonus[EG], 1, BAs, side, 1)
+#endif
+				}
+			}
 		}
 
-#endif
+// my pawn to opposite king - to put pressure on
+		opk=attack.distance[from][b->king[Flip(side)]]-1;
+		a->specs[side][PAWN].sqr_b += p->pawn_op_king_bonus[MG][side][opk];
+		a->specs[side][PAWN].sqr_e += p->pawn_op_king_bonus[EG][side][opk];
+		a->scc[from].sqr_b += p->pawn_op_king_bonus[MG][side][opk];
+		a->scc[from].sqr_e += p->pawn_op_king_bonus[EG][side][opk];
 
+#ifdef TUNING
+	ADD_STACKER(st, pawn_op_king_bonus[MG][side][opk], 1, BAs, side, 0)
+	ADD_STACKER(st, pawn_op_king_bonus[EG][side][opk], 1, BAs, side, 1)
+#endif
+	}
 
 #if 0
 
@@ -3766,6 +3798,17 @@ int MVVLVA_gen(int table[ER_PIECE + 2][ER_PIECE+1], _values Values)
 	return 0;
 }
 
+int init_mat_phase_val(int t[ER_PIECE][256], _values Values){
+
+	for(int phase=0; phase<256; phase++) {
+		for(int piece=0; piece<KING; piece++) {
+			t[piece][phase] = PVAL(Values[0][piece], Values[1][piece], phase, 255);
+		}
+		t[KING][phase] = Max(Values[0][KING], Values[1][KING]);
+	}
+	return 0;
+}
+
 void init_lmr_table(int table[64][64])
 {
 int d, m;
@@ -3780,3 +3823,4 @@ int d, m;
 //		  L0("%d:%d = %d\n", d,m, table[d][m]);
 		}
 }
+

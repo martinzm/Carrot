@@ -1299,7 +1299,7 @@ uint8_t phase=eval_phase(b, b->pers);
 
 	sco= (hresult!=0) ? hash.value : (side==WHITE) ? getlazyEval(b, b->pers): -getlazyEval(b, b->pers);
 // scaled value of PAWN
-	pvalue = PVAL(b->pers->Values[0][PAWN], b->pers->Values[1][PAWN], phase, 255);
+	pvalue = b->pers->matval[PAWN][phase];
 	
 	reduce_o = extend_o = 0;
 // reverse futility pruning
@@ -1339,7 +1339,7 @@ uint8_t phase=eval_phase(b, b->pers);
 		&& (incheck == 0)
 		&& (can_do_NullMove(b, att, talfa, tbeta, depth, ply, side) != 0)
 		&& (depth > b->pers->NMP_min_depth)
-		&& sco >= (tbeta + 500)
+		&& sco >= (tbeta + pvalue/2)
 		) {
 		tree->tree[ply][ply].move = NULL_MOVE;
 		MakeNullMove(b, &u);
@@ -1790,7 +1790,7 @@ int ply = 0;
 int changes;
 int alow, ahigh;
 int pos[4];
-int aspdiff[]={50, 100, 200, 400, 800, iINFINITY};
+int aspdiff[]={500, 1000, 2000, 4000, 8000, iINFINITY};
 
 int cc, v, xcc, old_score, old_score_count;
 MOVESTORE bestmove, hashmove, i, t1pbestmove;
@@ -1929,7 +1929,7 @@ rerun:
 		best = 0 - iINFINITY;
 		isPVcount = 0;
 		
-		if((b->pers->use_aspiration!=0)&&(f>4)&&(!incheck)) {
+		if((b->pers->use_aspiration!=0)&&(f>=5)&&(!incheck)) {
 			talfa=Max(alfa, old_score-aspdiff[alow]);
 			tbeta=Min(beta, old_score+aspdiff[ahigh]);
 		} else {
@@ -1950,7 +1950,7 @@ rerun:
 // handle aspiration if used
 // check for problems
 // over beta, not rising alfa at fist move or at all
-		if (b->pers->use_aspiration != 0) {
+		if ((b->pers->use_aspiration != 0)) {
 			if (tbeta <= best){
 // gat failed move and move it to the front
 				int i;
@@ -1963,6 +1963,7 @@ rerun:
 				}
 				b->stats->s[S_aspfailits]++;
 				ahigh++;
+				
 				goto rerun;
 			}
 			else if(best<=talfa) {

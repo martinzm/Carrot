@@ -57,6 +57,7 @@ int meval_t_gen(personality*);
 
 int MVVLVA_gen(int table[ER_PIECE + 2][ER_PIECE+1], _values Values);
 void init_lmr_table(int table[64][64]);
+int init_mat_phase_val(int t[ER_PIECE][256], _values Values);
 
 int SEE(board *b, MOVESTORE m);
 int SEEx(board *b, MOVESTORE m);

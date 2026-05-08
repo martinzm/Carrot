@@ -921,6 +921,35 @@ static void parsedoc_int(xmlDocPtr doc, personality *p)
 }
 
 #undef MLINE
+
+int map_init_passer(_passer *x, int s_r, char *n, pers_uni *map, char desc[NTUNL][64], int *i){
+return 0;
+}
+
+int map_init_dvalues(_dvalues *x, int s_r, char *n, pers_uni *map, char desc[NTUNL][64], int *i){
+return 0;
+}
+
+int map_init_values(_values *x, int s_r, char *n, pers_uni *map, char desc[NTUNL][64], int *i){
+return 0;
+}
+
+int map_init_gamestage(_gamestage *x, int s_r, char *n, pers_uni *map, char desc[NTUNL][64], int *i){
+return 0;
+}
+
+int map_init_general_option(_general_option *x, int s_r, char *n, pers_uni *map, char desc[NTUNL][64], int *i){
+	char *s;
+	int idx;
+	
+return 0;
+}
+
+int map_init_general_option_8(_general_option_8 *x, int s_r, char *n, pers_uni *map, char desc[NTUNL][64], int *i){
+return 0;
+}
+
+
 #define MLINE(x,y,z,s_r,i) { int __qq__[]={i}; params_init ## z(&(p->y), s_r, __qq__); }
 
 void setup_init_pers(personality *p)
@@ -955,6 +984,58 @@ void setup_init_pers(personality *p)
 		}
 	}
 }
+
+#undef MLINE
+#define MLINE(x,y,z,s_r,i) { int __qq__[]={i}; map_init ## z(&(p->y), s_r, "y",map,desc, __qq__); }
+
+void setup_map_pers(personality *p, pers_uni *map, char desc[NTUNL][64])
+{
+	int f, x, i;
+
+	E_OPTS
+	;
+	
+	char *s;
+	int idx;
+	
+	for (f = 0; f < ER_GAMESTAGE; f++) {
+		for (x = 0; x < ER_PIECE+1; x++) {
+			for (i = A1; i <= H8; i++) {
+				idx = map->p.piecetosquare[f][WHITE][x][i];
+				s = desc[idx];
+				snprintf(s,64, "psqr_%d_%d_%d_%d",f, WHITE,x,i);
+				idx = map->p.piecetosquare[f][BLACK][x][i];
+				s = desc[idx];
+				snprintf(s,64, "psqr_%d_%d_%d_%d",f, BLACK,x,i);
+			}
+		}
+	}
+	for (f = 0; f < ER_GAMESTAGE; f++) {
+		for (x = 0; x < ER_PIECE; x++) {
+			for (i = 0; i < ER_MOBILITY; i++) {
+				idx = map->p.mob_val[f][WHITE][x][i];
+				s = desc[idx];
+				snprintf(s,64, "mob_%d_%d_%d_%d",f, WHITE,x,i);
+				idx = map->p.mob_val[f][BLACK][x][i];
+				s = desc[idx];
+				snprintf(s,64, "mob_%d_%d_%d_%d",f, BLACK,x,i);
+			}
+		}
+	}
+	for (f = 0; f < ER_GAMESTAGE; f++) {
+		for (x = 0; x < ER_PIECE; x++) {
+			for (i = 0; i < ER_MOBILITY; i++) {
+				idx = map->p.mob_uns[f][WHITE][x][i];
+				s = desc[idx];
+				snprintf(s,64, "mob_uns_%d_%d_%d_%d",f, WHITE,x,i);
+				idx = map->p.mob_uns[f][BLACK][x][i];
+				s = desc[idx];
+				snprintf(s,64, "mob_uns_%d_%d_%d_%d",f, BLACK,x,i);
+			}
+		}
+	}
+}
+
 
 int print_pers_values2(char *b, _squares_p *s, int count, int stage, int side, int piece)
 {
@@ -1015,7 +1096,7 @@ int print_pers_values(char *b, _squares_p *s, int count, int stage, int side, in
 
 		for(l=0;l<8;l++) {
 			i[l]=(*s)[stage][side][piece][f * 8 + l];
-			if(i[l]==0) sprintf(q[l], " "); else { sprintf(q[l], "%d", i[l]), c=1; };
+			if(i[l]==0) sprintf(q[l], "     "); else { sprintf(q[l], "%5d", i[l]), c=1; };
 		}
 		sprintf(b2, "%1s,\t%1s,\t%1s,\t%1s,\t%1s,\t%1s,\t%1s,\t%1s|\t",q[0],q[1],q[2],q[3],q[4],q[5],q[6],q[7]);
 		strcat(b, b2);
@@ -1129,6 +1210,7 @@ void* init_personality(char *docname)
 	meval_t_gen(p);
 	MVVLVA_gen((p->LVAcap), p->Values);
 	init_lmr_table(p->lmr_table);
+	init_mat_phase_val(p->matval, p->Values);
 	return p;
 }
 

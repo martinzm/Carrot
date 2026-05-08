@@ -3021,13 +3021,17 @@ void print_pawn_analysis(board *b, attack_model *a, PawnStore *ps, personality *
 	mask2add(bb, b2);
 	mask2print(bb);
 
+
+//				sprintf(bf2, "%c%c: %6d ",getFile(w[x])+'A', getRank(w[x])+'1',hh->val[s][q][ w[x] ]);
+
 	for (s = 0; s <= 1; s++) {
 		f = 0;
 		from = ps->pawns[s][f];
 		while (from != -1) {
 			L0(
-				"Side: %d, from %d, pas %d, stop %d, block %d, double %d, outp %d, outp_d %d, prot FR %d, prot BH %d, prot DIR %d\n",
-				s, from, ps->pas_d[s][f], ps->stop_d[s][f],
+				"Side: %d, from %c%c, pas %d, stop %d, block %d, double %d, outp %d, outp_d %d, prot FR %d, prot BH %d, prot DIR %d\n",
+				s, getFile(from)+'A', getRank(from)+'1',
+				ps->pas_d[s][f], ps->stop_d[s][f],
 				ps->block_d[s][f], ps->double_d[s][f],
 				ps->outp[s][f], ps->outp_d[s][f],
 				ps->prot_d[s][f], ps->prot_p_d[s][f],
@@ -3286,6 +3290,11 @@ int driver_eval_checker(int max, personality *pers_init, CBACK, void *cdata)
 
 	int side, opside, from, f, ff, idx, fff;
 	PawnStore *ps;
+	char opt[1000];
+
+
+	st.map=&map;
+	for(int f=0; f<NTUNL; f++) map.u[f]=f;
 
 	b.stats = allocate_stats(1);
 	b.pers = pers_init;
@@ -3295,12 +3304,7 @@ int driver_eval_checker(int max, personality *pers_init, CBACK, void *cdata)
 	b.kmove = allocateKillerStore();
 	b.uci_options = &uci_options;
 
-	stat = allocate_stats(1);
-
-	for(int f=0; f<NTUNL; f++) map.u[f]=f;
-	st.map=&map;
-
-	i = 0;
+//	stat = allocate_stats(1);
 
 // personality should be provided by caller
 	i = 0;
@@ -3308,6 +3312,7 @@ int driver_eval_checker(int max, personality *pers_init, CBACK, void *cdata)
 		if (parseEPD(bx, fen, NULL, NULL, NULL, NULL, cm9, NULL, &name)
 			> 0) {
 			setup_FEN_board(&b, fen);
+			L0("Test name:%s\n", cm9);
 			printBoardNice(&b);
 
 			eval_king_checks_extU(&b, &(a.ke[WHITE]), 0, b.king[WHITE]);
@@ -3319,6 +3324,8 @@ int driver_eval_checker(int max, personality *pers_init, CBACK, void *cdata)
 			a.att_by_side[WHITE] = regenerateSQAttacked(&b, &a, WHITE);
 			mvsfromk22(&b, &a, BLACK);
 			mvsfromk22(&b, &a, WHITE);
+#if 1
+			L0("*** EVAL phase ***\n");
 
 			ev=eval(&b, &a, b.pers, &st);
 
@@ -3332,23 +3339,40 @@ int driver_eval_checker(int max, personality *pers_init, CBACK, void *cdata)
 			L0("Scaling %d, phase %d, mindex %d, scaling apply %d\n", a.sc.scaling, a.phase, b.mindex_validity, ((b.side==WHITE && ev>=0)||(b.side==BLACK && ev<=0)));
 			ps = &(a.hpep->value);
 
+			sprintf(opt, "id 1; ce %.f", ev / 10.0);
+			writeEPD_FEN(&b, fen, 1, opt);
+//			eval_dump(&b, &a, b.pers);
+			L0("FEN: %s\n",fen);
+
 			LOGGER_0("Score %d, %d:%d\n", a.sc.complete,a.sc.score_b, a.sc.score_e);
-			L0("Test name:%s\n", cm9);
+
+			L0("*** REPLAY phase ***\n");
+
 			replay_stacker(&st, &uw, &ub);
+			L0("*** EVAL phase WHITE ***\n");
 			personality_dump((personality *) &uw.p);
+			L0("*** EVAL phase BLACK ***\n");
 			personality_dump((personality *) &ub.p);
+#endif
+#if 1
+			L0("*** STACKER EVAL phase ***\n");
+			ev=eval_dir_stacker(&b, &a, b.pers, &st);
+			sprintf(opt, "id 1; ce %.f", ev/10.0);
+			writeEPD_FEN(&b, fen, 1, opt);
+			L0("FEN: %s\n",fen);
+#endif
 
 			free(name);
 			i++;
 		}
 	}
 
+	L0("Done\n");
 	freeKillerStore(b.kmove);
 	freeHHTable(b.hht);
 	freeHashPawnStore(b.hps);
 	freeHashStore(b.hs);
-	deallocate_stats(stat);
-	deallocate_stats(b.stats);
+
 	return i;
 }
 
@@ -4050,7 +4074,6 @@ int test_hh_checker(personality *pers_init, CBACK, void *cdata, int depth, int t
 				b->uci_options->movetime = time;
 				b->uci_options->infinite = 0;
 			}
-
 
 			b->run.time_move = 0;
 			b->run.time_crit = 0;

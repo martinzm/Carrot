@@ -166,9 +166,9 @@ void printmask(BITVAR m, char *s)
 	int f, n;
 	BITVAR q, z;
 	char buf[100], b2[20];
-
+	
 	if (s != NULL)
-		NL0("", s, "\n");
+		L0("%s", s);
 	q = 1ULL << 56;
 	for (f = 8; f >= 1; f--) {
 		z = q;
@@ -181,10 +181,10 @@ void printmask(BITVAR m, char *s)
 			strcat(buf, b2);
 			q <<= 1;
 		}
-		NL0("", buf, "\n");
+		L0("%s", buf, "\n");
 		q = z >> 8;
 	}
-	NL0("", "  ABCDEFGH\n", "");
+	L0("%s", "  ABCDEFGH\n");
 }
 
 void mask2print(char *b[9])

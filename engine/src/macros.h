@@ -99,6 +99,8 @@ MLINE(passer_bonus, passer_bonus, _passer, 0, M_P(2, 0,1000,500,250,200,150,100,
 MLINE(pot_passer_bonus, pot_passer_bonus, _passer, 0, M_P(2, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0) )\
 MLINE(passer_my_king_bonus, passer_my_king_bonus, _passer, 0, M_P(2, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0) )\
 MLINE(passer_op_king_penalty, passer_op_king_penalty, _passer, 0, M_P(2, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0) )\
+MLINE(pawn_op_king_bonus, pawn_op_king_bonus, _passer, 0, M_P(2, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0) )\
+MLINE(passer_unstop_bonus, passer_unstop_bonus, _gamestage, 0, M_P(0,0) )\
 MLINE(backward_penalty, backward_penalty, _gamestage, 0, M_P(-250,-250) ) \
 MLINE(doubled_n_penalty, doubled_n_penalty, _passer, 0, M_P(2, -1000,-1000,-500,-250,-200,-150,-100,0, -10000,-1000,-1000,-10000,-1000,-1000,-1000,0) )\
 MLINE(pawn_stopped_penalty, pawn_stopped_penalty, _passer, 0, M_P(2, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0) )\

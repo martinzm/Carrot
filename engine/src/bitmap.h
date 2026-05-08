@@ -279,6 +279,8 @@ int FirstOne(BITVAR board);
 #define CLAMP(x, low, high) (Min( (high), Max( (x), (low) ) ))
 
 #define Flip(side) ((side == WHITE) ? BLACK : WHITE)
+
+// compute tapered eval from B to E at Phase P over range S
 #define PVAL(B,E,P,S) ((B-E)*P/S+E)
 
 
@@ -414,7 +416,6 @@ typedef union _pers_uni {
 } pers_uni;
 
 typedef struct _personality {
-
 	_mobility mob_val;
 	_mobility mob_uns;
 	_squares_p piecetosquare;
@@ -430,10 +431,9 @@ typedef struct _personality {
 	meval_t mate_e[420000];
 	struct materi mat_info[420000];
 	uint8_t mat_faze[420000];
-	int *matdeb;
-
+	int matval[ER_PIECE][256];
 	int lmr_table[64][64];
-
+	int *matdeb;
 } personality;
 
 typedef struct _attack_f {
@@ -873,6 +873,8 @@ typedef struct _matrix_type {
 	int tunable;
 	int counterpart;
 	int cnp;
+//	char n[64];
+	double(*norm_f)(double);
 } matrix_type;
 
 typedef struct {
