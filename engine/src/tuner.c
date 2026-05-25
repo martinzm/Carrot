@@ -175,7 +175,7 @@ int to_matrix(matrix_type **m, personality *p, pers_uni *map)
 	i = 0;
 // BIAS must be index 0/1
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, eval_BIAS, eval_BIAS_e, i, map);  i+=2;)
-DEB_X(MAT_DUO(mat[i], mat[i+1], p, pawn_ah_penalty[0], pawn_ah_penalty[1], i, map);  i+=2;)
+DEB_0(MAT_DUO(mat[i], mat[i+1], p, pawn_ah_penalty[0], pawn_ah_penalty[1], i, map);  i+=2;)
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, rook_on_seventh[0], rook_on_seventh[1], i, map); i+=2;)
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, rook_on_open[0], rook_on_open[1], i, map); i+=2;)
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, rook_on_semiopen[0], rook_on_semiopen[1], i, map); i+=2;)
@@ -185,13 +185,13 @@ DEB_X(MAT_DUO(mat[i], mat[i+1], p, king_castle_pot_bonus[0], king_castle_pot_bon
   mat[i+1].tunable=0; i+=2;)
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, king_moved_away_bonus[0], king_moved_away_bonus[1], i, map);
   mat[i+1].tunable=0; i+=2;)
-DEB_X(MAT_DUO(mat[i], mat[i+1], p, pawn_iso_center_penalty[0], pawn_iso_center_penalty[1], i, map); i+=2;)
-DEB_X(MAT_DUO(mat[i], mat[i+1], p, pawn_iso_onopen_penalty[0], pawn_iso_onopen_penalty[1], i, map); i+=2;)
-DEB_X(MAT_DUO(mat[i], mat[i+1], p, isolated_penalty[0], isolated_penalty[1], i, map); i+=2;)
+DEB_0(MAT_DUO(mat[i], mat[i+1], p, pawn_iso_center_penalty[0], pawn_iso_center_penalty[1], i, map); i+=2;)
+DEB_0(MAT_DUO(mat[i], mat[i+1], p, pawn_iso_onopen_penalty[0], pawn_iso_onopen_penalty[1], i, map); i+=2;)
+DEB_0(MAT_DUO(mat[i], mat[i+1], p, isolated_penalty[0], isolated_penalty[1], i, map); i+=2;)
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, backward_penalty[0], backward_penalty[1], i, map); i+=2;)
 DEB_0(for(sq=0;sq<=5;sq++) { MAT_DUO(mat[i], mat[i+1], p, passer_bonus[0][WHITE][sq], passer_bonus[1][WHITE][sq], i, map); mat[i].norm_f=enforce_positive;
 		MAT_DUO_ADD(mat[i], mat[i+1], p, passer_bonus[0][BLACK][sq], passer_bonus[1][BLACK][sq], map); mat[i].norm_f=enforce_positive; i+=2; })
-DEB_X(for(sq=0;sq<=5;sq++) { MAT_DUO(mat[i], mat[i+1], p, pot_passer_bonus[0][WHITE][sq], pot_passer_bonus[1][WHITE][sq], i, map); MAT_DUO_ADD(mat[i], mat[i+1], p, pot_passer_bonus[0][BLACK][sq], pot_passer_bonus[1][BLACK][sq], map); i+=2; })
+DEB_0(for(sq=0;sq<=5;sq++) { MAT_DUO(mat[i], mat[i+1], p, pot_passer_bonus[0][WHITE][sq], pot_passer_bonus[1][WHITE][sq], i, map); MAT_DUO_ADD(mat[i], mat[i+1], p, pot_passer_bonus[0][BLACK][sq], pot_passer_bonus[1][BLACK][sq], map); i+=2; })
 DEB_0(for(sq=0;sq<=6;sq++) { MAT_DUO(mat[i], mat[i+1], p, passer_my_king_bonus[0][WHITE][sq], passer_my_king_bonus[1][WHITE][sq], i, map); MAT_DUO_ADD(mat[i], mat[i+1], p, passer_my_king_bonus[0][BLACK][sq], passer_my_king_bonus[1][BLACK][sq], map);
   mat[i].tunable=0; i+=2; })
 DEB_0(for(sq=0;sq<=6;sq++) { MAT_DUO(mat[i], mat[i+1], p, passer_op_king_penalty[0][WHITE][sq], passer_op_king_penalty[1][WHITE][sq], i, map); MAT_DUO_ADD(mat[i], mat[i+1], p, passer_op_king_penalty[0][BLACK][sq], passer_op_king_penalty[1][BLACK][sq], map);
@@ -202,7 +202,7 @@ DEB_0(for(sq=0;sq<=6;sq++) { MAT_DUO(mat[i], mat[i+1], p, pawn_op_king_bonus[0][
 
 DEB_0(MAT_DUO(mat[i], mat[i+1], p, passer_unstop_bonus[0], passer_unstop_bonus[1], i, map); mat[i].tunable=0; i+=2;)
 
-DEB_X(for(sq=0;sq<=4;sq++) {
+DEB_0(for(sq=0;sq<=4;sq++) {
       MAT_DUO(mat[i], mat[i+1], p, pawn_blocked_penalty[0][WHITE][sq], pawn_blocked_penalty[1][WHITE][sq], i, map);
       MAT_DUO_ADD(mat[i], mat[i+1], p, pawn_blocked_penalty[0][BLACK][sq], pawn_blocked_penalty[1][BLACK][sq], map);
 	  i+=2; } )
@@ -210,6 +210,11 @@ DEB_X(for(sq=0;sq<=4;sq++) {
       MAT_DUO(mat[i], mat[i+1], p, pawn_stopped_penalty[0][WHITE][sq], pawn_stopped_penalty[1][WHITE][sq], i, map);
       MAT_DUO_ADD(mat[i], mat[i+1], p, pawn_stopped_penalty[0][BLACK][sq], pawn_stopped_penalty[1][BLACK][sq], map);
       i+=2; } )
+DEB_0(for(sq=0;sq<=4;sq++) {
+      MAT_DUO(mat[i], mat[i+1], p, pawn_backward_n_penalty[0][WHITE][sq], pawn_backward_n_penalty[1][WHITE][sq], i, map);
+      MAT_DUO_ADD(mat[i], mat[i+1], p, pawn_backward_n_penalty[0][BLACK][sq], pawn_backward_n_penalty[1][BLACK][sq], map);
+      i+=2; } )
+
 DEB_X(for(sq=0;sq<=7;sq++) {
       MAT_DUO(mat[i], mat[i+1], p, pawn_issues_penalty[0][WHITE][sq], pawn_issues_penalty[1][WHITE][sq], i, map);
       MAT_DUO_ADD(mat[i], mat[i+1], p, pawn_issues_penalty[0][BLACK][sq], pawn_issues_penalty[1][BLACK][sq], map);
@@ -253,6 +258,15 @@ DEB_0(
 		 i+=2; } 
 		 ii++; }
 		 )
+
+DEB_0(
+		 for(sq=32;sq<=55;sq++){ 
+		 MAT_DUO(mat[i], mat[i+1], p, outpost_knight[0][WHITE][sq], outpost_knight[1][WHITE][sq], i, map); 
+		 MAT_DUO_ADD(mat[i], mat[i+1], p, outpost_knight[0][BLACK][Square_Swap[sq]], outpost_knight[1][BLACK][Square_Swap[sq]], map); 
+		 i+=2; }
+		 )
+
+
 DEB_0(
 		for(pi=0;pi<=5;pi++) { for(sq=0;sq<mob_lengths[pi];sq++){ MAT_DUO(mat[i], mat[i+1], p, mob_val[0][WHITE][pi][sq], mob_val[1][WHITE][pi][sq], i, map); MAT_DUO_ADD(mat[i], mat[i+1], p, mob_val[0][BLACK][pi][sq], mob_val[1][BLACK][pi][sq], map); i+=2; } })
 DEB_0(
@@ -289,7 +303,7 @@ DEB_0(for(sq=0;sq<=7;sq++) {
 	  MAT_DUO(mat[i], mat[i+1], p, pawn_dir_protect[0][WHITE][sq], pawn_dir_protect[1][WHITE][sq], i, map);
 	  MAT_DUO_ADD(mat[i], mat[i+1], p, pawn_dir_protect[0][BLACK][sq], pawn_dir_protect[1][BLACK][sq], map);
 	  i+=2; })
-DEB_X(for(sq=0;sq<=7;sq++) {
+DEB_0(for(sq=0;sq<=7;sq++) {
       MAT_DUO(mat[i], mat[i+1], p, doubled_n_penalty[0][WHITE][sq], doubled_n_penalty[1][WHITE][sq], i, map);
       MAT_DUO_ADD(mat[i], mat[i+1], p, doubled_n_penalty[0][BLACK][sq], doubled_n_penalty[1][BLACK][sq], map);
       i+=2; } )
@@ -574,7 +588,7 @@ char bb[128];
 #if 0
 		if(t->side==WHITE) uw->u[t->index]+=t->value; else ub->u[t->index]+=t->value;
 #else
-		if(t->side==WHITE) uw->u[t->index]+=t->value*KOSC; else ub->u[t->index]+=t->value*KOSC;
+		if(t->side==WHITE) uw->u[t->index]+= (int)t->value*KOSC; else ub->u[t->index]+=(int)t->value*KOSC;
 #endif
 		f++;
 		t++;
@@ -1782,7 +1796,7 @@ int thr;
 	L0("Tuner start\n");
 	printf("Tuner start\n");
 
-	ntun.max_records = 2000000;
+	ntun.max_records = 3000000;
 // load personality
 		ntun.pi = (personality*) init_personality("../texel/pers.xml");
 // put references to tuned params into structure  

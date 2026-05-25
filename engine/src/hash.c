@@ -139,19 +139,35 @@ void setupRandom(board *b)
 }
 
 void analyzeHash(hashStore *hs){
-unsigned long long used, notused, fused, fnotused;
+unsigned long long used, notused, fused, fnotused, u_cur, u_old, u_not;
 
-	used=notused=fused=fnotused=0;
 	hashBucket *p;
+	int b_empty=0;
+	int b_empty_old=0;
+	int b_half=0;
+	int b_full=0;
+	int b_full_cur=0;
+	int s_cur=0;
+	int s_old=0;
+	int s_not=0;
+	
 	int f,i;
+	int ag;
 	for(f=0; f< hs->hashlen; f++) {
 		p=hs->hash+f*HASHPOS;
-		if(UNPACKHASHAGE(p[0].pld)) fused++; else fnotused++;
+		used=notused=fused=fnotused=u_cur=u_old=u_not=0;
 		for(i=0;i < HASHPOS; i+=1) {
-			if(UNPACKHASHAGE(p[i].pld)) used++; else notused++;
+		ag=UNPACKHASHAGE(p[i].pld);
+			if(ag == hs->hashValidId) u_cur++; else if(ag!=0) u_old++; else u_not++;
 		}
+		if(u_not==0) { b_full++; if(u_cur==HASHPOS) b_full_cur++; }
+		else {
+			if(u_cur==0) { b_empty++; if(u_old==HASHPOS) b_empty_old++; }
+		}
+		if(u_cur>0 && (u_old>0||u_not>0)) b_half++;
 	}
-	L0("Hash used %lld, not used %lld,(%f), FIRST used %lld, not %lld, (%f)\n", used, notused, 100.0*used/(used+notused), fused, fnotused, 100.0*fused/(fused+fnotused));
+	L0("Hash buckets %d, bucket size %d\n", hs->hashlen, HASHPOS);
+	L0("Full %d, Current only %d, CurHalf %d, NotUsed %d, Old only %d\n", b_full, b_full_cur, b_half, b_empty, b_empty_old);
 }
 
 /*
@@ -159,45 +175,102 @@ unsigned long long used, notused, fused, fnotused;
  we should store score into hash table modified by distance from current depth to depth the mate position occurred
  */
 
+/*
+  storeCollision means that we cannot store the record
+  storeMiss - we replace smt
+  */
+
+
 void storeHashX(hashStore *hs, BITVAR key, BITVAR pld, BITVAR ver, struct _statistics *s) {
 
 	int i, c, q, id;
 	BITVAR f, hi;
 	hashBucket *h;
 
+	int32_t val;  //3 17b
+	MOVESTORE bm;  //2 15b
+	int16_t de;  //1 limit to 7b, max depth 127
+	uint8_t age;  //1 5b
+	uint8_t sc; //1 2b 
+	
 	s->s[S_hashStores]++;
 	f = key & (BITVAR) (hs->hashlen - 1);
 	hi = key;
-	h=hs->hash+f*HASHPOS;
-	
-	c=HASHPOS- 1;
+	h=&(hs->hash[f*HASHPOS]);
 
+#if 0
+	UNPACKHASH(pld, bm, val, de, sc, age);
+	L0("hash dump: key %llx, f:%llx, len: %llx\n", key, f, hs->hashlen-1);
+	L0("hash dump: IN key %llx, ver %llx, BM %x, val %d, de %d, sc %d, age %d\n", key, ver, bm, val, de, sc, age);
+	
 	for (i = 0; i < HASHPOS; i +=1 ) {
-//		if(((UNPACKHASHAGE(h[i].pld))&0x3F) !=0) 
-		if(((UNPACKHASHAGE(h[i].pld))) !=0) 
-		  if ((hi == h[i].key) && (h[i].ver==ver)) {
+		UNPACKHASH(h[i].pld, bm, val, de, sc, age);
+		L0("hash dump: %d key %llx, ver %llx, BM %x, val %d, de %d, sc %d, age %d\n", i, h[i].key, h[i].ver, bm, val, de, sc, age);
+	}
+#endif
+
+	c=HASHPOS-1;
+	for (i = 0; i < HASHPOS; i +=1 ) {
+		if(((UNPACKHASHAGE(h[i].pld))) !=0) {
+		  if ((hi == h[i].key)&&(ver == h[i].ver)) {
 // mame nas zaznam
 			s->s[S_hashStoreHits]++;
-			s->s[S_hashStoreInPlace]++;
-			c = i;
 			if(pld==h[i].pld) return;
-			goto replace;
-		}
-	}	for (i = 0; i< HASHPOS; i += 1) {
-		if (UNPACKHASHAGE(h[i].pld) == 0) {
+			int qq = UNPACKHASHDEPTH(pld);
+			int q = UNPACKHASHDEPTH(h[i].pld);
+			int ag = hs->hashValidId != UNPACKHASHAGE(h[i].pld);
+			if ((qq >= q)||ag) {
+				s->s[S_hashStoreInPlace]++;
 				c = i;
 				goto replace;
+			} 
+			return;
+		  }
 		}
 	}
-	q=-1;
+// looking for non used slot
+	for (i = 0; i< HASHPOS; i += 1) {
+		if (UNPACKHASHAGE(h[i].pld) == 0) {
+			c = i;
+			goto replace;
+		}
+	}
+// tricky one, we have to sacrifice content of one slot...
+	c=-1;
+	int d = UNPACKHASHTYPE(pld);
+	int n_ag=-1;
+	int w_dp= 9999;
+//	int qq = UNPACKHASHDEPTH(pld) + (d == EXACT_SC ? 5 : (d == FAILHIGH_SC ? 2:0)) + 256;
+	int qq = UNPACKHASHDEPTH(pld);
+//	int qq=0;
 	for (i = 0; i < HASHPOS; i+= 1) {
-		int qq=(hs->hashValidId - UNPACKHASHAGE(h[i].pld))&0x3F;
-		if (qq > q) {
-			q = qq;
+		int q = UNPACKHASHDEPTH(h[i].pld);
+			d = UNPACKHASHTYPE(h[i].pld);
+
+		int ag = hs->hashValidId >= UNPACKHASHAGE(h[i].pld) ? hs->hashValidId - UNPACKHASHAGE(h[i].pld):
+			hs->hashValidId + 0x3F - UNPACKHASHAGE(h[i].pld);
+//		int ag = hs->hashValidId != UNPACKHASHAGE(h[i].pld);
+		if(ag>n_ag) {
+			n_ag=ag;
+			w_dp = q;
+			c = i;
+		} else if(ag == n_ag && q < w_dp) {
+			w_dp = q;
 			c = i;
 		}
+//		q += (d == EXACT_SC ? 5 : (d == FAILHIGH_SC ? 2:0)) + (ag == 0 ? 256 : (ag == 1 ? 64:0)) ;
+//		L0("Hstore %d <> [%d]%d\n", qq, i,q);
+//		if (qq > q) {
+//			qq = q;
+//			c = i;
+//		}
 	}
-
+	if(n_ag == 0 && qq < w_dp) {
+//	if(c ==-1) {
+		s->s[S_hashStoreColl]++;
+		return;
+	}
+	s->s[S_hashStoreMiss]++;
 replace:
 	h[c].key=hi;
 	h[c].pld=pld;
@@ -222,7 +295,9 @@ void storeHash(hashStore *hs, hashEntry *hash, int side, int ply, int depth, BIT
 		break;
 	}
 // fix for depth <= 0, can happen when searching in check
-	pld=PACKHASH(hash->bestmove, hash->value, Max(0, hash->depth), hash->scoretype, hs->hashValidId);
+	if(hash->depth<=1) return;
+//	pld=PACKHASH(hash->bestmove, hash->value, Min(127UL,Max(0UL, hash->depth)), hash->scoretype, hs->hashValidId);
+	pld=PACKHASH(hash->bestmove, hash->value, Min(511UL,Max(0UL, hash->depth)), hash->scoretype, hs->hashValidId);
 	storeHashX(hs, hash->key, pld, ver, s);
 	hash->pld=pld;
 }
@@ -314,50 +389,52 @@ int initHash(hashStore *hs)
 	return 0;
 }
 
+/*
+  hashColl - we cannot find info and all info is current
+  hashMiss - cannot find, not fully occupied.
+ */
+
 int retrieveHash(hashStore *hs, hashEntry *hash, int side, int ply, int depth, int use_previous, BITVAR ver,struct _statistics *s)
 {
 	int i;
 	BITVAR f, hi, pld;
 	hashBucket *h;
-	
+//	return 0;
 	s->s[S_hashAttempts]++;
 	f = hash->key & (BITVAR) (hs->hashlen - 1);
 	hi = hash->key;
-	h=hs->hash+ f*HASHPOS;
-
+	h=&(hs->hash[f*HASHPOS]);
+// attemtps
+// hits
+// collisions
+// misses
 	for (i = 0; i < HASHPOS; i+=1) {
 		if ((h[i].key == hi)
-			&& (h[i].ver==ver) 
+			&& (h[i].ver==ver)
 			&& (UNPACKHASHAGE(h[i].pld)!=0)
 			&& ((use_previous > 0)
 				|| ((use_previous == 0)
 					&& (UNPACKHASHAGE(h[i].pld)== hs->hashValidId)))) {
-			break;
+			goto finish;
 		}
 	}
-	if (i >= HASHPOS) {
-		s->s[S_hashMiss]++;
-		return 0;
+// check type of problem
+// if all used and full with actual info then it is collision in otherwise it is read miss
+	for (i = 0; i < HASHPOS; i+=1) {
+		if (UNPACKHASHAGE(h[i].pld)!=hs->hashValidId) {
+			s->s[S_hashMiss]++;
+			return 0;
+		}
 	}
-	
+	s->s[S_hashColls]++;
+	return 0;
+
+finish:
 	pld=h[i].pld;
 	UNPACKHASH(pld, hash->bestmove, hash->value, hash->depth, hash->scoretype, hash->age);
 	UPDATEHASHAGE(h[i].pld, hs->hashValidId);
 	s->s[S_hashHits]++;
-
 	hash->value -= ply*(isMATE(hash->value));
-/*
-	switch (isMATE(hash->value)) {
-	case -1:
-		hash->value += ply;
-		break;
-	case 1:
-		hash->value -= ply;
-		break;
-	default:
-		break;
-	}
-*/
 	return 1;
 }
 
@@ -416,7 +493,7 @@ int invalidateHash(hashStore *hs)
 // check for NULL should be part of a caller!
 	if (hs != NULL) {
 		hs->hashValidId++;
-		if (hs->hashValidId > 63)
+		if (hs->hashValidId > 0x3F)
 			hs->hashValidId = 1;
 	}
 	return 0;
@@ -481,7 +558,7 @@ hashStore* allocateHashStore(size_t hashBytes, unsigned int hashPVLen)
 {
 	hashStore *hs;
 
-	unsigned int msk = 0;
+	unsigned int msk = 1;
 	size_t hashLen, hl, hp;
 	size_t xx;
 	int l=0;
@@ -491,15 +568,16 @@ hashStore* allocateHashStore(size_t hashBytes, unsigned int hashPVLen)
 //	hashLen = hashBytes / sizeof(hashEntry_e);
 	hashLen = hashBytes / (HASHPOS * sizeof(hashBucket));
 // just make sure hashLen is power of 2
-	while (msk <= hashLen) {
+	while (msk < hashLen) {
 		msk <<= 1;
-		msk |= 1;
 		l++;
 	}
-	msk >>= 1;
-	l--;
-	msk++;
-	LOGGER_0("Bytes: %d, hashEntry %d, HASHLEN %o, msk %o, mask len %d\n", hashBytes, sizeof(hashEntry_e), hashLen, msk, l);
+	if(msk>hashLen) {
+		msk >>= 1;
+		l--;
+	}
+//	msk++;
+	LOGGER_0("Bytes: %d, hashEntry %d, bucket %d HASHLEN %d, msk %x, slots(%dx bucket) %d, mask len %d, masked bytes %d\n", hashBytes, sizeof(hashEntry_e), (HASHPOS * sizeof(hashBucket)), hashLen, msk, HASHPOS, msk, l, msk*((HASHPOS * sizeof(hashBucket))));
 	hashLen = msk;
 
 	xx = ((sizeof(hashStore) * 2)/128+1)*128;
@@ -808,7 +886,7 @@ char bf2[2048];
 
 int dumpHHTable(hhTable *hh)
 {
-#define TTOP 32
+#define TTOP 10
 char buf[10000];
 char bf2[10000];
 int b[TTOP],w[TTOP];

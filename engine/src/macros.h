@@ -102,6 +102,7 @@ MLINE(passer_op_king_penalty, passer_op_king_penalty, _passer, 0, M_P(2, 0,0,0,0
 MLINE(pawn_op_king_bonus, pawn_op_king_bonus, _passer, 0, M_P(2, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0) )\
 MLINE(passer_unstop_bonus, passer_unstop_bonus, _gamestage, 0, M_P(0,0) )\
 MLINE(backward_penalty, backward_penalty, _gamestage, 0, M_P(-250,-250) ) \
+MLINE(pawn_backward_n_penalty, pawn_backward_n_penalty, _passer, 0, M_P(2, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0) )\
 MLINE(doubled_n_penalty, doubled_n_penalty, _passer, 0, M_P(2, -1000,-1000,-500,-250,-200,-150,-100,0, -10000,-1000,-1000,-10000,-1000,-1000,-1000,0) )\
 MLINE(pawn_stopped_penalty, pawn_stopped_penalty, _passer, 0, M_P(2, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0) )\
 MLINE(pawn_blocked_penalty, pawn_blocked_penalty, _passer, 0, M_P(2, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0) )\
@@ -121,6 +122,10 @@ MLINE(pshelter_hopen_penalty, pshelter_hopen_penalty, _gamestage, 0, M_P(-100,-5
 MLINE(pshelter_double_penalty, pshelter_double_penalty, _gamestage, 0, M_P(-100,-50) ) \
 MLINE(pshelter_prim_bonus, pshelter_prim_bonus, _gamestage, 0, M_P(100,50) ) \
 MLINE(pshelter_sec_bonus, pshelter_sec_bonus, _gamestage, 0, M_P(50,25) ) \
+MLINE(outpost_knight, outpost_knight, _squares, 0, M_P(2, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,\
+										0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,\
+										0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,\
+										0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0) )\
 MLINE(dvalues, dvalues, _dvalues, 0, M_P(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,\
 										 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,\
 										 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0))\

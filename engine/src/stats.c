@@ -131,7 +131,7 @@ int c=0;
 	LX(o,c,l,
 			"HASH: Stores:%lld, SHit:%lld, SInPlace:%lld, SMiss:%lld SCCol:%lld\n",
 		s->s[S_hashStores], s->s[S_hashStoreHits], s->s[S_hashStoreInPlace],
-		s->s[S_hashStoreMiss], s->s[S_hashColls]);
+		s->s[S_hashStoreMiss], s->s[S_hashStoreColl]);
 	LX(o,c,l,
 	"PHSH: Get:%lld, GHit:%lld (%.2f%%), GMiss:%lld, GCol: %lld\n",
 		s->s[S_hashPawnAttempts], s->s[S_hashPawnHits],
@@ -141,7 +141,7 @@ int c=0;
 			"PHSH: Stores:%lld, SHit:%lld, SInPlace:%lld, SMiss:%lld SCCol:%lld\n",
 		s->s[S_hashPawnStores], s->s[S_hashPawnStoreHits],
 		s->s[S_hashPawnStoreInPlace], s->s[S_hashPawnStoreMiss],
-		s->s[S_hashPawnColls]);
+		s->s[S_hashPawnStoreColl]);
 	LX(o,c,l,
 	"HASH: TTNormal %lld, TTHigh %lld,TTLow %lld\n",
 		s->s[S_failhashnorm], s->s[S_failhashhigh], s->s[S_failhashlow]);

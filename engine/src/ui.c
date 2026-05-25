@@ -588,7 +588,7 @@ basetime = 0;
 // ulozime si aktualni cas co nejdrive...
 bs->run.time_start = readClock();
 
-lag = 00;  //miliseconds
+lag = 2;  //miliseconds
 //	initialize ui go options
 
 bs->uci_options->engine_verbose = 1;
@@ -705,14 +705,14 @@ if (bs->uci_options->infinite == 1) {
  */
 
 #define SX1 0.0
-#define SY1 80.0
-#define SX2 68.0
+#define SY1 40.0
+#define SX2 170.0
 #define SY2 10.0
 
 #define SA ((SY2-SY1)/(SX2-SX1))
 #define SB (SY1-SA*SX1)
 
-#if 1
+#if 0
 		if (bs->move >= SX2)
 			moves = (int) SY2;
 		else
@@ -721,19 +721,21 @@ if (bs->uci_options->infinite == 1) {
 			bs->move);
 #endif
 #if 0
-		if (bs->move > 180)
-			moves = 2;
-		else
-			moves = movdiv[bs->move/10] ;
+		moves= 45 - bs->move/2;
+		if(moves < 12) moves = 12;
 			
-//		if((bs->move>=0)&&(bs->move<=40)) moves-=20; else moves=10;
-//		if(moves<=1) moves=2;
 #endif
 #if 0
 		if(bs->move >= 140 ) moves=20;
 		else moves= 48 - bs->move / 5;
 #endif
-
+		if (bs->move < 70) {
+			moves = 40 - (bs->move / 4);
+		} else {
+			moves = 15 + (bs->move - 70) / 2;
+		}
+		if (moves < 15) moves = 15;
+		if (moves > 60) moves = 60;
 	} else {
 		moves = bs->uci_options->movestogo;
 	}
@@ -748,8 +750,22 @@ if (bs->uci_options->infinite == 1) {
 //		cm= (bs->uci_options->btime-bs->uci_options->wtime)*100;
 		cm= (bs->uci_options->btime*100/bs->uci_options->wtime);
 	}
+	if (bs->uci_options->movestogo == 0) {
+		if (bs->move < 70) {
+			moves = 40 - (bs->move / 4);
+		} else {
+			moves = 15 + (bs->move - 70) / 2;
+		}
+		if (moves < 15) moves = 15;
+		if (moves > 60) moves = 60;
+	} else {
+		moves = bs->uci_options->movestogo;
+	}
+	
 	// average movetime
 	basetime = ((time - inc) / moves + inc - lag);
+//	basetime = ((time / moves + 3*inc/4 - lag));
+	if(basetime < 5) basetime = 5;
 //	basetime = (time / moves - lag);
 //	basetime *= 100;
 //	basetime /= 100;
@@ -758,20 +774,19 @@ if (bs->uci_options->infinite == 1) {
 //		basetime /= 100;
 //	}
 
-	if (basetime < 0)
-		basetime = 0;
-	if (basetime > time)
-		basetime = time;
+	if(cm>120) basetime *= 1.15;
+	if(basetime > time) basetime = time;
 	bs->run.time_move = basetime;
 	if (moves == 1)
-		bs->run.time_crit = Min(5 * basetime, time - lag);
+		bs->run.time_crit = Min(3 * basetime, time - lag);
 	else
-		bs->run.time_crit = Min(5 * basetime, time / 2 - lag);
-}
+		bs->run.time_crit = Min(3 * basetime, time / 3 - lag);
+
+//	bs->run.time_crit = Min(2*basetime, time - lag);
 // pres time_crit nejede vlak a okamzite konec
 // time_move je cil kam bychom meli idealne mirit a nemel by byt prekrocen pokud neni program v problemech
 // time_move - target time
-
+	}
 DEB_2(printBoardNice(bs);)
 	LOGGER_1(
 	"TIME: wtime: %llu, btime: %llu, time_crit %llu, time_move %llu, basetime %llu, side %c, moves %d, bsmoves %d\n",
@@ -922,6 +937,12 @@ while (uci_state != 0) {
 				handle_stop();
 				uci_state = 0;
 				engine_stop = 1;
+				L0("** Running TOTALS **\n");
+				printSearchStat(&(STATS[MAXPLY]));
+				L0("** HHT dump **\n");
+				dumpHHTable(b->hht);
+				L0("** Analyze Hash **\n");
+				analyzeHash(b->hs);
 				break;
 			} else if (!strcasecmp(tok, "isready")) {
 				tell_to_engine("readyok\n");
@@ -1129,7 +1150,7 @@ while (uci_state != 0) {
 				goto reentry;
 			} else if (!strcasecmp(tok, "myts2")) {
 				strcpy(buff,
-					"position fen rnbq1rk/1p3pp/p4b1p/3p3n/8/1NP2N2/PPQ2PPP/R1B1KBR b Q - 6 13");
+					"position fen 8/7Q/8/1p4p/4k3/5p2/8/1K6 b - - 2 10");
 				uci_state = 2;
 				LOGGER_3("setup myts2");
 				goto reentry;
@@ -1175,6 +1196,10 @@ while (uci_state != 0) {
 				LOGGER_1("INFO: UCI game new\n");
 				L0("** Running TOTALS **\n");
 				printSearchStat(&(STATS[MAXPLY]));
+				L0("** HHT dump **\n");
+				dumpHHTable(b->hht);
+				L0("** Analyze Hash **\n");
+				analyzeHash(b->hs);
 				handle_newgame(b);
 				b->uci_options->newgame=1;
 				position_setup = 1;
@@ -1198,17 +1223,21 @@ while (uci_state != 0) {
 					LOGGER_1("INFO: UCI hash reset\n");
 				} LOGGER_4("INFO: UCI hash reset DONE\n");
 				move_o = b->move;
-				invalidateHash(b->hs);
 				if(b->uci_options->newgame==1) {
+//					initHash(b->hs);
+//					analyzeHash(b->hs);
+					invalidateHash(b->hs);
 					LOGGER_1("INFO: UCI new game detected\n");
 					if(b->pers->ttable_clearing < 1) invalidatePawnHash(b->hps);
 //					clearHHTable(b->hht);
 					clearHHTable2(b->hht,b->pers->piecetosquare);
 				} else {
 					LOGGER_1("INFO: UCI game cont\n");
-//					reduceHHTable(b->hht);
+					invalidateHash(b->hs);
+					reduceHHTable(b->hht);
 //					clearHHTable(b->hht);
 				}
+
 				handle_go(b, b2);
 				break;
 			} else if (!strcasecmp(tok, "gox")) {

@@ -18,10 +18,10 @@
 
 #include "globals.h"
 
-char eVERS[] = "0.46.17";
+char eVERS[] = "0.46.18";
 char eREL[] = "devel";
 char eNAME[] = "Carrot";
-char eFEATS[] = "further tuning";
+char eFEATS[] = "pawns 2";
 
 const int Piece_Map[] = { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING,
 	DBISHOP, LBISHOP, LIGHT, HEAVY, PIECES, TPIECES, ER_PIECE_EX

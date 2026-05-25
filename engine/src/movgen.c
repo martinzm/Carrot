@@ -39,18 +39,53 @@ BITVAR isInCheck_Eval(board *b, attack_model *a, int side)
 	return a->ke[side].attackers;
 }
 
+int CheckingMove2(board *b, attack_model *a,int opside, int piece, int from, int to){
+
+	int rank;
+	BITVAR map;
+
+	switch(piece) {
+	case PAWN:
+		map = a->ke[opside].pn_pot_att_pos;
+		break;
+	case KNIGHT:
+		map = a->ke[opside].kn_pot_att_pos;
+		break;
+	case BISHOP:
+		map = a->ke[opside].di_blocker_ray;
+		break;
+	case ROOK:
+		map = a->ke[opside].cr_blocker_ray;
+		break;
+	case QUEEN:
+		map = a->ke[opside].di_blocker_ray | a->ke[opside].cr_blocker_ray;
+		break;
+	default:
+		return 0;
+		break;
+	}
+	return map & NORMM(to);
+}
+
+
 // is move to be played delivering a check?
 int CheckingMove(board *b, attack_model *a,int side, move_entry const * const m){
 
 	int to, from, prom;
 	int rank;
-	int opside = Flip(side);
+	int piece;
+//	int opside = Flip(side);
 	BITVAR map;
 
 	to = UnPackTo(m->move);
 	from = UnPackFrom(m->move);
-//	prom = UnPackProm(m->move);
+	prom = UnPackProm(m->move);
+	if(prom>PAWN && prom < KING) piece=prom;
+	else piece = (b->pieces[from]&PIECEMASK);
 
+	return(CheckingMove2(b, a, Flip(side), piece, from, to));
+
+#if 0
 	switch((b->pieces[from]&PIECEMASK)) {
 	case PAWN:
 		map = a->ke[opside].pn_pot_att_pos;
@@ -72,6 +107,7 @@ int CheckingMove(board *b, attack_model *a,int side, move_entry const * const m)
 		break;
 	}
 	return map & NORMM(to);
+#endif
 }
 
 int is_quiet_move(board const * const b, attack_model const * const a, move_entry const * const m)
@@ -383,7 +419,7 @@ return att|a->ke[Flip(side)].att_vec| a->pset[side][5]|a->pset[side][6];
 
 }
 
-int generateBitmaps(const board *const b, attack_model *a, BITVAR upd, int side)
+int generateBitmaps(board *const b, attack_model *a, BITVAR upd, int side)
 {
 BITVAR *pset, pins, t;
 unsigned char opside;
@@ -408,17 +444,26 @@ unsigned char opside;
 // generate pawn info
 
 //	if(t & b->maps[PAWN]) {
+		b->ep_val=1;
 		if(side==WHITE) {
 			pawn_set_white(b, &(a->ke[WHITE]), pins, pset);
 		} else {
 			pawn_set_black(b, &(a->ke[BLACK]), pins, pset);
 		}
+
+		if((b->side==side) && pset[4]==0) {
+				b->ep_val=0;
+// revert ep in Zobrist
+				b->key ^= epKey[b->ep];
+		}
+
+
 //	}
 return 0;
 }
 
 // serialize captures
-void generateCapturesN3(const board *const b, attack_model *a, move_entry **m, int gen_u)
+void generateCapturesN3(board *const b, attack_model *a, move_entry **m, int gen_u)
 {
 	int from, to, epn, get_rank;
 	int ptype[] = { QUEEN, ROOK, BISHOP, KNIGHT, PAWN };
@@ -623,7 +668,7 @@ void generateCapturesN3(const board *const b, attack_model *a, move_entry **m, i
 }
 
 // serialize captures
-void generateCapturesN2(const board *const b, attack_model *a, move_entry **m, int gen_u)
+void generateCapturesN2(board *const b, attack_model *a, move_entry **m, int gen_u)
 {
 	generateBitmaps(b, a, b->colormaps[b->side], b->side);
 //	a->att_by_side[WHITE] = KingAvoidSQAlt(b, a, WHITE);
@@ -685,7 +730,7 @@ run_in RR[] = { { ER_PIECE, PAWN, 0, BLACK, 0 }, { ER_PIECE | BLACKPIECE, PAWN
 		RES = ((PIN & TQ) ? TP&attack.rays_dir[BO->king[SI]][FR] : TP);
 
 // serialize all non captures, moves bitmaps already generated
-void generateMovesN2(const board *const b, attack_model *a, move_entry **m)
+void generateMovesN2(board *const b, attack_model *a, move_entry **m)
 {
 	int from, to, get_rank;
 	int ptype[] = { QUEEN, ROOK, BISHOP, KNIGHT, PAWN };
@@ -1098,7 +1143,7 @@ BITVAR rw,rb, t;
 }
 
 /*
- * identify pieces that needs to update their moves/bitmaps
+ * identify pieces that need to update their moves/bitmaps
  *
  * working with board after move, UNDO containing pieces/position before & after move
  */
@@ -1387,6 +1432,7 @@ int isMoveValid(board *b, MOVESTORE move, const attack_model *a, int side, tree_
 			return 0;
 		}
 		return 1;
+		goto finaltouch;
 	case PAWN:
 // ep
 		if (movp != (PAWN | pside))
@@ -1408,7 +1454,7 @@ int isMoveValid(board *b, MOVESTORE move, const attack_model *a, int side, tree_
 		if (npins)
 			if (!(attack.rays_dir[b->king[side]][from] & bto))
 				return 0;
-		return 1;
+		goto finaltouch;
 		break;
 
 	case ER_PIECE + 1:
@@ -1461,10 +1507,10 @@ int isMoveValid(board *b, MOVESTORE move, const attack_model *a, int side, tree_
 		path = attack.rays[from][to];
 		eval_king_checks_oth(b, &kee, NULL, side, to);
 		if (((kee.attackers) & (~bto)) != 0) {
-//			L3("Kee attackers %o\n", from);
+//			L0("Kee attackers %o\n", from);
 			return 0;
 		}
-		m &= ~attack.maps[KING][b->king[opside]];
+		m &= ~(attack.maps[KING][b->king[opside]] | a->att_by_side[opside]);
 		break;
 	case KNIGHT:
 		m = attack.maps[KNIGHT][from];
@@ -1480,7 +1526,7 @@ int isMoveValid(board *b, MOVESTORE move, const attack_model *a, int side, tree_
 		break;
 	}
 	if (!(m & bto)) {
-//		L3("Entering prohibited square %o, %o\n", from, to);
+//		L0("Entering prohibited square %o, %o\n", from, to);
 		return 0;
 	}
 
@@ -1500,6 +1546,47 @@ int isMoveValid(board *b, MOVESTORE move, const attack_model *a, int side, tree_
 			return 0;
 		}
 	}
+
+finaltouch:
+
+// just validate if it leaves king in check
+// determine if in check and what reaction is possible
+int at = BitCount(a->ke[side].attackers);
+// 1 - pieces take attacker, step into attack line, king moves away
+// 2+- king moves away
+//		L0("King attX %d\n", at);
+	if(at==0) return 1;
+	if(at==1) {
+//		L0("King attx1\n", at);
+		if(((movp&PIECEMASK) != KING) && (bto & (a->ke[side].attackers|a->ke[side].att_vec))) {
+// check if bto and attacker are in the same part of att_vec. King itself is actually in the middle of att_vec
+		BITVAR low = NORMM(b->king[side])-1;
+		BITVAR btol = (bto&low)!=0;
+		BITVAR atol = (a->ke[side].attackers&low)!=0;
+//			printmask(bto,"bto");
+//			printmask(a->ke[side].att_vec,"att vec");
+//			printmask(a->ke[side].attackers,"atck");
+		if(btol == atol) {
+//			printmask(bto&low, "btol");
+//			printmask(a->ke[side].attackers&low, "atol");
+			return 1;
+		}
+			return 0;
+		}
+//		L0("King attx2\n", at);
+		if(((movp&PIECEMASK) == KING) && (bto & (a->ke[side].attackers))) return 1;
+//		L0("King attx2\n", at);
+		if(((movp&PIECEMASK) == KING) && (bto & (~a->att_by_side[opside]))) return 1;
+//		L0("King attx3\n", at);
+		if(prom== PAWN) {
+//				L0("King attx4\n", at);
+			if ((NORMM(b->ep) & (a->ke[side].att_vec|a->ke[side].attackers))) return 1;
+//				L0("King attx5\n", at);
+		}
+//		L0("King att1\n");
+		return 0;
+	}
+	if(at>=2) if((movp & PIECEMASK)!=KING) return 0;
 
 	return 1;
 }
@@ -1582,6 +1669,7 @@ int MakeMoveNew(board *b, MOVESTORE move, int *pos, UNDO *ret)
 	ret->prev_ep  = b->ep;
 	ret->prev_mindex= b->mindex;
 	ret->ep = b->ep = 0;
+	ret->ep_val_prev = b->ep_val;
 	ret->captured=ER_PIECE;
 
 	ret->key = b->key;
@@ -1773,6 +1861,7 @@ int MakeMoveNew(board *b, MOVESTORE move, int *pos, UNDO *ret)
 	b->key ^= randomTable[b->side][from][oldp];
 	b->key ^= randomTable[b->side][to][movp];
 	b->key ^= sideKey;
+// now is computed into zobrist key, if not real (no pawn can capture doublepushed) we fix it in GenerateBitmaps
 	b->key ^= epKey[b->ep];
 
 	if (vcheck)
@@ -1806,6 +1895,7 @@ int MakeNullMove(board *b, UNDO *ret)
 //	ret->prev_castle[BLACK] = b->castle[BLACK];
 	ret->rule50move = b->rule50move;
 	ret->prev_ep = b->ep;
+	ret->ep_val_prev = b->ep_val;
 //	ret->prev_mindex= b->mindex;
 //	ret->captured=ER_PIECE;
 	ret->key = b->key;
@@ -1816,6 +1906,7 @@ int MakeNullMove(board *b, UNDO *ret)
 //	ret->psq_b = b->psq_b;
 //	ret->psq_e = b->psq_e;
 
+// set it only if ep move is real
 	b->key ^= epKey[b->ep];
 	ret->ep = b->ep = 0;
 	b->key ^= sideKey;  //hash
@@ -1829,6 +1920,7 @@ int MakeNullMove(board *b, UNDO *ret)
 void UnMakeNullMove(board *b, UNDO *u)
 {
 	b->ep = u->prev_ep;
+	b->ep_val = u->ep_val_prev;
 	b->move--;
 	b->rule50move = u->rule50move;
 //	b->castle[WHITE] = u->prev_castle[WHITE];
@@ -1856,6 +1948,7 @@ void UnMakeMoveNew(board *b, UNDO *u, int *pos)
 	b->mindex_validity = u->mindex_validity;
 	b->mindex = u->prev_mindex;
 	b->ep = u->prev_ep;
+	b->ep_val = u->ep_val_prev;
 	b->move--;
 	b->rule50move = u->rule50move;
 	b->castle[WHITE] = u->prev_castle[WHITE];
@@ -1888,7 +1981,6 @@ void UnMakeMove(board *b, UNDO *u){
 int pos[4];
 	UnMakeMoveNew(b, u, pos);
 }
-
 
 // predelat pomoci generace capture a normal
 void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **m, int gen_u)
@@ -2069,7 +2161,6 @@ void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **
 			ClrLO(pmap);
 		}
 
-
 // block attack from single attacker
 		for(int f=0; f<4; f++) {
 			int piece = ptype[f];
@@ -2176,7 +2267,6 @@ void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **
 	}
 	*m = move;
 }
-
 
 void generateInCheckMovesN(const board *const b, attack_model *a, move_entry **m, int gen_u)
 {
@@ -2331,10 +2421,11 @@ void ScoreNormal(board *b, move_cont *mv, int side)
 }
 
 // score / test captures with SEE. SEE return is in miliPawns
-void ScoreCaps(board *b, move_cont *mv, int side)
+void ScoreCaps(board *b,  attack_model *a, move_cont *mv, int side)
 {
 	int see;
 	move_entry *t;
+	int check;
 	int fromPos, ToPos, piece, opside, dist;
 
 	opside = Flip(side);
@@ -2349,12 +2440,15 @@ void ScoreCaps(board *b, move_cont *mv, int side)
 		} else
 		if ((t->qorder < A_OR)
 				&& (t->qorder >= A_OR2)) {
-//				L0("SEE hit\n");
-				see = SEEx(b, t->move);
-				if(see < 0) {
-//					t->qorder += (MV_BAD-A_OR2);
-					t->qorder = (MV_OR + see/100);
-//					L0("neg SEE %d\n", see);
+				check = CheckingMove(b, a, side, t);
+				if(check==0) {
+//					L0("SEE hit\n");
+					see = SEEx(b, t->move);
+					if(see < 0) {
+//						t->qorder += (MV_BAD-A_OR2);
+						t->qorder = (MV_OR + see/100);
+//						L0("neg SEE %d\n", see);
+					}
 				}
 		}
 	}
@@ -2403,6 +2497,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 		mv->cgen = 0;
 		mv->quiet_pr = 0;
 		mv->cap_pr = 0;
+//		DEB_SE(L0("ply:%d, side:%d, ch:%d\n",ply, side, incheck));
 // previous PV move
 	case PVLINE:
 		mv->phase = HASHMOVE;
@@ -2425,6 +2520,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 	case GENERATE_CAPTURES:
 		mv->phase = CAPTUREA;
 		if (incheck == 1) {
+//			DEB_SE(L0("incheck GEN\n"));
 			generateInCheckMovesN(b, a, &(mv->lastp), 1);
 			mv->quiet=mv->lastp;
 			mv->tgen=mv->lastp-mv->next;
@@ -2437,7 +2533,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 			goto rest_moves;
 		}
 		generateCapturesN2(b, a, &(mv->lastp), 1);
-		ScoreCaps(b, mv, side);
+		ScoreCaps(b, a, mv, side);
 //		move_cont_dump(b, a, mv);
 		
 		mv->cgen=mv->tgen=mv->lastp-mv->next;
@@ -2767,18 +2863,18 @@ int fromPos, piece;
 		mv->cgen = 0;
 		mv->quiet_pr = 0;
 		mv->cap_pr = 0;
-		mv->lpcheck = ! ( 
+		mv->lpcheck = ! (
 			(BitCount(
 			  ((b->maps[BISHOP] | b->maps[ROOK] | b->maps[QUEEN]) & b->colormaps[Flip(side)]))==0)
 			&& (BitCount
 			  ((b->maps[PAWN]) & b->colormaps[Flip(side)])==1))
 			  ;
-		LOGGER_SE("Init\n");
+//		LOGGER_SE("Init\n");
 
 // previous PV move
 	case PVLINE:
 		mv->phase = GENERATE_CAPTURES;
-		LOGGER_SE("PVLINE\n");
+//		LOGGER_SE("PVLINE\n");
 	case GENERATE_CAPTURES:
 		mv->phase = CAPTUREA;
 		mv->next = mv->lastp;
@@ -2788,7 +2884,7 @@ int fromPos, piece;
 		DEB_S2(m=mv->lastp-1;for(;m>=mv->next; m--) m->state=0; )
 		mv->tcnt = 0;
 //		mv->actph = CAPTUREA;
-		LOGGER_SE("GEN CAP\n");
+//		LOGGER_SE("GEN CAP\n");
 	case CAPTUREA:
 		while ((mv->next < mv->lastp) && (mv->tcnt > 0)) {
 			mv->tcnt--;
@@ -2815,7 +2911,7 @@ int fromPos, piece;
 			mv->next->ord=mv->count;
 			mv->next++;
 			mv->cap_pr++;
-			LOGGER_SE("CAPTUREA\n");
+//			LOGGER_SE("CAPTUREA\n");
 			return ++mv->count;
 		}
 		mv->phase = SORT_CAPTURES;
@@ -2823,7 +2919,7 @@ int fromPos, piece;
 		SelectBestO(mv);
 //		mv->actph = CAPTURES;
 		mv->phase = CAPTURES;
-		LOGGER_SE("SORT CAP\n");
+//		LOGGER_SE("SORT CAP\n");
 	case CAPTURES:
 		while (mv->next < mv->lastp) {
 			if(mv->next->qorder == A_CA_PROM_N) {
@@ -2846,12 +2942,12 @@ int fromPos, piece;
 			mv->next->ord=mv->count;
 			mv->next++;
 			mv->cap_pr++;
-			LOGGER_SE("CAPTURES\n");
+//			LOGGER_SE("CAPTURES\n");
 			return ++mv->count;
 		}
 		mv->phase = DONE;
 	case DONE:
-		LOGGER_SE("DONE\n");
+//		LOGGER_SE("DONE\n");
 		break;
 	}
 	return 0;

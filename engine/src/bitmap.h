@@ -238,18 +238,32 @@ void printmask45L(BITVAR m, char *s);
 int FirstOne(BITVAR board);
 
 // pack hash into 64bits
-// TY:2:62 | DE:9:53 | MV:15:38 | SC:32:6 | AG:6:0 :
+// new TY:2:43   DE:7:36   MV:15:21   SC:17:4   AG:4:0
+// old TY:2:62 | DE:9:53 | MV:15:38 | SC:32:6 | AG:6:0 
 #define PACKHASH(MV, SC, DE, TY, AG)  (((TY & 0x3UL) << 62)|((DE & 0x1FFUL) << 53)|((MV & 0x7FFFUL) << 38)|((SC & 0xFFFFFFFFUL)<< 6)|(AG & 0x3FUL))
 
 // unpack hash;
-#define UNPACKHASH(PP, MV, SC, DE, TY, AG) { AG = PP & 0x3FUL; TY = (PP>>62)& 0x3UL; DE = (PP>>53)& 0x1FFUL; MV = (PP>>38)& 0x7FFFUL;\
+#define UNPACKHASH(PP, MV, SC, DE, TY, AG) { AG = PP & 0x03FUL; TY = (PP>>62)& 0x3UL; DE = (PP>>53)& 0x1FFUL; MV = (PP>>38)& 0x7FFFUL;\
 	SC = (PP>>6)& 0xFFFFFFFFUL;  }
 #define UNPACKHASHAGE(PP) (PP & 0x3FUL)
 #define UNPACKHASHDEPTH(PP) ((PP>>53)& 0x1FFUL)
 #define UNPACKHASHMOVE(PP) ((PP>>38)& 0x7FFFUL)
 #define UNPACKHASHSCORE(PP) ((PP>>6)& 0xFFFFFFFFUL)
-
+#define UNPACKHASHTYPE(PP) ((PP>>62)& 0x3UL)
 #define UPDATEHASHAGE(PP, AG) PP = ((PP&(0xFFFFFFFFFFFFFFC0UL))|(AG & 0x3F))
+
+/*
+//new :45 TY:2:43   DE:7:36   MV:15:21   SC:17:4   AG:4:0
+#define PACKHASH(MV, SC, DE, TY, AG)  (((TY & 0x3UL) << 43)|((DE & 0x07FUL) << 36)|((MV & 0x7FFFUL) << 21)|(((SC+iINFINITY) & 0x1FFFFUL)<< 4)|(AG & 0x0FUL))
+#define UNPACKHASH(PP, MV, SC, DE, TY, AG) { AG = PP & 0x0FUL; TY = (PP>>43)& 0x3UL; DE = (PP>>36)& 0x07FUL; MV = (PP>>21)& 0x7FFFUL;\
+       SC = (((PP>>4)& 0x1FFFFUL)-iINFINITY);  }
+#define UNPACKHASHAGE(PP) (PP & 0x0FUL)
+#define UNPACKHASHDEPTH(PP) ((PP>>36)& 0x07FUL)
+#define UNPACKHASHMOVE(PP) ((PP>>21)& 0x7FFFUL)
+#define UNPACKHASHSCORE(PP) (((PP>>4)& 0x1FFFFUL)-iINFINITY)
+#define UPDATEHASHAGE(PP, AG) PP = ((PP&(0xFFFFFFFFFFFFFFF0UL))|(AG & 0x0F))
+#define UNPACKHASHTYPE(PP) ((PP>>43)& 0x3UL)
+*/
 
 
 #define ClrLO(x) (x &= x - 1)
@@ -308,10 +322,10 @@ typedef struct _att_mov {
 	BITVAR pawn_move[2][64];
 	BITVAR pawn_move2[2][64];
 	BITVAR attack_norm[64][256];
+	BITVAR attack_norm_2[64][256];
 	BITVAR attack_r90R[64][256];
 	BITVAR attack_r45L[64][256];
 	BITVAR attack_r45R[64][256];
-	BITVAR attack_norm_2[64][256];
 	BITVAR attack_r90R_2[64][256];
 	BITVAR attack_r45L_2[64][256];
 	BITVAR attack_r45R_2[64][256];
@@ -521,7 +535,7 @@ typedef struct _score_type {
 #define MAXPLYHIST 2048
 #define SEARCH_HISTORY_DEPTH 100
 // hashsize and hashpawnsize in Mbytes
-#define HASHSIZE 512
+#define HASHSIZE 32
 #define HASHPOS 4
 #define HASHPAWNSIZE 32
 #define HASHPAWNPOS 4
@@ -529,14 +543,13 @@ typedef struct _score_type {
 
 typedef struct _runtime_o {
 // timing
-	unsigned long long int time_start;
-	unsigned long long int nodes_mask;
-	unsigned long long int iter_start;
+	long long int time_start;
+	long long int nodes_mask;
+	long long int iter_start;
 	unsigned long long int nodes_at_iter_start;
 	unsigned long long int time_move;
 	unsigned long long int time_crit;
 	pthread_t engine_thread;
-
 } runtime_o;
 
 // hashing
@@ -544,10 +557,10 @@ typedef struct _hashEntry {
 	BITVAR key; //8
 	BITVAR map; //8
 	BITVAR pld; //8
-	int32_t value;  // 4
+	int32_t value;  //3 17b
 	MOVESTORE bestmove;  //2 15b
-	int16_t depth;  //1 limit to 8b, max depth 256
-	uint8_t age;  //1 6b
+	int16_t depth;  //1 limit to 7b, max depth 127
+	uint8_t age;  //1 5b
 	uint8_t scoretype; //1 2b 
 } hashEntry __attribute__((aligned(8)));
 
@@ -603,7 +616,7 @@ typedef struct _PawnStore {
 	sqr_eval sh_opts[2][3];
 
 	int potpas_d[2][9], pas_d[2][9], stop_d[2][9], block_d[2][9], block_d2[2][9],
-			double_d[2][9], issue_d[2][9];
+			double_d[2][9], issue_d[2][9], back_n_d[2][9];
 	int pawns[2][9], outp[2][9], outp_d[2][9], prot_d[2][9], prot_p_d[2][9],
 			prot_p_p_d[2][9], prot_p_c_d[2][9];
 	BITVAR pawns_b[2][8];
@@ -752,6 +765,7 @@ typedef struct _bit_board {
 	int psq_e;
 	int8_t mindex_validity;
 	int8_t ep;  // e.p. square
+	int8_t ep_val;
 	int8_t side;  // side to move
 	int8_t castle[ER_SIDE];  // castling possibility // 0 no, 1 - queenside, 2 - kingside, 3 - both, +4 - non castl
 	int8_t king[ER_SIDE];  // king position, 

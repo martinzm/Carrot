@@ -41,7 +41,7 @@ typedef struct _undo {
 	int8_t from, to;
 	int8_t fRO, toRO; // if castling, rook move
 	int8_t whereCa; //where capture took place
-	int8_t prev_castle[ER_SIDE], castle[ER_SIDE];
+	int8_t prev_castle[ER_SIDE], castle[ER_SIDE], ep_val_prev;
 /*
  * sources of changes
  * from, to, fRO, toT, whereCapt, captured, promoted, moved, oldEP, newEP, oldCast, newCast
@@ -59,6 +59,9 @@ typedef struct __changed {
 
 #define CHECKFLAG (1<<15)
 
+// 
+// spec|prom|to|from
+// 15:1|12:3|6:6|0:6
 #define PackMove(from,to,prom,spec)  ((MOVESTORE)((((from) & 0x3F) | (((to) & 0x3F) <<6) | (((prom) & 7) <<12))))
 #define PackMoveF(from,to,prom,spec)  ((MOVESTORE)((((from) & 0x3F) | (((to) & 0x3F) <<6)))|(ER_PIECE<<12))
 #define UnPackFrom(a)  ((int) ((a) & 0x3F))
@@ -101,13 +104,13 @@ int simple_pre_movegen_n2check(const board * constb, attack_model *a, int side);
 
 int getNextCheckin(board*, attack_model*, move_cont*, int, int, int, move_entry**, tree_store*);
 
-void generateCapturesN2(const board *const b, attack_model *a, move_entry **m, int gen_u);
-void generateCapturesN3(const board *const b, attack_model *a, move_entry **m, int gen_u);
-void generateMovesN2(const board *const b, attack_model *a, move_entry **m);
+void generateCapturesN2(board *const b, attack_model *a, move_entry **m, int gen_u);
+void generateCapturesN3(board *const b, attack_model *a, move_entry **m, int gen_u);
+void generateMovesN2(board *const b, attack_model *a, move_entry **m);
 void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **m, int gen_u);
 void mvsfrom2(const board * const, int const, int const, FuncAttacks, bmv **, BITVAR const, BITVAR const);
 void mvsfroma2(const board * const, attack_model *, int const, int const, bmv **, BITVAR const, BITVAR const);
-int generateBitmaps(const board *const, attack_model *, BITVAR, int);
+int generateBitmaps(board *const, attack_model *, BITVAR, int);
 void mvsfromk22(const board *const, attack_model *, int);
 
 

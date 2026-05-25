@@ -30,6 +30,8 @@
 #include "globals.h"
 #include "assert.h"
 
+int MMAX=0, MMIN=0;
+
 // 6*4+6*4+9*4+18*2 = 24+24+36+36 = 120 //--
 // koncovka - materialu celkem je mene nez 6 (hluboka) nebo 8 ve schematu 0,1,1,2,4, <12 prechod do koncovky
 
@@ -231,6 +233,7 @@ int make_mobility_modelN2(const board *const b, attack_model *a, personality con
 /*
  * Pawns
  * potential passer (path to promotion is not blocked by pawns)
+ * passer = pot passer ktery neni stopped
  * blocked - pawn in the way
  * stopped - opposite pawn attacks path
  * doubled - blocked by own pawn
@@ -238,11 +241,19 @@ int make_mobility_modelN2(const board *const b, attack_model *a, personality con
  * backward - ???
  *
  * attacks
- *\
+ *
  * outposts
  * holes
  * king shelter
- * 
+ *
+ */
+
+/*
+ * spans: 
+ *	0 - forward safe
+ *	1 - backward till end (pawn or start row)
+ *	2 - forward till end (pawn or promotion row), can include unsafe squares - attacked by opp pawn
+ *	3 - forward till promotion row
  */
 
 // no evaluation, only features discovery
@@ -281,6 +292,7 @@ int analyze_pawn(board const *b, attack_model const *a, PawnStore *ps, int side,
 		ps->block_d[side][f] = 8;
 		ps->block_d2[side][f] = 8;
 		ps->stop_d[side][f] = 8;
+		ps->back_n_d[side][f] = 8;
 		ps->prot_d[side][f] = 8;
 		ps->prot_p_d[side][f] = 8;
 		ps->prot_p_p_d[side][f] = 0;
@@ -298,20 +310,25 @@ int analyze_pawn(board const *b, attack_model const *a, PawnStore *ps, int side,
 //		printmask(ps->spans[side][f][3],"3");
 //		printmask(ps->safe_att[side],"safe_att");
 		
+		// path till hard stop...
 		dir = ps->spans[side][f][2];
+		// do we hit pawn or promotion row?
 		if ((dir & b->maps[PAWN])==0) {
+		// is path the same as safe path - not attacked by pawns?
 			if(ps->spans[side][f][0]!=dir) {
+			// how far is the attack?
 				if(BitCount(~ps->safe_att[side] & dir)==1){
 					ps->potpas_d[side][f] = BitCount(dir) - 1 - dpush;
 					ps->potpasser[side] |= NORMM(from);
 				}
 			} else {
+			// clear up to promotion, how far?
 				ps->pas_d[side][f] = BitCount(dir) - 1 - dpush;
 				ps->passer[side] |= NORMM(from);
 			}
 		} else {
-// blocked by something, how far ahead - pawns, ignoring attack on the path
-			dir = ps->spans[side][f][0];
+// blocked by pawn, how far ahead? ignoring attack on the path
+			dir = ps->spans[side][f][2];
 // pawns !!!!
 			if (dir & b->maps[PAWN]) {
 				tt2=BitCount(dir)-1;
@@ -333,7 +350,7 @@ int analyze_pawn(board const *b, attack_model const *a, PawnStore *ps, int side,
 //			printmask(dir,"dir");
 //			printmask(ps->safe_att[side], "safe_att");
 //			printmask(b->maps[PAWN], "pawn");
-			if (((dir & ps->safe_att[side])!=dir)&&((dir&b->maps[PAWN])==0)) {
+			if ((dir&b->maps[PAWN])==0) {
 //			L0("stop trigger\n");
 // stopped - opposite pawn attacks path to promotion, how far
 				ps->stopped[side] |= NORMM(from);
@@ -423,7 +440,7 @@ int analyze_pawn(board const *b, attack_model const *a, PawnStore *ps, int side,
 			}
 		}
 		
-#if 0
+#if 1
 		temp = 0;
 		if (file > FILEiA) temp |= ((dir & ps->paths[side]) >> 1);
 		if (file < FILEiH) temp |= ((dir & ps->paths[side]) << 1);
@@ -471,11 +488,12 @@ int analyze_pawn(board const *b, attack_model const *a, PawnStore *ps, int side,
 				ps->half_isol[side][1] |= NORMM(from);
 			}
 		}
-// i cannot be protected and cannot progress to promotion, so backward
-		if ((((ps->prot_dir[side] | ps->prot_p[side])
+// i cannot be protected and cannot progress to promotion - path forward is attacked, so backward
+		if ((((ps->prot_dir[side] | ps->prot_p[side] | ps->prot[side])
 			& NORMM(from)) == 0)
-			&& (NORMM(from) & (ps->blocked[side] | ps->stopped[side]))) {
+			&& (NORMM(from) & ( ps->stopped[side]))) {
 			ps->back[side] |= NORMM(from);
+			ps->back_n_d[side][f]=ps->stop_d[side][f];
 		}
 		from = ps->pawns[side][++f];
 	}
@@ -877,28 +895,26 @@ int pre_evaluate_pawns(board const *b, attack_model const *a, PawnStore *ps, per
 
 // if simple_EVAL then only material and PSQ are used
 			if (p->simple_EVAL != 1) {
-// isolated
-				if ((ps->half_isol[side][0] | ps->half_isol[side][1]) & x) {
-					if (ps->half_isol[side][0] & x) {
+// isolated - changed to full isolation
+				if ((ps->half_isol[side][0] & ps->half_isol[side][1]) & x) {
+//					if (ps->half_isol[side][0] & x) {
 						ps->t_sc[side][f][BAs].sqr_b += p->isolated_penalty[MG];
 						ps->t_sc[side][f][BAs].sqr_e += p->isolated_penalty[EG];
-
 #ifdef TUNING
-		ADD_STACKER(st, isolated_penalty[MG], 1, BAs, side, 0)
-		ADD_STACKER(st, isolated_penalty[EG], 1, BAs, side, 1)
+						ADD_STACKER(st, isolated_penalty[MG], 1, BAs, side, 0)
+						ADD_STACKER(st, isolated_penalty[EG], 1, BAs, side, 1)
 #endif
 
 					  if ((x & ps->not_pawns_file[opside])) {
 						ps->t_sc[side][f][HEa].sqr_b += p->pawn_iso_onopen_penalty[MG];
 						ps->t_sc[side][f][HEa].sqr_e += p->pawn_iso_onopen_penalty[EG];
-
 #ifdef TUNING
-		ADD_STACKER(st, pawn_iso_onopen_penalty[MG], 1, HEa, side, 0)
-		ADD_STACKER(st, pawn_iso_onopen_penalty[EG], 1, HEa, side, 1)
+						ADD_STACKER(st, pawn_iso_onopen_penalty[MG], 1, BAs, side, 0)
+						ADD_STACKER(st, pawn_iso_onopen_penalty[EG], 1, BAs, side, 1)
 #endif
-
 					  }
-					}
+//					}
+/*
 					if (ps->half_isol[side][1] & x) {
 						ps->t_sc[side][f][BAs].sqr_b += p->isolated_penalty[MG];
 						ps->t_sc[side][f][BAs].sqr_e += p->isolated_penalty[EG];
@@ -915,12 +931,38 @@ int pre_evaluate_pawns(board const *b, attack_model const *a, PawnStore *ps, per
 #endif
 					  }
 					}
+*/
 					if (x & CENTEREXBITMAP) {
 						ps->t_sc[side][f][BAs].sqr_b += p->pawn_iso_center_penalty[MG];
 						ps->t_sc[side][f][BAs].sqr_e += p->pawn_iso_center_penalty[EG];
 #ifdef TUNING
-		ADD_STACKER(st, pawn_iso_center_penalty[MG], 1, BAs, side, 0)
-		ADD_STACKER(st, pawn_iso_center_penalty[EG], 1, BAs, side, 1)
+						ADD_STACKER(st, pawn_iso_center_penalty[MG], 1, BAs, side, 0)
+						ADD_STACKER(st, pawn_iso_center_penalty[EG], 1, BAs, side, 1)
+#endif
+					}
+				}
+// fix material value for isolated pawn on A and H 
+				else if (((ps->half_isol[side][0] | ps->half_isol[side][1]) & x) && (x & (FILEA | FILEH))) {
+						ps->t_sc[side][f][BAs].sqr_b += p->pawn_ah_penalty[MG];
+						ps->t_sc[side][f][BAs].sqr_e += p->pawn_ah_penalty[EG];
+#ifdef TUNING
+						ADD_STACKER(st, pawn_ah_penalty[MG], 1, BAs, side, 0)
+						ADD_STACKER(st, pawn_ah_penalty[EG], 1, BAs, side, 1)
+#endif
+//						ps->t_sc[side][f][BAs].sqr_b += p->isolated_penalty[MG];
+//						ps->t_sc[side][f][BAs].sqr_e += p->isolated_penalty[EG];
+
+#ifdef TUNING
+//						ADD_STACKER(st, isolated_penalty[MG], 1, BAs, side, 0)
+//						ADD_STACKER(st, isolated_penalty[EG], 1, BAs, side, 1)
+#endif
+
+					  if ((x & ps->not_pawns_file[opside])) {
+						ps->t_sc[side][f][HEa].sqr_b += p->pawn_iso_onopen_penalty[MG];
+						ps->t_sc[side][f][HEa].sqr_e += p->pawn_iso_onopen_penalty[EG];
+#ifdef TUNING
+						ADD_STACKER(st, pawn_iso_onopen_penalty[MG], 1, HEa, side, 0)
+						ADD_STACKER(st, pawn_iso_onopen_penalty[EG], 1, HEa, side, 1)
 #endif
 					}
 				}
@@ -1002,10 +1044,11 @@ int pre_evaluate_pawns(board const *b, attack_model const *a, PawnStore *ps, per
 					ps->t_sc[side][f][BAs].sqr_b += p->pawn_dir_protect[MG][side][ps->prot_dir_d[side][f]];
 					ps->t_sc[side][f][BAs].sqr_e += p->pawn_dir_protect[EG][side][ps->prot_dir_d[side][f]];
 #ifdef TUNING
-		ADD_STACKER(st, pawn_dir_protect[MG][side][ps->prot_dir_d[side][f]], 1, BAs, side, 0)
-		ADD_STACKER(st, pawn_dir_protect[EG][side][ps->prot_dir_d[side][f]], 1, BAs, side, 1)
+					ADD_STACKER(st, pawn_dir_protect[MG][side][ps->prot_dir_d[side][f]], 1, BAs, side, 0)
+					ADD_STACKER(st, pawn_dir_protect[EG][side][ps->prot_dir_d[side][f]], 1, BAs, side, 1)
 #endif
 //				}
+/*
 // backward,ie unprotected, not able to promote, not completely isolated
 				if (ps->back[side]
 					& (ps->blocked[side] | ps->stopped[side] | ps->doubled[side])
@@ -1018,6 +1061,19 @@ int pre_evaluate_pawns(board const *b, attack_model const *a, PawnStore *ps, per
 		ADD_STACKER(st, backward_penalty[EG], 1, BAs, side, 1)
 #endif
 				}
+*/
+				
+// new backward
+				if (ps->back[side] & x) {
+					ps->t_sc[side][f][BAs].sqr_b += p->pawn_backward_n_penalty[MG][side][ps->back_n_d[side][f]];
+					ps->t_sc[side][f][BAs].sqr_e += p->pawn_backward_n_penalty[EG][side][ps->back_n_d[side][f]];
+
+#ifdef TUNING
+					ADD_STACKER(st, pawn_backward_n_penalty[MG][side][ps->back_n_d[side][f]], 1, BAs, side, 0)
+					ADD_STACKER(st, pawn_backward_n_penalty[EG][side][ps->back_n_d[side][f]], 1, BAs, side, 1)
+#endif
+				}
+
 //passer ?
 				if (ps->pas_d[side][f] < 8) {
 					ps->t_sc[side][f][BAs].sqr_b +=
@@ -1065,15 +1121,6 @@ int pre_evaluate_pawns(board const *b, attack_model const *a, PawnStore *ps, per
 		ADD_STACKER(st, pawn_weak_onopen_penalty[EG], 1, HEa, side, 1)
 #endif
 					}
-				}
-// fix material value
-				if (x & (FILEA | FILEH)) {
-					ps->t_sc[side][f][BAs].sqr_b += p->pawn_ah_penalty[MG];
-					ps->t_sc[side][f][BAs].sqr_e += p->pawn_ah_penalty[EG];
-#ifdef TUNING
-		ADD_STACKER(st, pawn_ah_penalty[MG], 1, BAs, side, 0)
-		ADD_STACKER(st, pawn_ah_penalty[EG], 1, BAs, side, 1)
-#endif
 				}
 // mobility, but related to PAWNS only, other pieces are treated like non existant
 //				msk = p->mobility_protect == 1 ?
@@ -1186,15 +1233,31 @@ int premake_pawn_model(board const *b, attack_model const *a, hashPawnEntry **hh
 		ps->one_side[BLACK] = ((ps->half_att[BLACK][0] | ps->half_att[BLACK][1])
 			& (~(ps->half_att[WHITE][0] | ps->half_att[WHITE][1])));
 
-		// pawn attacks from hole/outpost for analysing opponent pawn reachability
-		ps->one_s_att[WHITE][1] = (((ps->one_side[WHITE]) & (~(FILEH | RANK8)))
-			<< 9);
+		// pawn attacks from hole/outpost for analysing opponent pawn reachability - combine with opposing paths
+#if 0
+		ps->one_s_att[WHITE][1] = ((((ps->one_side[WHITE]) & (~(FILEH | RANK8)))
+			<< 9));
 		ps->one_s_att[WHITE][0] = (((ps->one_side[WHITE]) & (~(FILEA | RANK8)))
 			<< 7);
 		ps->one_s_att[BLACK][0] = (((ps->one_side[BLACK]) & (~(FILEH | RANK1)))
 			>> 7);
 		ps->one_s_att[BLACK][1] = (((ps->one_side[BLACK]) & (~(FILEA | RANK1)))
 			>> 9);
+#endif 
+// >>7 doprava dolu, >> 9 doleva dolu, <<7 doleva nahoru, << 9 doprava nahoru
+//		BITVAR bb = ~(((ps->paths[BLACK] & (~(FILEH | RANK1)))>> 7)|((ps->paths[BLACK] & (~(FILEA | RANK1)))>> 9));
+//		BITVAR ww = ~(((ps->paths[WHITE] & (~(FILEA | RANK8)))<< 7)|((ps->paths[WHITE] & (~(FILEH | RANK8)))<< 9));
+		BITVAR bb = ~(((ps->paths[BLACK]>> 7) & ~FILEA)|((ps->paths[BLACK]>>9) & ~FILEH ));
+		BITVAR ww = ~(((ps->paths[WHITE]<< 7) & ~FILEH)|((ps->paths[WHITE]<<9) & ~FILEA ));
+// propagate opposing pawns toward outposts
+//		ps->one_s_att[WHITE][1] = bb & (ps->one_side[WHITE]);
+		ps->one_s_att[WHITE][0] = bb & (ps->one_side[WHITE]);
+		ps->one_s_att[BLACK][0] = ww & (ps->one_side[BLACK]);
+//		ps->one_s_att[BLACK][1] = ww & (ps->one_side[BLACK]);
+
+//		printmask(~((ps->paths[BLACK] & (~(FILEH | RANK1)))>> 7),"rotated bp1");
+//		printmask(~((ps->paths[BLACK] & (~(FILEA | RANK1)))>> 9),"rotated bp2");
+
 
 // prepare bitmaps of potential shelter pawns - even out of shelter ones
 		ps->shelter_p[WHITE][0] = ps->shelter_p[BLACK][0] = 0;
@@ -1294,7 +1357,8 @@ int premake_pawn_model(board const *b, attack_model const *a, hashPawnEntry **hh
 			 * from stop square we can conclude reason - my pawn, opposide pawn, no piece - either we terminate at promotion row
 			 * or the square is attacked by other pawn
 			 * ps->spans[side][idx][1] is backspan - contains either pawn behind or first row
-			 *
+			 * ps->spans[side][idx][2] path to hard stop - pawn or promotion row, attacks on the path included, if exist
+			 * ps->spans[side][idx][3] path up to promotion row
 			 */
 			ps->pawns[WHITE][f1] = -1;
 			ps->pawns[BLACK][f2] = -1;
@@ -2586,10 +2650,12 @@ int eval_knight(board const *b, attack_model *a, PawnStore const *ps, int side, 
 	int piece;
 	int from;
 	int f;
+	BITVAR x;
 
 	piece = (side == WHITE) ? KNIGHT : KNIGHT | BLACKPIECE;
 	for (f = a->pos_c[piece]; f >= 0; f--) {
 		from = a->pos_m[piece][f];
+		x=NORMM(from);
 		a->sc.side[side].mobi_b += a->me[from].pos_mob_tot_b;
 		a->sc.side[side].mobi_e += a->me[from].pos_mob_tot_e;
 #ifdef TUNING
@@ -2598,6 +2664,17 @@ int eval_knight(board const *b, attack_model *a, PawnStore const *ps, int side, 
 		a->sc.side[side].sqr_b += a->sq[from].sqr_b;
 		a->sc.side[side].sqr_e += a->sq[from].sqr_e;
 #endif
+		if(x & ps->one_s_att[side][0]) {
+			a->specs[side][KNIGHT].sqr_b += p->outpost_knight[MG][side][from];
+			a->specs[side][KNIGHT].sqr_e += p->outpost_knight[EG][side][from];
+			a->scc[from].sqr_b += p->outpost_knight[MG][side][from];
+			a->scc[from].sqr_e += p->outpost_knight[EG][side][from];
+#ifdef TUNING
+			ADD_STACKER(st, outpost_knight[MG][side][from], 1, BAs, side, 0)
+			ADD_STACKER(st, outpost_knight[EG][side][from], 1, BAs, side, 1)
+#endif
+		}
+
 		a->scc[from].sqr_b=0;
 		a->scc[from].sqr_e=0;
 	}
@@ -2772,15 +2849,19 @@ int eval_pawn(board const *b, attack_model *a, PawnStore const *ps, int side, pe
 			if ((GT_M0(b, p, Flip(side), PIECES) == 0)) {
 				int n=0;
 				int ds;
+				int ks;
 				int pp=ps->pawns[side][n];
 				while(pp!=-1) {
 					if(pp==from) break;
 					pp=ps->pawns[side][++n];
 				}
 				assert(pp!=-1);
-				ds=ps->pas_d[side][n];
+				ds=ps->pas_d[side][n]+1;
+				ks=attack.distance[getPos(getFile(from), (side == WHITE)? 7:0) ][b->king[Flip(side)]];
+//				L0("pp:%d, ds:%d, opk:%d\n", pp, ds, ks);
 				if(side!=b->side) ds++;
-				if(ds<=opk) {
+//				L0("pp:%d, ds:%d, opk:%d\n", pp, ds, ks);
+				if(ds<ks) {
 					a->specs[side][PAWN].sqr_b += p->passer_unstop_bonus[MG];
 					a->specs[side][PAWN].sqr_e += p->passer_unstop_bonus[EG];
 					a->scc[from].sqr_b += p->passer_unstop_bonus[MG];
@@ -3568,6 +3649,23 @@ int lazyEval(board *b, attack_model *a, int alfa, int beta, int side, int ply, i
 	}
 //	LOGGER_0("LAZY score %d, mb %d, me %d, sb %d, se %d\n", sc2, mb, me, b->psq_b, b->psq_e);
 	
+	
+DEB_X(
+	if(scr>MMAX) {
+		MMAX=scr;
+		L0("SCORE_ALERT %d\n",MMAX);
+	} else 
+	if(scr<MMIN){
+		MMIN=scr;
+		L0("SCORE_ALERT %d\n",MMIN);
+	}
+)
+
+DEB_1(
+	if(scr>iINFINITY) { L0("Score over Infinity %d\n", scr); assert(0); }
+	if(scr<-iINFINITY) { L0("Score below Infinity %d\n", scr); assert(0); }
+)
+
 	if (side == WHITE)
 		return scr;
 	else
@@ -3819,7 +3917,8 @@ int d, m;
 //			L0("%d:%d = %d\n", d,m, table[d][m]);
 			continue;
 		  }
-		  table[d][m] = (int) (0.5 + log(d)*log(m) / 2.3);
+//		  table[d][m] = (int) (0.5 + log(d)*log(m) / 2.3);
+		  table[d][m] = (int) (0.5 + log(d)*log(m));
 //		  L0("%d:%d = %d\n", d,m, table[d][m]);
 		}
 }

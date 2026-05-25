@@ -314,6 +314,24 @@ int setup_value4(_passer *s, int *buffer, int count, int stage, int side)
 	return 0;
 }
 
+int setup_value4_1(_squares *s, int *buffer, int count, int stage, int side)
+{
+	int f;
+	if (stage >= ER_GAMESTAGE)
+		return 1;
+	if (side >= ER_SIDE)
+		return 2;
+	for (f = 0; f < count; f++) {
+		(*s)[stage][side][f] = buffer[f];
+//		L0("%d:%d\n", f, buffer[f]);
+	}
+	return 0;
+}
+
+
+
+
+
 int reorganize_values(int *b)
 {
 	int pawn, queen, rook, bishop, king, knight;
@@ -671,6 +689,43 @@ int params_init_passer(_passer *x, int s_r, int *i)
 	return 0;
 }
 
+int params_init_squares(_squares *x, int s_r, int *i)
+{
+	int side, f;
+
+	side = *i;
+	i++;
+	if (side == 2) {
+		setup_value4_1(x, i, ER_SQUARE, 0, 0);
+		setup_value4_1(x, i + ER_SQUARE, ER_SQUARE, 1, 0);
+		// swap if needed
+		if (s_r & 1) {
+			for (f = 0; f < ER_SQUARE; f++)
+				(*x)[0][1][f] = (*x)[0][0][ER_SQUARE - 1 - f];
+			for (f = 0; f < ER_SQUARE; f++)
+				(*x)[1][1][f] = (*x)[1][0][ER_SQUARE - 1 - f];
+		} else {
+			for (f = 0; f < ER_SQUARE; f++)
+				(*x)[0][1][f] = (*x)[0][0][f];
+			for (f = 0; f < ER_SQUARE; f++)
+				(*x)[1][1][f] = (*x)[1][0][f];
+		}
+	} else {
+		if (side > 2)
+			return 1;
+		setup_value4_1(x, i, ER_SQUARE, 0, side);
+		setup_value4_1(x, i + ER_SQUARE, ER_SQUARE, 1, side);
+		x += ER_SQUARE * 2;
+		side = *i;
+		i++;
+		if (side > 2)
+			return 1;
+		setup_value4_1(x, i, ER_SQUARE, 0, side);
+		setup_value4_1(x, i + ER_SQUARE, ER_SQUARE, 1, side);
+	}
+	return 0;
+}
+
 int params_load_passer(xmlDocPtr doc, xmlNodePtr cur, int *st, int s_r, _passer *o)
 {
 	int side, stage, piece, f;
@@ -696,6 +751,30 @@ int params_load_passer(xmlDocPtr doc, xmlNodePtr cur, int *st, int s_r, _passer 
 	}
 	return 0;
 }
+
+int params_load_squares(xmlDocPtr doc, xmlNodePtr cur, int *st, int s_r, _squares *o)
+{
+	int side, stage, piece, f;
+	int bb[128];
+	int count;
+
+	count=parse_value2(doc, cur, bb, ER_SQUARE, &stage, &side, &piece);
+	if(count>0) {
+		assert(stage != 9);
+		assert(side != 9);
+		if ((side == 1) || (side == 0)) {
+			setup_value4_1(o, bb, count, stage, side);
+		} else if (side == 2) {
+			setup_value4_1(o, bb, count, stage, 0);
+//			if (s_r & 1) {
+				swap_board(bb);
+//			}
+				setup_value4_1(o, bb, count, stage, 1);
+		}
+	}
+	return 0;
+}
+
 
 int params_out_passer(char *x, _passer *i)
 {
@@ -736,6 +815,37 @@ int params_out_passer(char *x, _passer *i)
 		}
 			if(NZEROONLY && c!=0) LOGGER_0("PERS: %s GS[%i]:SIDE[1]=%s, %s, %s, %s, %s, %s, %s, %s\n", x,
 			f, cc[0], cc[1], cc[2], cc[3], cc[4], cc[5], cc[6], cc[7]);
+	}
+	return 0;
+}
+
+int params_out_squares(char *x, _squares *i)
+{
+	int f,l,c;
+	char buf[1024];
+	char bb[256];
+	int q[65];
+	char cc[65][16];
+	
+	sprintf(buf, "PERS: %s ", x);
+
+	for (f = 0; f < ER_GAMESTAGE; f++) {
+		c=0;
+		for(l=0;l<ER_SQUARE;l++) {
+			q[l]=(*i)[f][0][l];
+			if(q[l]==0) sprintf(cc[l], " "); else { sprintf(cc[l], "%d", q[l]); c=1; }
+		}
+		for(l=0;l<8;l++)
+			if(NZEROONLY && c!=0) LOGGER_0("PERS: %s GS[%i]:SIDE[0]=%s, %s, %s, %s, %s, %s, %s, %s\n", x,
+			f, cc[0+8*l], cc[1+8*l], cc[2+8*l], cc[3+8*l], cc[4+8*l], cc[5+8*l], cc[6+8*l], cc[7+8*l]);
+		c=0;
+		for(l=0;l<ER_SQUARE;l++) {
+			q[l]=(*i)[f][1][l];
+			if(q[l]==0) sprintf(cc[l], " "); else { sprintf(cc[l], "%d", q[l]); c=1; }
+		}
+		for(l=0;l<8;l++)
+			if(NZEROONLY && c!=0) LOGGER_0("PERS: %s GS[%i]:SIDE[1]=%s, %s, %s, %s, %s, %s, %s, %s\n", x,
+			f, cc[0+8*l], cc[1+8*l], cc[2+8*l], cc[3+8*l], cc[4+8*l], cc[5+8*l], cc[6+8*l], cc[7+8*l]);
 	}
 	return 0;
 }
@@ -805,6 +915,89 @@ int params_write_passer(xmlNodePtr parent, char *name, int s_r, _passer *i)
 			}
 
 			swprintf(bw, 999, L"%s", buf);
+			WchartoUTF8(bw, v8, 1024);
+			swprintf(bw, 999, L"%d", side);
+			WchartoUTF8(bw, s8, 256);
+
+			cur = xmlNewTextChild(parent, NULL, n8, v8);
+			xmlNewProp(cur, (xmlChar*) "gamestage", g8);
+			xmlNewProp(cur, (xmlChar*) "side", s8);
+		}
+	}
+	return 0;
+}
+
+int params_write_squares(xmlNodePtr parent, char *name, int s_r, _squares *i)
+{
+	int f, n, side;
+	char buf[2048], b2[2048];
+	xmlNodePtr cur;
+	wchar_t bw[4096];
+	xmlChar g8[256], s8[256], v8[1024], n8[256];
+
+	swprintf(bw, 999, L"%s", name);
+	WchartoUTF8(bw, n8, 256);
+
+	for (f = 0; f < (ER_GAMESTAGE); f++) {
+		// check for side type
+		side = 2;
+		for (n = 0; n < ER_SQUARE; n++) {
+/*
+			if (s_r & 1) {
+				if ((*i)[f][1][n]
+					!= (*i)[f][0][Square_Swap[n]]) {
+					side = 0;
+					break;
+				}
+			} else 
+*/
+				{
+				if ((*i)[f][1][Square_Swap[n]] != (*i)[f][0][n]) {
+					side = 0;
+					break;
+				}
+			}
+		}
+		buf[0] = '\0';
+		for (n = 0; n < (ER_SQUARE - 1); n++) {
+			sprintf(b2, "%d,", (*i)[f][0][n]);
+//		L0("%s\n",b2);
+			strcat(buf, b2);
+		}
+		swprintf(bw, 999, L"%s%d", buf, (*i)[f][0][ER_SQUARE - 1]);
+		WchartoUTF8(bw, v8, 1024);
+		swprintf(bw, 999, L"%d", f);
+		WchartoUTF8(bw, g8, 256);
+		swprintf(bw, 999, L"%d", side);
+		WchartoUTF8(bw, s8, 256);
+
+		cur = xmlNewTextChild(parent, NULL, n8, v8);
+		xmlNewProp(cur, (xmlChar*) "gamestage", g8);
+		xmlNewProp(cur, (xmlChar*) "side", s8);
+		//		xmlNewProp(cur, (xmlChar *) "value", v8);
+		if (side != 2) {
+			side = 1;
+			buf[0] = '\0';
+/*
+			if (s_r & 1) {
+				for (n = ER_SQUARE - 1; n > 0; n--) {
+					sprintf(b2, "%d,", (*i)[f][1][n]);
+					strcat(buf, b2);
+				}
+				sprintf(b2, "%d", (*i)[f][1][0]);
+				strcat(buf, b2);
+			} else 
+*/
+			{
+				for (n = 0; n < (ER_SQUARE - 1); n++) {
+					sprintf(b2, "%d,", (*i)[f][1][n]);
+					strcat(buf, b2);
+				}
+				sprintf(b2, "%d", (*i)[f][1][ER_SQUARE - 1]);
+				strcat(buf, b2);
+			}
+
+			swprintf(bw, 4096, L"%s", buf);
 			WchartoUTF8(bw, v8, 1024);
 			swprintf(bw, 999, L"%d", side);
 			WchartoUTF8(bw, s8, 256);
@@ -923,6 +1116,10 @@ static void parsedoc_int(xmlDocPtr doc, personality *p)
 #undef MLINE
 
 int map_init_passer(_passer *x, int s_r, char *n, pers_uni *map, char desc[NTUNL][64], int *i){
+return 0;
+}
+
+int map_init_squares(_squares *x, int s_r, char *n, pers_uni *map, char desc[NTUNL][64], int *i){
 return 0;
 }
 

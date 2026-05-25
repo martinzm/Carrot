@@ -1181,49 +1181,52 @@ unsigned long long int perftLoopN_int(board *b, int d, int side, attack_model *t
 	move_entry move[300], *n;
 	char b2[256];
 
+   BITVAR r;
 	if (d == 0)
 		return 1;
-	n = move;
 	nodes = 0;
-	opside = (side == WHITE) ? BLACK : WHITE;
-	a = &ATT;
+	a = tolev;
 
-	a->ke[b->side] = tolev->ke[b->side];
-	a->att_by_side[opside] = KingAvoidSQ(b, a, opside);
+	incheck = (isInCheck_Eval(b, a, b->side)!=0);
+	opside = Flip(b->side);
 
-	if (a->att_by_side[opside] & normmark[b->king[side]]) {
-		incheck = 1;
-//		simple_pre_movegen_n2check(b, a, side);
-	} else {
-//		simple_pre_movegen_n2(b, a, side);
-		incheck = 0;
-	}
+	a->phase = eval_phase(b, b->pers);
+	mvs.hash.move = DRAW_M;
 
 	sortMoveListNew_Init(b, a, &mvs);
 	while ((getNextMove(b, a, &mvs, 1, side, incheck, &m, NULL) != 0)) {
-		*n = *(m);
-		n++;
-		if (d != 1) {
-			t2 = b->mindex;
-			mv1= b->mindex_validity;
 			MakeMoveNew(b, m->move, pos, &u);
-			t4 = b->mindex;
-			mv2= b->mindex_validity;
-			eval_king_checks(b, &(a->ke[opside]), NULL, opside);
+		r = ChangesToMove(b, a, &u);
+
+// update bitmaps
+		generateBitmaps(b, a, r, WHITE);
+		generateBitmaps(b, a, r, BLACK);
+
+// regenerate attacked / king not allowed squares
+		a->att_by_side[BLACK] = regenerateSQAttacked(b, a, BLACK);
+		a->att_by_side[WHITE] = regenerateSQAttacked(b, a, WHITE);
+
+// update king moves bitmaps
+		mvsfromk22(b, a, side);
+		mvsfromk22(b, a, opside);
+
 			tnodes = perftLoopN_int(b, d - 1, opside, a);
 			nodes += tnodes;
-			t5 = b->mindex;
 			UnMakeMoveNew(b, &u, pos);
-			t3 = b->mindex;
-			if (((t2 != t3)&&(mv1==1))||((t4!=t5)&&(mv2==1))) {
-				printBoardNice(b);
-				sprintfMoveSimple(m->move, b2);
-				printf("MINDEX problem %s\n", b2);
-				LOGGER_1("MINDEX problem %s %lld!=%lld; %lld!=%lld \n", b2, t2, t3, t4, t5 );
-//				check_mindex_validity(b, 1);
-			}
-		} else
-			nodes++;
+//				nodes++;
+		r = ChangesToMove(b, a, &u);
+
+// regenerate bitmaps
+		generateBitmaps(b, a, r, WHITE);
+		generateBitmaps(b, a, r, BLACK);
+
+// regenerate attacked squares
+		a->att_by_side[BLACK] = regenerateSQAttacked(b, a, BLACK);
+		a->att_by_side[WHITE] = regenerateSQAttacked(b, a, WHITE);
+
+// regenerate king bitmaps
+		mvsfromk22(b, a, side);
+		mvsfromk22(b, a, opside);
 	}
 	return nodes;
 }
@@ -1234,49 +1237,63 @@ unsigned long long int perftLoopN_v(board *b, int d, int side, attack_model *tol
 	int opside, incheck, pos[4];
 
 	unsigned long long nodes, tnodes;
-	attack_model *a, ATT;
-	move_cont mvs;
-	move_entry *m;
+	attack_model *att;
 	move_entry move[300], *n;
 	char buf[300];
-	BITVAR attacks;
+	BITVAR attacks, r;
 	struct timespec start, end;
 	unsigned long long int totaltime;
 	char fen[100];
 
-	n = move;
+	move_entry *m, mdum = { MATE_M, 0, 0 - GenerateMATESCORE(1) }, *mb, *mn, mt;
+	move_cont mvs, *MVS;
+
 	if (d == 0)
 		return 1;
 	nodes = 0;
 	opside = Flip(side);
-	a = &ATT;
+	att = tolev;
 
+	MVS = &mvs;
 	if(div) printBoardNice(b);
 
-	eval_king_checks(b, &(a->ke[side]), NULL, side);
-	eval_king_checks(b, &(a->ke[opside]), NULL, opside);
-	attacks = KingAvoidSQ(b, a, opside);
-	a->att_by_side[opside] = attacks;
+	incheck = (isInCheck_Eval(b, att, b->side)!=0);
+	opside = Flip(b->side);
 
-	if (attacks & normmark[b->king[side]]) {
-		incheck = 1;
-	} else {
-		incheck = 0;
-	}
+	att->phase = eval_phase(b, b->pers);
 
-	sortMoveListNew_Init(b, a, &mvs);
-	while ((getNextMove(b, a, &mvs, 0, side, incheck, &m, NULL) != 0)) {
-		*n = *(m);
-		n++;
-		if (d >= 1) {
+	eval_king_checks_extU(b, &(att->ke[WHITE]), 0, b->king[WHITE]);
+	eval_king_checks_extU(b, &(att->ke[BLACK]), 1, b->king[BLACK]);
+
+	generateBitmaps(b, att, FULLBITMAP, BLACK);
+	generateBitmaps(b, att, FULLBITMAP, WHITE);
+	att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+	att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+	mvsfromk22(b, att, BLACK);
+	mvsfromk22(b, att, WHITE);
+
+	MVS->hash.move = DRAW_M;
+
+	sortMoveListNew_Init(b, att, &mvs);
+	while ((getNextMove(b, att, &mvs, 0, side, incheck, &m, NULL) != 0)) {
 			readClock_wall(&start);
 			MakeMoveNew(b, m->move, pos, &u);
-			eval_king_checks(b, &(a->ke[opside]), NULL, opside);
-			tnodes = perftLoopN_int(b, d - 1, opside, a);
+
+		r = ChangesToMove(b, att, &u);
+
+// update bitmaps
+		generateBitmaps(b, att, r, WHITE);
+		generateBitmaps(b, att, r, BLACK);
+
+// regenerate attacked / king not allowed squares
+		att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+		att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+
+// update king moves bitmaps
+		mvsfromk22(b, att, side);
+		mvsfromk22(b, att, opside);
+			tnodes = perftLoopN_int(b, d - 1, opside, att);
 			if (div) {
-//					sprintfMoveSimple(m->move, buf);
-//					printf("XXXXXXXXX %s\t\t%lld\n", buf, tnodes);
-//					LOGGER_0("XXXXXXXXXXXXXX %s\t\t%lld\n", buf, tnodes);
 				sprintfMoveSimple(m->move, buf);
 				writeEPD_FEN(b, fen, 1, "");
 				readClock_wall(&end);
@@ -1290,9 +1307,22 @@ unsigned long long int perftLoopN_v(board *b, int d, int side, attack_model *tol
 				LOGGER_1("%s\t\t%lld\t\t(%lld:%lld.%lld\t%lld tis/sec,\t\t%s perft %d = %lld )\n", buf, tnodes, totaltime/60000000,(totaltime%60000000)/1000000,(totaltime%1000000)/1000, tnodes*1000/totaltime, fen, d-1, tnodes );
 			}
 			UnMakeMoveNew(b, &u, pos);
-		} else tnodes = 1;
+		r = ChangesToMove(b, att, &u);
+
+// regenerate bitmaps
+		generateBitmaps(b, att, r, WHITE);
+		generateBitmaps(b, att, r, BLACK);
+
+// regenerate attacked squares
+		att->att_by_side[BLACK] = regenerateSQAttacked(b, att, BLACK);
+		att->att_by_side[WHITE] = regenerateSQAttacked(b, att, WHITE);
+
+// regenerate king bitmaps
+		mvsfromk22(b, att, side);
+		mvsfromk22(b, att, opside);
+
 		nodes += tnodes;
-}
+	}
 	return nodes;
 }
 
@@ -1637,7 +1667,7 @@ int timed_driver(int t, int d, int max, personality *pers_init, int sts_mode, st
 	int ii = 0;
 
 //#pragma omp parallel num_threads(4)
-#pragma omp parallel proc_bind(spread) num_threads(4)
+#pragma omp parallel proc_bind(spread) num_threads(1)
 	{
 	int time, depth;
 	int i;
@@ -1734,6 +1764,7 @@ int timed_driver(int t, int d, int max, personality *pers_init, int sts_mode, st
 			clear_killer_moves(b.kmove);
 			initPawnHash(b.hps);
 			initHash(b.hs);
+			clearHHTable2(b.hht,b.pers->piecetosquare);
 			clearSearchCnt(b.stats);
 
 			starttime = readClock();
@@ -1805,6 +1836,13 @@ int timed_driver(int t, int d, int max, personality *pers_init, int sts_mode, st
 			printf(b3);
 			LOGGER_0(b3);
 		  }
+				L0("** TOTALS **\n");
+				printSearchStat(b.stats);
+				L0("** HHT dump **\n");
+				dumpHHTable(b.hht);
+				L0("** Analyze Hash **\n");
+				analyzeHash(b.hs);
+
 #endif
 			free(name);
 	}
@@ -3343,7 +3381,14 @@ int driver_eval_checker(int max, personality *pers_init, CBACK, void *cdata)
 			writeEPD_FEN(&b, fen, 1, opt);
 //			eval_dump(&b, &a, b.pers);
 			L0("FEN: %s\n",fen);
-
+			printmask(ps->paths[WHITE],"pw");
+			printmask(ps->paths[BLACK],"pb");
+			printmask(ps->one_side[WHITE],"w");
+			printmask(ps->one_side[BLACK],"b");
+			printmask(ps->one_s_att[WHITE][0], "W0");
+//			printmask(ps->one_s_att[WHITE][1], "W1");
+			printmask(ps->one_s_att[BLACK][0], "B0");
+//			printmask(ps->one_s_att[BLACK][1], "B1");
 			LOGGER_0("Score %d, %d:%d\n", a.sc.complete,a.sc.score_b, a.sc.score_e);
 
 			L0("*** REPLAY phase ***\n");
