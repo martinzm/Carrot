@@ -48,7 +48,7 @@ ifeq ($(MAKECMDGOALS), vnormal)
     LDFLAGS += -DDEBUG1 
 endif
 ifeq ($(MAKECMDGOALS), sedebug)
-    CFLAGS += -Wall -Og -DDEBUG1 -DSEDEBUG -Wno-unused-variable -Finline-functions -Winline -pedantic
+    CFLAGS += -g -Wall -O2 -DDEBUG1 -DSEDEBUG -Wno-unused-variable -Finline-functions -Winline -pedantic
     LDFLAGS += -DDEBUG1
 endif
 ifeq ($(MAKECMDGOALS), release)
@@ -84,8 +84,8 @@ ifeq ($(MAKECMDGOALS), tuned)
     LDFLAGS += -pg -g -DTUNING -DDEBUG1  -fprofile-arcs --coverage
 endif
 ifeq ($(MAKECMDGOALS), sanit)
-    CFLAGS += -DDEBUG3 -Og -pg -g3 -pedantic -Wall -Wconversion -c -MMD -MP -Wno-unused-label -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment -Wno-unused-variable -Finline-functions --coverage
-    LDFLAGS += -DDEBUG3 -pg -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment --coverage
+    CFLAGS += -DTUNING -DDEBUG3 -Og -pg -g3 -pedantic -Wall -Wconversion -c -MMD -MP -Wno-unused-label -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment -Wno-unused-variable -Finline-functions --coverage
+    LDFLAGS += -DTUNING -DDEBUG3 -pg -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment --coverage
 endif
 
 all normal cov covs sedebug release prof debug sanit perf vnormal: $(PATHB)$(NAME)

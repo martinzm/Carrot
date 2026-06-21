@@ -686,7 +686,7 @@ if (bs->uci_options->infinite == 1) {
 	bs->run.time_crit = bs->uci_options->movetime - lag;
 } else {
 // variable move time
-	if (bs->uci_options->movestogo == 0) {
+//	if (bs->uci_options->movestogo == 0) {
 // sudden death
 
 /* best - pro 2+s 
@@ -729,6 +729,7 @@ if (bs->uci_options->infinite == 1) {
 		if(bs->move >= 140 ) moves=20;
 		else moves= 48 - bs->move / 5;
 #endif
+#if 0
 		if (bs->move < 70) {
 			moves = 40 - (bs->move / 4);
 		} else {
@@ -739,6 +740,7 @@ if (bs->uci_options->infinite == 1) {
 	} else {
 		moves = bs->uci_options->movestogo;
 	}
+#endif
 	if ((bs->side == 0)) {
 		time = bs->uci_options->wtime;
 		inc = bs->uci_options->winc;
@@ -751,12 +753,13 @@ if (bs->uci_options->infinite == 1) {
 		cm= (bs->uci_options->btime*100/bs->uci_options->wtime);
 	}
 	if (bs->uci_options->movestogo == 0) {
-		if (bs->move < 70) {
-			moves = 40 - (bs->move / 4);
+		if (bs->move < 80) {
+			moves = 30 - (bs->move / 4);
 		} else {
-			moves = 15 + (bs->move - 70) / 2;
+//			moves = 15 + (bs->move - 80) / 2;
+			moves = 15;
 		}
-		if (moves < 15) moves = 15;
+		if (moves < 10) moves = 10;
 		if (moves > 60) moves = 60;
 	} else {
 		moves = bs->uci_options->movestogo;
@@ -939,8 +942,8 @@ while (uci_state != 0) {
 				engine_stop = 1;
 				L0("** Running TOTALS **\n");
 				printSearchStat(&(STATS[MAXPLY]));
-				L0("** HHT dump **\n");
-				dumpHHTable(b->hht);
+//				L0("** HHT dump **\n");
+//				dumpHHTable(b->hht);
 				L0("** Analyze Hash **\n");
 				analyzeHash(b->hs);
 				break;
@@ -1196,8 +1199,8 @@ while (uci_state != 0) {
 				LOGGER_1("INFO: UCI game new\n");
 				L0("** Running TOTALS **\n");
 				printSearchStat(&(STATS[MAXPLY]));
-				L0("** HHT dump **\n");
-				dumpHHTable(b->hht);
+//				L0("** HHT dump **\n");
+//				dumpHHTable(b->hht);
 				L0("** Analyze Hash **\n");
 				analyzeHash(b->hs);
 				handle_newgame(b);

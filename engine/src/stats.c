@@ -32,16 +32,19 @@ void clearSearchCnt(struct _statistics *s)
 // do prvniho parametru je pricten druhy
 void AddSearchCnt(struct _statistics *s, struct _statistics *b)
 {
-long long depth, depth_max;
+long long depth, depth_max, cutoff_long;
 
-	depth = s->s[S_depth];
-	depth_max = s->s[S_depth_max];
+//	depth = s->s[S_depth];
+//	depth_max = s->s[S_depth_max];
+	depth = Max(s->s[S_depth], b->s[S_depth]);
+	depth_max = Max(s->s[S_depth_max], b->s[S_depth_max]);
+	cutoff_long = Max(s->s[S_cutoff_long],b->s[S_cutoff_long]);
 	for(int f=0;f<S_MAX_COLL; f++) { s->s[f] += b->s[f]; }
 
 // vyresit depth a depth_max
 	s->s[S_depth] = depth;
 	s->s[S_depth_max] = depth_max;
-
+	s->s[S_cutoff_long] = cutoff_long;
 }
 
 // do prvniho parametru je skopirovan druhy
@@ -53,14 +56,22 @@ void CopySearchCnt(struct _statistics *s, struct _statistics *b)
 // od prvniho je odecten druhy a vlozen do tretiho
 void DecSearchCnt(struct _statistics *s, struct _statistics *b, struct _statistics *r)
 {
+long long depth, depth_max, cutoff_long;
+
+	depth = Max(s->s[S_depth], b->s[S_depth]);
+	depth_max = Max(s->s[S_depth_max], b->s[S_depth_max]);
+	cutoff_long = Max(s->s[S_cutoff_long],b->s[S_cutoff_long]);
 	for(int f=0;f<S_MAX_COLL; f++) { r->s[f] = s->s[f] - b->s[f]; }
+	r->s[S_depth] = depth;
+	r->s[S_depth_max] = depth_max;
+	r->s[S_cutoff_long] = cutoff_long;
 }
 
 void dumpEBF()
 {
 	int f, mx=Min(MAXPLY, 64);
 	for(f=1;f<mx;f++) {
-		L0("Depth %d, N1/N-1 %lld/%lld, ebf %.2f\n",
+		L0("Depth %d, N/N-1 %lld/%lld, ebf %.2f\n",
 		f, STATS[f].s[S_ebfnodes], STATS[f].s[S_ebfnodespri], STATS[f].s[S_ebfnodes]/(STATS[f].s[S_ebfnodespri]+1.0));
 	}
 }
@@ -93,23 +104,30 @@ int c=0;
 			"Info: LmrN %lld, LmrRerun %lld (%.2f%%), LMP cuts %lld, FhFlCount: %lld\n",
 		s->s[S_lmrtotal], s->s[S_lmrrerun], 100*s->s[S_lmrrerun]/(s->s[S_lmrtotal]+1.0), s->s[S_lmpcount], s->s[S_fhflcount]);
 	LX(o,c,l,
-			"Info: ZeroN %lld, ZeroRerun %lld, Zero Rate %.2f%%\n",
-		s->s[S_zerototal], s->s[S_zerorerun],  100*s->s[S_zerorerun]/(s->s[S_zerototal]+1.0));
+			"Info: ZeroN %lld, ZeroRerun %lld, Zero Rate %.2f%%, ZeroLow %lld\n",
+		s->s[S_zerototal], s->s[S_zerorerun],  100*s->s[S_zerorerun]/(s->s[S_zerototal]+1.0), s->s[S_Zfhflcount]);
+	long long int ttc=s->s[S_failhashnorm]+s->s[S_failhashhigh]+s->s[S_failhashlow] +
+			s->s[S_Qfailhashnorm]+s->s[S_Qfailhashhigh]+s->s[S_Qfailhashlow];
 	LX(o,c,l,
 	"HASH: TTHits %lld, PosRes %lld (%.2f%%), Move Ordering %lld (%.2f%%)\n",
-		s->s[S_hashHits], s->s[S_failhashnorm]+s->s[S_failhashhigh]+s->s[S_failhashlow], 
-		100 *(s->s[S_failhashnorm]+s->s[S_failhashhigh]+s->s[S_failhashlow])/(s->s[S_hashHits]+1.0),
-		(s->s[S_hashHits]-s->s[S_failhashnorm]-s->s[S_failhashhigh]-s->s[S_failhashlow]),
-		100 *(s->s[S_hashHits]-s->s[S_failhashnorm]-s->s[S_failhashhigh]-s->s[S_failhashlow])/(s->s[S_hashHits]+1.0));
+		s->s[S_hashHits], ttc, 100 *ttc/(s->s[S_hashHits]+1.0),
+		(s->s[S_hashHits]-ttc),100 *(s->s[S_hashHits]-ttc)/(s->s[S_hashHits]+1.0));
 
 	LX(o,c,l,
 	"Info: NMP run node %lld, ZeroRerunMoves %lld, LmrRerunMoves %lld\n", s->s[S_u_nullnodes], s->s[S_zerorerunnodes], s->s[S_lmrrerunnodes]);
 	LX(o,c,l,
-			"Info: Cutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%\n",
-		s->s[S_firstcutoffs], s->s[S_cutoffs], 100 * s->s[S_firstcutoffs] / (s->s[S_cutoffs] + 1.0));
+			"Info: Any Cutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%, AvNFCut %.2f, Longest cut %lld\n",
+		s->s[S_firstcutoffs], s->s[S_cutoffs], 100 * s->s[S_firstcutoffs] / (s->s[S_cutoffs] + 1.0),
+		s->s[S_cutoff_cum]/(s->s[S_cutoffs]-s->s[S_firstcutoffs]-s->s[S_failhashhigh]+1.0), s->s[S_cutoff_long]);
 	LX(o,c,l,
-			"Info: Moves before Cuttoffs %lld, Average %.2f%%, Non cutoff moves %lld\n", s->s[S_moves_to_cutoff],100*(s->s[S_moves_to_cutoff]/(s->s[S_cutoffs]+1.0)),
-		s->s[S_non_cutoff_moves]);
+			"Info: Moves before Cutoffs %lld, Non cutoff moves %lld (%.2f%%)\n", s->s[S_cutoff_cum],
+		s->s[S_non_cutoff_moves], 100 * s->s[S_non_cutoff_moves]/(s->s[S_movestested]+1.0));
+
+unsigned long long caps=s->s[S_cutoffs]-s->s[S_quiet_cuts];
+
+	LX(o,c,l,
+			"Info: Capture Cutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%\n",
+			s->s[S_first_cap_cuts], caps, 100 * s->s[S_first_cap_cuts]/(caps+1.0) );
 	LX(o,c,l,
 			"Info: Quiet Cutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%\n",
 		s->s[S_first_quiet_cuts], s->s[S_quiet_cuts],
@@ -167,6 +185,11 @@ int c=0;
 	"Info: Time in: %dh, %dm, %ds, %dms\n",
 		(int ) s->s[S_elaps] / 3600000, (int ) (s->s[S_elaps] % 3600000) / 60000,
 		(int ) (s->s[S_elaps] % 60000) / 1000, (int ) (s->s[S_elaps] % 1000));
+	LX(o,c,l,
+	"Info: Time wasted: %dh, %dm, %ds, %dms\n",
+		(int ) s->s[S_wasted_time] / 3600000, (int ) (s->s[S_wasted_time] % 3600000) / 60000,
+		(int ) (s->s[S_wasted_time] % 60000) / 1000, (int ) (s->s[S_wasted_time] % 1000));
+
 #if 0
 	LX(o,c,l,
 	"Info: Position Quality Tests %lld, Reductions %lld\n",

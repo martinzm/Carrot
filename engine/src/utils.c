@@ -855,8 +855,8 @@ int boardCheck(board *b, char *name)
 	}
 	key = getKey(b);
 	if (b->key != key) {
+			LOGGER_1("ERR: %s, Keys dont match, board key %llX, computed key %llX\n",name, (unsigned long long) b->key, (unsigned long long) key);
 		ret = 0;
-		LOGGER_1("ERR: %s, Keys dont match, board key %llX, computed key %llX\n",name, (unsigned long long) b->key, (unsigned long long) key);
 	}
 	matidx = computeMATIdx(b);
 	if (b->mindex != matidx) {

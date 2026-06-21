@@ -108,7 +108,10 @@ hranice ruznych cuts pocitat dynamicky z aktualnich hodnot figur a faze - mit v 
   
   
   
-  
+- 21/06/26
+  above not true anymore, will update later
+  current version 120 ELO over cheese set to 2700.
+  But producing a lot of unneeded moves 
   
   
   

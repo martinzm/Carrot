@@ -127,7 +127,9 @@ BITVAR getKey(board *b)
 	if (b->side == BLACK)
 		key ^= sideKey;
 	if (b->ep != -1)
-		key ^= epKey[b->ep];
+		if(attack.ep_mask[b->ep] & b->maps[PAWN] & b->colormaps[Flip(b->side)]) {
+			key ^= epKey[b->ep];
+		}
 	return key;
 }
 
@@ -419,7 +421,7 @@ int retrieveHash(hashStore *hs, hashEntry *hash, int side, int ply, int depth, i
 		}
 	}
 // check type of problem
-// if all used and full with actual info then it is collision in otherwise it is read miss
+// if all used and full with actual info then it is collision, otherwise it is read miss
 	for (i = 0; i < HASHPOS; i+=1) {
 		if (UNPACKHASHAGE(h[i].pld)!=hs->hashValidId) {
 			s->s[S_hashMiss]++;

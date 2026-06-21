@@ -451,11 +451,11 @@ unsigned char opside;
 			pawn_set_black(b, &(a->ke[BLACK]), pins, pset);
 		}
 
-		if((b->side==side) && pset[4]==0) {
-				b->ep_val=0;
+//		if((b->side==side) && pset[4]==0) {
 // revert ep in Zobrist
-				b->key ^= epKey[b->ep];
-		}
+//				b->key ^= epKey[b->ep];
+//				b->ep_val=0;
+//		}
 
 
 //	}
@@ -1725,8 +1725,8 @@ int MakeMoveNew(board *b, MOVESTORE move, int *pos, UNDO *ret)
  */			
 		switch (capp) {
 			case BISHOP:
-//				if (NORMM(to) & BLACKBITMAP) midx = omidx[DBISHOP];
-				midx = (NORMM(to) & BLACKBITMAP) ? omidx[DBISHOP]:0;
+				if (NORMM(to) & BLACKBITMAP) midx = omidx[DBISHOP];
+//				midx = (NORMM(to) & BLACKBITMAP) ? omidx[DBISHOP]:0;
 				break;
 			case PAWN:
 				b->pawnkey ^= randomTable[opside][to][PAWN];  //pawnhash
@@ -1760,7 +1760,13 @@ int MakeMoveNew(board *b, MOVESTORE move, int *pos, UNDO *ret)
 		case PAWN:
 			b->rule50move = b->move;
 // was it 2 rows ?
-			if (((to > from) ? to - from : from - to) == 16) b->ep = to;
+			if (((to > from) ? to - from : from - to) == 16) {
+// just make sure ep is real - ie there is opposing pawn able to deliver ep
+// otherwise leave it set to 0
+				if(attack.ep_mask[to] & b->maps[PAWN] & b->colormaps[opside]) {
+					b->ep = to;
+				}
+			}
 			b->pawnkey ^= randomTable[b->side][from][PAWN];  //pawnhash
 			b->pawnkey ^= randomTable[b->side][to][PAWN];  //pawnhash
 			break;
@@ -2394,6 +2400,7 @@ void ScoreNormal(board *b, move_cont *mv, int side)
 {
 	move_entry *t;
 	int fromPos, ToPos, piece, opside, dist;
+	uint8_t phase = eval_phase(b, b->pers);
 
 	opside = Flip(side);
 	for (t = mv->lastp - 1; t >= mv->next; t--) {
@@ -2401,7 +2408,26 @@ void ScoreNormal(board *b, move_cont *mv, int side)
 		ToPos = UnPackTo(t->move);
 		piece = b->pieces[fromPos] & PIECEMASK;
 
-		if(t->qorder < CS_K_OR) t->qorder = checkHHTable(b->hht, side, piece, ToPos) + MV_HH;
+		if(t->qorder < CS_K_OR) {
+
+#if 0
+			int be = b->pers->piecetosquare[MG][side][piece][ToPos]
+				- b->pers->piecetosquare[MG][side][piece][fromPos];
+			int en = b->pers->piecetosquare[EG][side][piece][ToPos]
+				- b->pers->piecetosquare[EG][side][piece][fromPos];
+			int val = PVAL(be, en, phase, 255);
+			t->qorder = checkHHTable(b->hht, side, piece, ToPos) + MV_HH + val*32;
+#endif
+			int see = SEEx(b, t->move);
+#if 0
+			if(see < 0) {
+//					t->qorder += (MV_BAD-A_OR2);
+				t->qorder = (MV_OR);
+//					L0("neg SEE %d\n", see);
+			} else
+#endif
+			t->qorder = checkHHTable(b->hht, side, piece, ToPos) + MV_HH;
+		}
 
 //		L0("HH table:%d\n", t->qorder);
 // assign priority based on distance to enemy king or promotion
@@ -2497,6 +2523,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 		mv->cgen = 0;
 		mv->quiet_pr = 0;
 		mv->cap_pr = 0;
+		mv->tgen = 0;
 //		DEB_SE(L0("ply:%d, side:%d, ch:%d\n",ply, side, incheck));
 // previous PV move
 	case PVLINE:
@@ -2543,7 +2570,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 		while ((mv->next < mv->lastp) && (mv->tcnt > 0)) {
 			mv->tcnt--;
 			SelectBest(mv);
-			if (isMoveValid(b, mv->next->move, a, side, tree))
+			if (isMoveValid(b, mv->next->move, a, side, tree) && !ExcludeMove(mv, mv->next->move)) {
 			  if ((mv->next->qorder < MV_OR)
 			  ) {
 				mv->next->phase=OTHER;
@@ -2552,13 +2579,15 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 				mv->badp++;
 				mv->next++;
 				continue;
+			  }
+			  *mm = mv->next;
+			  mv->next->phase=CAPTUREA;
+			  mv->next->ord=mv->count;
+			  mv->next++;
+			  mv->cap_pr++;
+			  return ++mv->count;
 			}
-			*mm = mv->next;
-			mv->next->phase=CAPTUREA;
-			mv->next->ord=mv->count;
-			mv->next++;
-			mv->cap_pr++;
-			return ++mv->count;
+			  mv->next++;
 		}
 		mv->phase = SORT_CAPTURES;
 	case SORT_CAPTURES:
@@ -2568,7 +2597,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 		mv->phase = CAPTURES;
 	case CAPTURES:
 		while (mv->next < mv->lastp) {
-			if (isMoveValid(b, mv->next->move, a, side, tree))
+			if (isMoveValid(b, mv->next->move, a, side, tree) && !ExcludeMove(mv, mv->next->move)) {
 			  if ((mv->next->qorder < MV_OR)
 			  ) {
 				mv->next->ord=-1;
@@ -2584,6 +2613,8 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 			mv->cap_pr++;
 			mv->next++;
 			return ++mv->count;
+		  }
+		  mv->next++;
 		}
 		mv->phase = KILLER1;
 	case KILLER1:
@@ -2598,7 +2629,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 				mv->exclp++;
 				*mm =  &(mv->killer1);
 				mv->killer1.ord=mv->count;
-				mv->next->phase=KILLER1;;
+				mv->next->phase=KILLER1;
 				return ++mv->count;
 			}
 		}
@@ -2781,6 +2812,7 @@ int getNextRootMove(board *b, attack_model *a, move_cont *mv, int ply, int side,
 		mv->phase = NORMAL;
 		mv->quiet = NULL;
 		mv->cgen = 0;
+		mv->tgen = 0;
 	case NORMAL:
 		while (mv->next < mv->lastp) {
 			mv->next->phase=NORMAL;
@@ -2816,6 +2848,7 @@ char b2[512];
 		mv->cgen = 0;
 		mv->quiet_pr = 0;
 		mv->cap_pr = 0;
+		mv->tgen = 0;
 // previous PV move
 	case PVLINE:
 		mv->phase = GENERATE_NORMAL;
@@ -2848,12 +2881,13 @@ char b2[512];
 
 int getNextCap(board *b, attack_model *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store *tree)
 {
-	move_entry *m;
+	move_entry M, *m=&M;
 int fromPos, piece;
 
 	switch (mv->phase) {
 	case INIT:
-		// setup everything
+		mv->lastp = mv->move;
+		mv->next = mv->lastp;
 		mv->lastp = mv->move;
 		mv->badp = mv->bad;
 		mv->exclp = mv->excl;
@@ -2863,6 +2897,7 @@ int fromPos, piece;
 		mv->cgen = 0;
 		mv->quiet_pr = 0;
 		mv->cap_pr = 0;
+		mv->tgen = 0;
 		mv->lpcheck = ! (
 			(BitCount(
 			  ((b->maps[BISHOP] | b->maps[ROOK] | b->maps[QUEEN]) & b->colormaps[Flip(side)]))==0)
@@ -2873,8 +2908,25 @@ int fromPos, piece;
 
 // previous PV move
 	case PVLINE:
+		mv->phase = HASHMOVE;
+	case HASHMOVE:
+		m->move=mv->hash.move;
 		mv->phase = GENERATE_CAPTURES;
-//		LOGGER_SE("PVLINE\n");
+		if ((mv->hash.move != DRAW_M) && (b->hs != NULL)
+			&& isMoveValid(b, mv->hash.move, a, side, tree)
+			&& !is_quiet_move(b, a, m)
+			&& (!ExcludeMove(mv, mv->hash.move))) {
+			mv->next->move = mv->hash.move;
+			*(mv->exclp) = *(mv->next);
+			mv->next->phase=HASHMOVE;
+			*mm = mv->next;
+			mv->next->ord=mv->count;
+			mv->next->qorder=HASH_OR;
+			mv->next++;
+			mv->exclp++;
+			mv->lastp=mv->next;
+			return ++mv->count;
+		}
 	case GENERATE_CAPTURES:
 		mv->phase = CAPTUREA;
 		mv->next = mv->lastp;
@@ -2886,9 +2938,11 @@ int fromPos, piece;
 //		mv->actph = CAPTUREA;
 //		LOGGER_SE("GEN CAP\n");
 	case CAPTUREA:
+
 		while ((mv->next < mv->lastp) && (mv->tcnt > 0)) {
 			mv->tcnt--;
 			SelectBest(mv);
+			if(!ExcludeMove(mv, mv->next->move)){
 #if 0
 			if(mv->next->qorder == A_CA_PROM_N) {
 				fromPos = UnPackFrom(mv->next->move);
@@ -2913,6 +2967,9 @@ int fromPos, piece;
 			mv->cap_pr++;
 //			LOGGER_SE("CAPTUREA\n");
 			return ++mv->count;
+			}
+			mv->next++;
+
 		}
 		mv->phase = SORT_CAPTURES;
 	case SORT_CAPTURES:
@@ -2922,6 +2979,7 @@ int fromPos, piece;
 //		LOGGER_SE("SORT CAP\n");
 	case CAPTURES:
 		while (mv->next < mv->lastp) {
+			if(!ExcludeMove(mv, mv->next->move)) {
 			if(mv->next->qorder == A_CA_PROM_N) {
 				fromPos = UnPackFrom(mv->next->move);
 				piece = b->pieces[fromPos] & PIECEMASK;
@@ -2944,6 +3002,8 @@ int fromPos, piece;
 			mv->cap_pr++;
 //			LOGGER_SE("CAPTURES\n");
 			return ++mv->count;
+			}
+			mv->next++;
 		}
 		mv->phase = DONE;
 	case DONE:

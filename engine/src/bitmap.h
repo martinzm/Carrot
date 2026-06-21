@@ -795,6 +795,8 @@ typedef struct _bit_board {
 	MOVESTORE bestmove;
 	int bestscore;
 	int depth_run;
+// check extension capping
+	int ext;
 // set when more time is needed - at 1st iteration/1st move/on fail low at root
 	int search_dif;
 	int search_abort;
