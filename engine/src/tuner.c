@@ -307,7 +307,7 @@ DEB_0(for(sq=0;sq<=7;sq++) {
       MAT_DUO(mat[i], mat[i+1], p, doubled_n_penalty[0][WHITE][sq], doubled_n_penalty[1][WHITE][sq], i, map);
       MAT_DUO_ADD(mat[i], mat[i+1], p, doubled_n_penalty[0][BLACK][sq], doubled_n_penalty[1][BLACK][sq], map);
       i+=2; } )
-DEB_X(MAT_DUO(mat[i], mat[i+1], p, bishopboth[0], bishopboth[1], i, map); i+=2;)
+DEB_0(MAT_DUO(mat[i], mat[i+1], p, bishopboth[0], bishopboth[1], i, map); i+=2;)
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, rookpair[0], rookpair[1], i, map); i+=2; )
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, knightpair[0], knightpair[1], i, map); i+=2; )
 DEB_X(for(sq=0;sq<=7;sq++) {
@@ -337,6 +337,20 @@ DEB_0(
 		ii++;
 	}
 #endif
+)
+
+int start_in2[] = { 1, 2, 3, 4, -1 };
+DEB_0(
+  ii = 0;
+  while (start_in2[ii] != -1)
+	{
+		sq = start_in2[ii];
+		for(int x=0;x<(PAWNS_TOT);x++) {
+		MAT_SIN(mat[i], p, dvalues[sq][x], i, map);
+		i++;
+	  }
+	  ii++;
+	}
 )
 return i;
 }

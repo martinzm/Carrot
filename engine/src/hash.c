@@ -191,9 +191,10 @@ void storeHashX(hashStore *hs, BITVAR key, BITVAR pld, BITVAR ver, struct _stati
 
 	int32_t val;  //3 17b
 	MOVESTORE bm;  //2 15b
-	int16_t de;  //1 limit to 7b, max depth 127
-	uint8_t age;  //1 5b
+	int16_t dep, de1;  //1 limit to 7b, max depth 127
+	uint8_t age, ag1, agt;  //1 5b
 	uint8_t sc; //1 2b 
+	int hto, htn;
 	
 	s->s[S_hashStores]++;
 	f = key & (BITVAR) (hs->hashlen - 1);
@@ -221,11 +222,12 @@ void storeHashX(hashStore *hs, BITVAR key, BITVAR pld, BITVAR ver, struct _stati
 			int qq = UNPACKHASHDEPTH(pld);
 			int q = UNPACKHASHDEPTH(h[i].pld);
 			int ag = hs->hashValidId != UNPACKHASHAGE(h[i].pld);
-			if ((qq >= q)||ag) {
+			if ((qq >= q)) {
 				s->s[S_hashStoreInPlace]++;
 				c = i;
 				goto replace;
 			} 
+			UPDATEHASHAGE(h[i].pld, hs->hashValidId);
 			return;
 		  }
 		}
@@ -239,36 +241,39 @@ void storeHashX(hashStore *hs, BITVAR key, BITVAR pld, BITVAR ver, struct _stati
 	}
 // tricky one, we have to sacrifice content of one slot...
 	c=-1;
-	int d = UNPACKHASHTYPE(pld);
-	int n_ag=-1;
-	int w_dp= 9999;
-//	int qq = UNPACKHASHDEPTH(pld) + (d == EXACT_SC ? 5 : (d == FAILHIGH_SC ? 2:0)) + 256;
-	int qq = UNPACKHASHDEPTH(pld);
-//	int qq=0;
-	for (i = 0; i < HASHPOS; i+= 1) {
-		int q = UNPACKHASHDEPTH(h[i].pld);
-			d = UNPACKHASHTYPE(h[i].pld);
+	int scrt, scr1=99999;
+	int ws=0;
+	int det;
 
-		int ag = hs->hashValidId >= UNPACKHASHAGE(h[i].pld) ? hs->hashValidId - UNPACKHASHAGE(h[i].pld):
-			hs->hashValidId + 0x3F - UNPACKHASHAGE(h[i].pld);
-//		int ag = hs->hashValidId != UNPACKHASHAGE(h[i].pld);
-		if(ag>n_ag) {
-			n_ag=ag;
-			w_dp = q;
-			c = i;
-		} else if(ag == n_ag && q < w_dp) {
-			w_dp = q;
-			c = i;
+	UNPACKHASH(pld, bm, val, de1, sc, age);
+	det=de1;
+//	ag1 = hs->hashValidId >= age ? hs->hashValidId - age: hs->hashValidId + 0x3F - age;
+	ag1=0;
+//	scr1=1*de1 + (sc==EXACT_SC) ? 3:0;
+	scr1=1*de1 - (sc==EXACT_SC) ? 3:0 + (sc==FAILHIGH_SC) ? 1:0;
+	
+	for (i = 0; i < HASHPOS; i+= 1) {
+		UNPACKHASH(h[i].pld, bm, val, dep, sc, age);
+		agt = hs->hashValidId >= age ? hs->hashValidId - age: hs->hashValidId + 0x3F - age;
+		scrt=1*dep - agt*4 + ((sc==EXACT_SC) ? 3:0) + ((sc==FAILHIGH_SC) ? 1:0);
+		if(scrt<=scr1) {
+			if(scrt==scr1) {
+				if(dep>de1) continue;
+				else if(dep==de1) {
+					if(bm!=NULL_MOVE) continue;
+				}
+			}
+			scr1=scrt;
+			de1=dep;
+			ag1=agt;
+			c=i;
 		}
-//		q += (d == EXACT_SC ? 5 : (d == FAILHIGH_SC ? 2:0)) + (ag == 0 ? 256 : (ag == 1 ? 64:0)) ;
-//		L0("Hstore %d <> [%d]%d\n", qq, i,q);
-//		if (qq > q) {
-//			qq = q;
-//			c = i;
-//		}
 	}
-	if(n_ag == 0 && qq < w_dp) {
-//	if(c ==-1) {
+	if(c==-1) {
+		s->s[S_hashStoreColl]++;
+		return;
+	}
+	if(ag1==0 && de1 > det) {
 		s->s[S_hashStoreColl]++;
 		return;
 	}
@@ -285,7 +290,7 @@ void storeHash(hashStore *hs, hashEntry *hash, int side, int ply, int depth, BIT
 	BITVAR f, hi;
 	BITVAR pld;
 	hashBucket *h;
-
+  
 	switch (isMATE(hash->value)) {
 	case -1:
 		hash->value -= ply;
@@ -297,7 +302,7 @@ void storeHash(hashStore *hs, hashEntry *hash, int side, int ply, int depth, BIT
 		break;
 	}
 // fix for depth <= 0, can happen when searching in check
-	if(hash->depth<=1) return;
+	if(hash->depth<=0) return;
 //	pld=PACKHASH(hash->bestmove, hash->value, Min(127UL,Max(0UL, hash->depth)), hash->scoretype, hs->hashValidId);
 	pld=PACKHASH(hash->bestmove, hash->value, Min(511UL,Max(0UL, hash->depth)), hash->scoretype, hs->hashValidId);
 	storeHashX(hs, hash->key, pld, ver, s);
@@ -331,7 +336,8 @@ void storeExactPV(hashStore *hs, BITVAR key, BITVAR ver, tree_store *orig, int l
 		}
 	}
 	c = 0;
-	replace: hs->pv[f].e[c].key = hi;
+replace:
+	hs->pv[f].e[c].key = hi;
 	hs->pv[f].e[c].age = (uint8_t) hs->hashValidId;
 	hs->pv[f].e[c].map = ver;
 	for (n = level, m = 0; n <= MAXPLY; n++, m++) {
@@ -843,19 +849,52 @@ int updateHHTable2(board *b, hhTable *hh, move_entry *m, int cutoff, int side, i
 	fromPos = UnPackFrom(m[cutoff].move);
 	toPos = UnPackTo(m[cutoff].move);
 	piece = b->pieces[fromPos] & PIECEMASK;
-	hh->val[side][piece][toPos] += bonus - hh->val[side][piece][toPos] * abs(bonus)/HHScale;
+
+#if 0
+	if(!(hh->val[side][piece][toPos]<=HHScale && hh->val[side][piece][toPos]>=-HHScale)) {
+		L0("side %d, piece %d, hh %d\n", side, piece, hh->val[side][piece][toPos]);
+		assert(0);
+	}
+#endif
+
+	int dec2=hh->val[side][piece][toPos] * abs(bonus);
+	int dec = dec2/HHScale;
+
+#if 0
+	if(!(dec<=HHScale && dec>=-HHScale)) {
+		L0("side %d, piece %d, toPos %d, bonus %d, hh %d, dec %d\n", side, piece, toPos, bonus, hh->val[side][piece][toPos], dec);
+		assert(0);
+	}
+#endif
+	
+	hh->val[side][piece][toPos] += bonus - dec;
+
+#if 0
+	if(!(hh->val[side][piece][toPos]<=HHScale && hh->val[side][piece][toPos]>=-HHScale)) {
+		L0("side %d, piece %d, toPos %d, bonus %d, hh %d, dec %d, d2 %d\n", side, piece, toPos, bonus, hh->val[side][piece][toPos], dec, dec2);
+//		assert(0);
+	}
+#endif
+
 	return 0;
 }
 
 int updateHHTableGood(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int depth, int ply){
-	return updateHHTable2(b, hh, m, cutoff, side, Min(100*depth, HHScale));
+	return updateHHTable2(b, hh, m, cutoff, side, Min(20*depth, HHScale));
 }
 int updateHHTableBad(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int depth, int ply){
-	return updateHHTable2(b, hh, m, cutoff, side, -Min(100*depth, HHScale));
+	return updateHHTable2(b, hh, m, cutoff, side, -Min(30*depth, HHScale));
 }
 
 int checkHHTable(hhTable *hh, int side, int piece, int square)
 {
+#if 0
+	if(!(hh->val[side][piece][square]<=HHScale && hh->val[side][piece][square]>=-HHScale)) {
+		L0("side %d, piece %d, hh %d\n", side, piece, hh->val[side][piece][square]);
+		assert(0);
+	}
+#endif 
+
 	return hh->val[side][piece][square];
 }
 
@@ -865,7 +904,7 @@ int reduceHHTable(hhTable *hh)
 	for (int s=0;s<=1;s++)
 		for (q = PAWN; q < ER_PIECE; q++) 
 			for (f = 0; f < 64; f++)
-				hh->val[s][q][f] >>=1;
+				hh->val[s][q][f] /=2;
 	return 0;
 }
 
@@ -888,7 +927,7 @@ char bf2[2048];
 
 int dumpHHTable(hhTable *hh)
 {
-#define TTOP 10
+#define TTOP 5
 char buf[10000];
 char bf2[10000];
 int b[TTOP],w[TTOP];

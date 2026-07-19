@@ -1765,6 +1765,7 @@ int timed_driver(int t, int d, int max, personality *pers_init, int sts_mode, st
 			initPawnHash(b.hps);
 			initHash(b.hs);
 			clearHHTable2(b.hht,b.pers->piecetosquare);
+//			clearHHTable(b.hht);
 			clearSearchCnt(b.stats);
 
 			starttime = readClock();

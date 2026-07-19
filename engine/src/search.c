@@ -461,6 +461,7 @@ int search_finished(board *b)
 #else
 // time_move is our target / optimal time for move
 // deal with difficulties and adapt out allocated time.
+//	b->search_dif=100;
 long long int dyn_time = b->run.time_move * b->search_dif /100;
 	frem = (long long int ) Min(dyn_time, b->run.time_crit) - trun;
 
@@ -578,7 +579,7 @@ int QuiesceCheckN(board *b, int talfa, int tbeta, int depth, int ply, int side, 
 			return 0;
 		}
 	}
-
+	
 	if (b->stats->s[S_depth_max] < ply) {
 		b->stats->s[S_depth_max] = ply;
 		if (ply >= MAXPLY - 1) {
@@ -793,7 +794,7 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 // time to check hash table
 // TT CUT off?
 #if 1
-	if ((b->hs != NULL)&&(depth>10)) {
+	if ((b->hs != NULL)&& checks>0) {
 		hash.key = b->key;
 		hash.scoretype = NO_NULL;
 		hresult = retrieveHash(b->hs, &hash, side, ply, depth, b->pers->use_ttable_prev, b->norm, b->stats);
@@ -803,7 +804,7 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 			mt.real_score = hash.value;
 			mt.move = hash.bestmove;
 			if ((mt.move == NULL_MOVE) || (isMoveValid(b, mt.move, att, side, tree))) {
-				if ((hash.depth >= depth)) {
+				if ((hash.depth > 0)) {
 					tree->tree[ply][ply].move = mt.move;
 					tree->tree[ply][ply].score = mt.real_score;
 					if ((hash.scoretype != FAILHIGH_SC) && (mt.move != NULL_MOVE) && (mt.real_score <= talfa)) {
@@ -816,9 +817,17 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 						b->stats->s[S_Qfailhashhigh]++;
 						b->stats->s[S_qcutoffs]++;
 						mb = &mt;
+#if 1
+//						b->stats->s[S_Qcutoff_long]=Max(b->stats->s[S_Qcutoff_long],0);
+						b->stats->s[S_qfirstcutoffs]++;
+//						if (is_quiet_move(b, att, &mt))
+//							b->stats->s[S_Qquiet_cuts]++;
+//						else
+//							b->stats->s[S_qfirstcutoffs]++;
+#endif
 						goto ABFINISH2;
 					} else if (hash.scoretype == EXACT_SC) {
-						b->stats->s[S_failhashnorm]++;
+						b->stats->s[S_Qfailhashnorm]++;
 						if ((b->pers->use_hash)) {
 							}
 							b->stats->s[S_Qfailnorm]++;
@@ -987,6 +996,8 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 
 			LOGGER_SE("%*d, -G , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, best %d, val %d\n", 2+ply, ply, b2, 1, depth, talfa, tbeta, mb->real_score, m->real_score);
 			if(m->real_score>=tbeta) {
+				if (m == mvs.move)
+					b->stats->s[S_qfirstcutoffs]++;
 				b->stats->s[S_qcutoffs]++;
 				b->stats->s[S_Qfailhigh]++;
 				mb=m;
@@ -1042,7 +1053,7 @@ int SearchMoveNew(board *b, int talfa, int tbeta, int ttbeta, int depth, int ply
 	val = talfa;
 //	int check_depth = isPV ? b->pers->quiesce_check_depth_limit : 0;
 	int check_depth = b->pers->quiesce_check_depth_limit;
-	if (((ext > 0) && (ply < MAXPLY))||check) {
+	if (((ext > 0) && (ply < MAXPLY))|| (check && depth>-5)) {
 		val = -ABNew(b, -ttbeta, -talfa, ext, ply + 1, opside, tree,
 			nulls, att);
 //	unexpected over alpha? - rerun as it might be because of reduced depth
@@ -1079,7 +1090,7 @@ int SearchMoveNew(board *b, int talfa, int tbeta, int ttbeta, int depth, int ply
 		ext = depth + extend - 1;
 		b->stats->s[S_zerorerun]++;
 		zerormoves=b->stats->s[S_movestested];
-	if (ext > 0 || check)
+	if (ext > 0 || (check && depth>-5))
 			val = -ABNew(b, -tbeta, -talfa, ext, ply + 1, opside, tree, nulls, att);
 		else val = -QuiesceNew(b, -tbeta, -talfa, ext, ply + 1,
 				opside, tree, b->pers->quiesce_check_depth_limit, att);
@@ -1121,15 +1132,24 @@ int can_do_NullMove(board *b, attack_model *a, int alfa, int beta, int depth, in
 	return 1;
 }
 
-int can_do_LMP(board *b, attack_model *a, int alfa, int beta, int depth, move_entry *m, move_cont *MVS, int ply, int side, uint8_t phase)
+int can_do_LMP(board *b, attack_model *a, int alfa, int beta, int depth, int isPV, move_entry *m, move_cont *MVS, int ply, int side, uint8_t phase)
 {
 	int8_t from, to, rank;
 	int prio, reduce;
 	int see;
 	
+// dealing with in check moves before QS
+	if(depth<=0) {
+	   if (is_quiet_move(b,a,m) && !isPV && m->ord>3) return 1; else return 0;
+	}
+	
 	if(CheckingMove(b, a, side, m)) return 0;
-	int isPV = (alfa != (beta - 1));
+//	int isPV = (alfa != (beta - 1));
 
+//	if(isPV) {
+//		if((depth<=1) && MVS->quiet_pr>4) return 1;
+//		return 0;
+//	}
 	to = UnPackTo(m->move);
 	from = UnPackFrom(m->move);
 //	prom = UnPackProm(m->move);
@@ -1138,33 +1158,40 @@ int can_do_LMP(board *b, attack_model *a, int alfa, int beta, int depth, move_en
 	rank=getRank(from);
 #if 1
 	if ((b->pieces[from]&PIECEMASK) == PAWN) {
-		if((((side==WHITE)&&(rank==RANKi7||rank==RANKi6))
-		||((side==BLACK)&&(rank==RANKi2||rank==RANKi3)))) return 0;
+//		if((((side==WHITE)&&(rank==RANKi7||rank==RANKi6))
+//		||((side==BLACK)&&(rank==RANKi2||rank==RANKi3)))) return 0;
+		if((((side==WHITE)&&(rank==RANKi7))
+		||((side==BLACK)&&(rank==RANKi2)))) return 0;
 	}
 #endif
 //	if ((b->pieces[to]) != ER_PIECE) return 0;
+		prio = checkHHTable(b->hht, side, from, to);
 #if 1
 	see = SEEx(b, m->move);
 	if(see == 0) {
-		prio = checkHHTable(b->hht, side, from, to);
 		if(prio<0) return 1;
 	}
+//	if(see<0) return 1;
 #endif
 
-	int current_lmp_start = b->pers->LMP_start_move;
+
+	double current_lmp_start = b->pers->LMP_start_move;
 	if (phase < 153) {
-		current_lmp_start = (current_lmp_start * (phase + 75)) / 228;
-		if (current_lmp_start < 1) current_lmp_start = 1;
+		current_lmp_start = (current_lmp_start * (phase + 75)) / 228.0;
+		if (current_lmp_start < 2) current_lmp_start = 2;
 	}
-//	current_lmp_start = 1;
+//	current_lmp_start = 4;
 //	if ((MVS->quiet_pr > (b->pers->LMP_start_move + 2*depth)))
-	current_lmp_start += 2*(depth+isPV);
-//	if(depth>2) current_lmp_start += depth;
+	current_lmp_start += 2.0*(depth);
+	if (prio < -(HHScale/2.0)) current_lmp_start--;
+
+//	if(depth>2) current_lmp_start += 2*depth;
 
 	if (((MVS->quiet_pr) > current_lmp_start))
 	{
 		return 1;
 	}
+	if(m->ord>(10+2*depth)) return 1;
 	
 	return 0;
 }
@@ -1188,13 +1215,14 @@ int can_do_LMP(board *b, attack_model *a, int alfa, int beta, int depth, move_en
  * LMR doesnt reduce captures, hashmove, killers, non captures with good history
  * checks not reduced normally, no pawn
  */
-int can_do_LMR(board *b, attack_model *a, int alfa, int beta, int depth, move_entry *move, move_cont *MVS, int ply, int side, uint8_t phase, int seval, UNDO *u)
+int can_do_LMR(board *b, attack_model *a, int alfa, int beta, int depth, int isPV, move_entry *move, move_cont *MVS, int ply, int side, uint8_t phase, int seval, UNDO *u)
 {
 
 	int8_t from, movp, ToPos, rank;
 	int prio, reduce, sval;
-	int isPV = (alfa != (beta - 1));
+//	int isPV = (alfa != (beta - 1));
 
+//	if(isPV) return 0;
 // promotion
 	rank=getRank(u->from);
 	if (u->old == PAWN) {
@@ -1211,31 +1239,29 @@ int can_do_LMR(board *b, attack_model *a, int alfa, int beta, int depth, move_en
 	int pwn=(GT_M0(b, b->pers, side, PAWN))+(GT_M0(b, b->pers, Flip(side), PAWN));
 	int endg = 0;
 	if((pwn<8) && (phase<128)) {
-		endg=Min(3,(128-phase)/40 + (8-pwn)/3);
+		endg=Min(3,(128-phase)/40.0 + (8-pwn)/3.0);
 	}
 
 	double dynamic_divisor = 2.3 + (double)(255 - phase) / 500.0;
 	prio = checkHHTable(b->hht, side, u->old, u->to);
 
 	if(u->whereCa != -1) {
-		reduce = b->pers->lmr_table[Min(64,depth)][Min(64,move->ord+endg)] / (dynamic_divisor+0.5);
-//		reduce=1;
+		reduce = b->pers->lmr_table[Min(64,depth)][Min(64,move->ord+endg)] / (dynamic_divisor + 0.5);
 		sval = SEE0(b, u->to, side, u->captured);
 		if(sval<0) reduce+=1;
 		if((sval==0) && (prio<0)) reduce++;
 		if(MVS->cap_pr<3) reduce--;
 	} else {
 		reduce = b->pers->lmr_table[Min(64,depth)][Min(64,MVS->quiet_pr+endg)] / dynamic_divisor;
-		if (prio > (HHScale/2)) reduce--;
-		if (prio > (4*HHScale/5)) reduce--;
-		if (prio < -(HHScale/4)) reduce++;
-
+		if (prio > (HHScale/2.0)) reduce--;
+		if (prio > (4*HHScale/5.0)) reduce--;
+		if (prio < -(HHScale/4.0)) reduce++;
+	}
 // scaled value of PAWN
 	int pvalue = b->pers->matval[PAWN][phase];
 	if(seval < (beta - pvalue/5)) reduce--;
 
-	}
-//	if(isPV) reduce--;
+//	if(isPV) reduce-=2;
 
 	if(move->phase==OTHER)	return CLAMP(reduce, 0, depth-1 );
 //	if(depth>=6) return CLAMP(reduce, 0, depth-3);
@@ -1399,6 +1425,15 @@ int ABNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_store
 						b->stats->s[S_failhashhigh]++;
 						b->stats->s[S_cutoffs]++;
 //						b->stats->s[S_firstcutoffs]++;
+#if 1
+						b->stats->s[S_cutoff_long]=Max(b->stats->s[S_cutoff_long],0);
+						b->stats->s[S_firstcutoffs]++;
+						if (is_quiet_move(b, att, &mt))
+							b->stats->s[S_quiet_cuts]++;
+						else
+							b->stats->s[S_first_cap_cuts]++;
+#endif
+
 						mb = &mt;
 						goto ABFINISH2;
 					} else if (hash.scoretype == EXACT_SC) {
@@ -1444,7 +1479,8 @@ int pvalue;
 uint8_t phase=eval_phase(b, b->pers);
 // get value of position from hash or lazyEval (mat + psq, phase scaled)
 
-	sco= (hresult!=0) ? hash.value : (side==WHITE) ? getlazyEval(b, b->pers): -getlazyEval(b, b->pers);
+//	sco= (hresult!=0) ? hash.value : (side==WHITE) ? getlazyEval(b, b->pers): -getlazyEval(b, b->pers);
+	sco= (side==WHITE) ? getlazyEval(b, b->pers): -getlazyEval(b, b->pers);
 // scaled value of PAWN
 	pvalue = b->pers->matval[PAWN][phase];
 	
@@ -1452,25 +1488,35 @@ uint8_t phase=eval_phase(b, b->pers);
 // reverse futility pruning
 // asi necutovat kdyz mam jen pesce
 	int pstatef = ((GT_M0(b, b->pers, side, PIECES) == 0) && (GT_M0(b, b->pers, side, PAWN) > 0));
-
-		if ((depth <= b->pers->futility_depth && b->pers->futility_depth>0)
+		if (
+			((depth <= b->pers->futility_depth) && (b->pers->futility_depth>0))
 			&& (incheck == 0)
-			&& !isPV 
-			&& !pstatef
+//			&& !isPV 
+//			&& !pstatef
 //			&& (hresult==0)
-			&& (isMATE2(tbeta) == 0)
+//			&& (isMATE2(tbeta) == 0)
 			&& (depth>0)
+			&& (tbeta<20000) && (tbeta>-20000)
 			)
 			{
 //				if(sco >= ( tbeta + b->pers->futility_cut[depth] )) {
-				if(sco >= ( tbeta + (int)(depth*pvalue * 1.2) )) {
+				int rsco = (int)((depth+1)*pvalue * b->pers->futility_cut[depth]/100.0);
+				if(sco >= ( tbeta + rsco )) {
 					b->stats->s[S_FUT_cuts]++;
 					if(b->pers->futility_sim==1) {
-						L0("alfa %d, beta %d, talfa %d, tbeta %d, mat_eval %d, depth %d, fcut value %d, est score %d\n", alfa, beta, talfa, tbeta, sco, depth,b->pers->futility_cut[depth], sco - b->pers->futility_cut[depth]);
+						L0("pval %d, fcut %d\n", pvalue, b->pers->futility_cut[depth]);
+						L0("alfa %d, beta %d, talfa %d, mat_eval %d >= tbeta %d + fcut value %d, depth %d, est score %d\n", alfa, beta, talfa, sco, tbeta, rsco, depth, sco - rsco);
 						futility_sim_flag=1;
 					} else {
 //						mb->real_score=sco - b->pers->futility_cut[depth];
-						mb->real_score=sco - (int)(depth*pvalue * 1.2);
+						mb->real_score=sco - rsco;
+// store info into TT
+						hash.key = b->key;
+						hash.depth = (int16_t) depth;
+						hash.value = mt.real_score;
+						if(hresult == 0) hash.bestmove = NULL_MOVE;
+						hash.scoretype = FAILHIGH_SC;
+						if ((b->hs != NULL) && (b->search_abort == 0) && depth > 0) storeHash(b->hs, &hash, side, ply, depth, b->norm, b->stats);
 						DEB_S2( MVS->def.real_score=sco; MVS->def.state|=r_FUT;)
 						goto ABFINISH2;
 					}
@@ -1545,7 +1591,7 @@ uint8_t phase=eval_phase(b, b->pers);
 			hash.bestmove = NULL_MOVE;
 			hash.scoretype = FAILHIGH_SC;
 			if ((b->hs != NULL) && (b->search_abort == 0) && depth > 0)
-				storeHash(b->hs, &hash, side, ply, ext, b->norm, 
+				storeHash(b->hs, &hash, side, ply, depth, b->norm, 
 					b->stats);
 			if (b->pers->NMP_search_reduction == 0) {
 				b->stats->s[S_failhigh]++;
@@ -1647,48 +1693,24 @@ uint8_t phase=eval_phase(b, b->pers);
 // !extended !incheck !isPV !first_move use_lmp move mvs.actph >= NORMAL !MATEd
 // check after move is done in can_do_LMP as well as promotion
 
-//		if ((MVS->count > (b->pers->LMP_start_move + 2*depth*depth))
+//		  assert(b->stats->s[S_lmpcount]==0);
+		  
 		if ((b->pers->LMP_enable > 0)
 			&& (depth <= b->pers->LMP_depth)
-//			&& (depth < 10)
-			&& (depth > 0) // depth <= 0 is happenning only when incheck
-			&& (incheck == 0) 
-//			&& (extend == extend_o)
-			&& (m->phase>KILLER4) //aka quiet and bad SEE moves
-//			&& !isPV
-//			&& (u.whereCa == -1)
-			){
-			int lmp_red = can_do_LMP(b, att, talfa, ttbeta, depth, m, MVS, ply, side, phase);
+			&& (!isPV)
+			&& (
+				((depth > 0) // depth <= 0 is happenning only when incheck
+					&& (incheck == 0) && (m->phase>KILLER4)) //aka quiet and bad SEE moves
+				|| ((depth <= 0) && (m->ord>2))
+			  )
+			) {
+			int lmp_red = can_do_LMP(b, att, talfa, ttbeta, depth, isPV, m, MVS, ply, side, phase);
 				if(lmp_red>0) {
 					b->stats->s[S_lmpcount]++;
 					goto bypass2;
 				}
 		}
-
-#if 0
-// check for Futility pruning conditions, based on depth
-// !extended !incheck !isPV !first_move use_fprune
-// getlazyEval + fprune_margin < alfa drop;
-
-		if ((MVS->count > 0)
-			&& (depth < b->pers->futility_depth)&&(depth > 0)
-			&& (incheck == 0) && (aftermovecheck == 0)
-			&& (extend == extend_o)
-			&& !(ttbeta== talfa+1)
-			&& mb != &mdum
-			&& (tbeta<MATEMIN) && (tbeta> -MATEMIN)
-			&& (talfa<MATEMIN) && (talfa> -MATEMIN)
-			&& (m->phase>=NORMAL)) {
-			sco=(side==WHITE) ? get_material_eval_f(b, b->pers): -get_material_eval_f(b, b->pers);
-				if((sco+b->pers->futility_cut[depth]) <= talfa) {
-					m->state=1;
-					if(b->pers->futility_sim==1) {
-						L0("alfa %d, beta %d, talfa %d, tbeta %d, sco %d, depth %d, fcut %d\n", alfa, beta, talfa, tbeta, sco, depth,b->pers->futility_cut[depth]);
-					} else 
-						goto bypass2;
-				}
-		}
-#endif
+//		  assert(b->stats->s[S_lmpcount]==0);
 
 // perform move & setup node counting
 
@@ -1713,8 +1735,7 @@ uint8_t phase=eval_phase(b, b->pers);
 // idea from Crafty - extend only SAFE moves
 #if 1
 		if (b->pers->check_extension > 0 && depth>1 && b->ext<2) {
-				pval =
-					(u.captured < ER_PIECE) ? u.captured : 0;
+				pval = (u.captured < ER_PIECE) ? u.captured : 0;
 				sval = SEE0(b, UnPackTo(m->move), side, pval);
 				if (sval >= 0) {
 					extend += b->pers->check_extension;
@@ -1730,8 +1751,7 @@ uint8_t phase=eval_phase(b, b->pers);
 			aftermovecheck = 0;
 
 // setup window
-		ttbeta =
-			((MVS->count <= b->pers->PVS_full_moves) && isPV) ? tbeta : talfa + 1;
+		ttbeta = ((MVS->count <= b->pers->PVS_full_moves) && isPV) ? tbeta : talfa + 1;
 
 		DEB_SE(
 				sprintfMoveSimple(m->move, b2);
@@ -1773,11 +1793,15 @@ int lmr_s=m->real_score;
 			&& (aftermovecheck == 0)
 //			&& (extend == extend_o)
 			&& !isPV
+//			&& (!isPV  || (isPV && m->ord>10))
 //			&& phase>=64
 			&& ((u.whereCa == -1)
-				|| (m->phase>KILLER4)|| (MVS->cap_pr>2))
+				|| ((m->phase>KILLER4) || (MVS->cap_pr>2 && m->phase==CAPTURES))
+//				|| ((MVS->cgen>118)&&(MVS->cap_pr>2) && (m->phase==CAPTURES) && (depth ==1))
+				)
 			){
-			int lmr_red = can_do_LMR(b, att, talfa, tbeta, depth, m, MVS, ply, side, phase, sco, &u);
+//!! pouzit alfa a beta ne txxxx!
+			int lmr_red = can_do_LMR(b, att, talfa, tbeta, depth, isPV, m, MVS, ply, side, phase, sco, &u);
 				if(lmr_red!=0) {
 				L4("depth %d, move %d, red %d\n", depth, m->order, lmr_red);
 				DEB_S2(m->state|=r_LMR;)
@@ -1826,9 +1850,11 @@ bypass2:
 				L0("Invalid MOVE %s, score %d, talfa %d, tbeta %d\n",b2, m->real_score, talfa, tbeta);
 				printBoardNice(b);
 			}
-
+	int ddepth=CLAMP(depth,0,10);
 			b->stats->s[S_cutoffs]++;
 			b->stats->s[S_cutoff_cum]+=m->ord;
+			b->stats->s[S_cutoffs+ddepth]++;
+			b->stats->s[S_cutoff_cum+ddepth]+=m->ord;
 
 #if 0
 			if(b->stats->s[S_cutoff_long] < m->ord) {
@@ -1840,7 +1866,7 @@ bypass2:
 			b->stats->s[S_cutoff_long]=Max(b->stats->s[S_cutoff_long],m->ord);
 			if ((m->ord == 0)) {
 				b->stats->s[S_firstcutoffs]++;
-				if(MVS->cap_pr==1) b->stats->s[S_first_cap_cuts]++;
+//				if(MVS->cap_pr==1) b->stats->s[S_first_cap_cuts]++;
 			}
 			if (is_quiet_move(b, att, m)) {
 				b->stats->s[S_quiet_cuts]++;
@@ -1848,7 +1874,7 @@ bypass2:
 				if((MVS->quiet_pr==1)||(m->ord==0)) b->stats->s[S_first_quiet_cuts]++;
 				
 				if ((b->pers->use_killer >= 1)) {
-					if ((m->phase>=KILLER1 && m->phase<OTHER && depth>0)) {
+					if ((m->phase>=KILLER1 && m->phase<OTHER && depth>0 && incheck==0)) {
 							update_killer_move(b->kmove, ply, m->move, b->stats);
 					}
 // update history when over beta
@@ -1859,7 +1885,7 @@ bypass2:
 				}
 			} else {
 // not quiet move yet not cap_pr? It is capturing/promoting hashmove!
-				if(MVS->cap_pr==0 && m->ord==0) b->stats->s[S_first_cap_cuts]++;
+				if(MVS->cap_pr==1 || m->ord==0) b->stats->s[S_first_cap_cuts]++;
 			}
 			mb = m;
 //				copyTree(tree, ply);
@@ -1930,6 +1956,10 @@ ABFINISH:
 	tree->tree[ply][ply].score = mb->real_score;
 
 	b->stats->s[S_possiblemoves] += (MVS->tgen);
+	if(isPV) {
+		b->stats->s[S_PV_possiblemoves] += (MVS->tgen);
+		b->stats->s[S_PV_movestested] += mov_test;
+	}
 ABFINISH2:
 
 	if((b->pers->futility_sim!=0) && (futility_sim_flag>0)) {
@@ -1949,7 +1979,7 @@ DEB_4(	if(ply==1) {
 }
 
 #define MISn 100
-#define MISc 100
+#define MISc 110
 
 int IterativeSearchN(board *b, int alfa, int beta, int depth, int side, int start_depth, tree_store *tree)
 {
@@ -2138,13 +2168,13 @@ rerun:
 				}
 				b->stats->s[S_aspfailits]++;
 				ahigh++;
-				b->search_dif+=20;
+				b->search_dif+=10;
 				goto rerun;
 			}
 			else if(best<=talfa) {
 					b->stats->s[S_aspfailits]++;
 					alow++;
-					b->search_dif+=30;
+					b->search_dif+=10;
 				goto rerun;
 			}
 		}
@@ -2154,23 +2184,16 @@ rerun:
 
 // check for difficulties during interation and tune time management
 		{
+		int bdif=b->search_dif;
 // change in best move
 			if(tree->tree[ply][ply].move != b->p_pv.line[0].move) {
-				b->search_dif+=30;
+				b->search_dif+=10;
 			}
 // drop in score
 			if(((best+50) < old_score) && (f > (start_depth + 1))) {
-				b->search_dif+=30;
+				b->search_dif+=15;
 			}
-			b->search_dif-=7;
-/*			
-					b->search_dif =
-						Min(1000,
-							Max((incheck) ? MISn : MISn, b->search_dif*1.0)
-							+((best+500) < old_score)*(old_score-best)/40
-							+(tree->tree[ply][ply].move!= b->p_pv.line[0].move)*30);
-			} else b->search_dif = Max(100, (best<0) ? b->search_dif -25 : b->search_dif * 0.85) ;
-*/
+			if(bdif==b->search_dif && alow==0 && ahigh==0) b->search_dif = Max(b->search_dif-10, b->run.time_move*0.65);
 			store_PV_tree(tree, &b->p_pv);
 			
 			bestmove=tree->tree[ply][ply].move;

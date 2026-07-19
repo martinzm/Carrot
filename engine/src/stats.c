@@ -69,7 +69,7 @@ long long depth, depth_max, cutoff_long;
 
 void dumpEBF()
 {
-	int f, mx=Min(MAXPLY, 64);
+	int f, mx=Min(MAXPLY, 32);
 	for(f=1;f<mx;f++) {
 		L0("Depth %d, N/N-1 %lld/%lld, ebf %.2f\n",
 		f, STATS[f].s[S_ebfnodes], STATS[f].s[S_ebfnodespri], STATS[f].s[S_ebfnodes]/(STATS[f].s[S_ebfnodespri]+1.0));
@@ -97,9 +97,9 @@ int c=0;
 		s->s[S_FUT_cuts], 100*s->s[S_FUT_cuts]/(s->s[S_positionsvisited]+1.0));
 // PVS moves???
 	LX(o,c,l,
-		"Info: Moves tested %lld (%.2f%%), generated %lld, PVS %lld, PVS in %.2f moves\n", 
+		"Info: Moves tested %lld (%.2f%%), generated %lld, PVS moves tested %lld, PVS in %.2f moves\n", 
 		s->s[S_movestested], 100*s->s[S_movestested]/(s->s[S_possiblemoves] + 1.0),s->s[S_possiblemoves],
-		s->s[S_movestested]-s->s[S_zerototal], ((s->s[S_movestested]+1.0)/(s->s[S_movestested]-s->s[S_zerototal])));
+		s->s[S_PV_movestested], ((s->s[S_movestested]+1.0)/(s->s[S_PV_movestested])));
 	LX(o,c,l,
 			"Info: LmrN %lld, LmrRerun %lld (%.2f%%), LMP cuts %lld, FhFlCount: %lld\n",
 		s->s[S_lmrtotal], s->s[S_lmrrerun], 100*s->s[S_lmrrerun]/(s->s[S_lmrtotal]+1.0), s->s[S_lmpcount], s->s[S_fhflcount]);
@@ -116,9 +116,18 @@ int c=0;
 	LX(o,c,l,
 	"Info: NMP run node %lld, ZeroRerunMoves %lld, LmrRerunMoves %lld\n", s->s[S_u_nullnodes], s->s[S_zerorerunnodes], s->s[S_lmrrerunnodes]);
 	LX(o,c,l,
-			"Info: Any Cutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%, AvNFCut %.2f, Longest cut %lld\n",
-		s->s[S_firstcutoffs], s->s[S_cutoffs], 100 * s->s[S_firstcutoffs] / (s->s[S_cutoffs] + 1.0),
+			"Info: Any Cutoffs: First move %lld (%.2f%% of cuts) , Any move cuts %lld (%.2f%% of tested), AvNFCut %.2f, Longest cut %lld\n",
+		s->s[S_firstcutoffs], 100 * s->s[S_firstcutoffs] / (s->s[S_cutoffs] + 1.0), s->s[S_cutoffs], 100 * s->s[S_cutoffs]/(s->s[S_movestested]+1.0), 
 		s->s[S_cutoff_cum]/(s->s[S_cutoffs]-s->s[S_firstcutoffs]-s->s[S_failhashhigh]+1.0), s->s[S_cutoff_long]);
+
+#if 0
+	for(int f=1;f<=10;f++){
+	LX(o,c,l,
+			"Info: Cutoffs D%d: %lld, AvNFCut %.2f\n", f,
+		(s->s[S_cutoffs+f]), s->s[S_cutoff_cum+f]/(s->s[S_cutoffs+f]+1.0));
+	}
+#endif
+
 	LX(o,c,l,
 			"Info: Moves before Cutoffs %lld, Non cutoff moves %lld (%.2f%%)\n", s->s[S_cutoff_cum],
 		s->s[S_non_cutoff_moves], 100 * s->s[S_non_cutoff_moves]/(s->s[S_movestested]+1.0));
@@ -126,12 +135,12 @@ int c=0;
 unsigned long long caps=s->s[S_cutoffs]-s->s[S_quiet_cuts];
 
 	LX(o,c,l,
-			"Info: Capture Cutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%\n",
-			s->s[S_first_cap_cuts], caps, 100 * s->s[S_first_cap_cuts]/(caps+1.0) );
+			"Info: Capture Cutoffs: First move %lld (%.2f%% of cap cuts), Any move %lld (%.2f%% of cuts)\n",
+			s->s[S_first_cap_cuts], 100 * s->s[S_first_cap_cuts]/(caps+1.0), caps, 100 * caps/(s->s[S_cutoffs]+1.0));
 	LX(o,c,l,
-			"Info: Quiet Cutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%\n",
-		s->s[S_first_quiet_cuts], s->s[S_quiet_cuts],
-		100 * s->s[S_first_quiet_cuts] / (s->s[S_quiet_cuts] + 1.0));
+			"Info: Quiet Cutoffs: First move %lld (%.2f%% of quiet cuts), Any move %lld (%.2f%% of cuts)\n",
+		s->s[S_first_quiet_cuts],
+		100 * s->s[S_first_quiet_cuts] / (s->s[S_quiet_cuts] + 1.0), s->s[S_quiet_cuts], 100 * s->s[S_quiet_cuts] / (s->s[S_cutoffs] + 1.0));
 	LX(o,c,l,
 			"Info: Quiet Cutoffs after capture move %lld\n", s->s[S_quiet_cuts_cap]);
 #if 0
@@ -168,9 +177,21 @@ unsigned long long caps=s->s[S_cutoffs]-s->s[S_quiet_cuts];
 		s->s[S_qposvisited], s->s[S_qmovestested],
 		s->s[S_qmovestested] * 100 / (s->s[S_qpossiblemoves] + 1.0), s->s[S_qpossiblemoves]);
 	LX(o,c,l,
+		"Info: QResolutions Exact %lld (%.2f%%), High %lld (%.2f%%), Low %lld (%.2f%%), TTExact %lld (%.2f%%), TTHigh %lld (%.2f%%), TTLow %lld (%.2f%%)\n",
+		s->s[S_Qfailnorm], 100*s->s[S_Qfailnorm]/(s->s[S_qposvisited]+1.0), s->s[S_Qfailhigh], 100*s->s[S_Qfailhigh]/(s->s[S_qposvisited]+1.0),
+		s->s[S_Qfaillow], 100*s->s[S_Qfaillow]/(s->s[S_qposvisited]+1.0),
+		s->s[S_Qfailhashnorm], 100*s->s[S_Qfailhashnorm]/(s->s[S_Qfailnorm]+1.0),
+		s->s[S_Qfailhashhigh], 100*s->s[S_Qfailhashhigh]/(s->s[S_Qfailhigh]+1.0), 
+		s->s[S_Qfailhashlow], 100*s->s[S_Qfailhashlow]/(s->s[S_Qfaillow]+1.0));
+		
+	LX(o,c,l,
 			"Info: QCutoffs: First move %lld, Any move %lld, Ratio of first %.2f%%\n",
 		s->s[S_qfirstcutoffs], s->s[S_qcutoffs],
 		100 * s->s[S_qfirstcutoffs] / (s->s[S_qcutoffs] + 1.0));
+
+	LX(o,c,l,
+	"QASH: TTNormal %lld, TTHigh %lld,TTLow %lld\n",
+		s->s[S_Qfailhashnorm], s->s[S_Qfailhashhigh], s->s[S_Qfailhashlow]);
 	LX(o,c,l,
 	"Info: QuiesceSEE: Tests %lld, Cuts %lld, Ratio %.2f%%\n",
 		s->s[S_qSEE_tests], s->s[S_qSEE_cuts],

@@ -400,11 +400,18 @@ return 0;}
 
 int thash_def(char *str)
 {
-int i;
-i = atoi(str);
-if (i == 0)
-	i = 90000;
-timed2Test("../tests/test_hash.epd", i, 200, 1000);
+
+int time, res, positions, depth;
+// max time per test, num of tests in category, second personality
+res = sscanf(str, "%d %d %d", &time, &positions, &depth);
+if (res < 3)
+	depth=200;
+if (res < 2)
+	positions = 9999;
+if (res < 1)
+	time = 90000;
+
+timed2Test("../tests/test_hash.epd", time, depth, positions);
 return 0;
 }
 

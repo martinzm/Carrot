@@ -3674,9 +3674,10 @@ DEB_1(
 
 int SEE(board *b, MOVESTORE m)
 {
-	int v[]={ 1000, 3250, 3250, 5000, 9750, 888888 };
+	int v[]={ 1000, 3250, 3250, 5000, 9750, 888888, 8750 };
 	int fr, to, side, d, attacker, piece;
 	int gain[32];
+	int pat;
 	BITVAR ignore, bto, ppromote;
 
 	ignore = FULLBITMAP;
@@ -3685,21 +3686,23 @@ int SEE(board *b, MOVESTORE m)
 	bto = normmark[to];
 	ppromote = (RANK1 | RANK8) & bto;
 	side = (b->pieces[fr] & BLACKPIECE) != 0;
-	d = 0;
+
 	if (bto & b->norm) {
 		piece = b->pieces[to] & PIECEMASK;
-		gain[d] = v[piece];
-	} else
-		gain[d] = 0;
+		gain[d] =  v[piece];
+	} else gain[d]=0;
+	
 	attacker = fr;
+// pri promotion se musi pripocitat hodnota promoce do zisku pri uspesnem brani
 	while (attacker != -1) {
-		d++;
 		piece = b->pieces[attacker] & PIECEMASK;
-		gain[d] =
-				((ppromote) && (piece == PAWN)) ?
-					-gain[d - 1] + v[QUEEN]
-						- v[PAWN] :
-					-gain[d - 1] + v[piece];
+		if((ppromote) && (piece == PAWN)){
+			gain[d] += 	v[KING+1];
+			piece = QUEEN;
+		}
+		d++;
+// urcit o co prijdu, kdyz bude dalsi brani
+		gain[d] = -gain[d - 1] + v[piece];
 		side = Flip(side);
 		ignore ^= normmark[attacker];
 		attacker = GetLVA_to(b, to, side, ignore);
@@ -3709,9 +3712,10 @@ int SEE(board *b, MOVESTORE m)
 	return gain[0];
 }
 
+// for move to be performed
 int SEEx(board *b, MOVESTORE m)
 {
-	int v[]={ 1000, 3250, 3250, 5000, 9750, 44444 };
+	int v[]={ 1000, 3250, 3250, 5000, 9750, 44444, 8750 };
 	int gain[32];
 	int fr, to, side, d, attacker, piece;
 	BITVAR ignore, bto, ppromote;
@@ -3726,19 +3730,18 @@ int SEEx(board *b, MOVESTORE m)
 	if (bto & b->norm) {
 		piece = b->pieces[to] & PIECEMASK;
 		gain[d] = v[piece];
-	} else
-		gain[d] = 0;
+	} else gain[d] = 0;
 	attacker = fr;
 	while (attacker != -1) {
-		d++;
 		piece = b->pieces[attacker] & PIECEMASK;
-		gain[d] =
-				((ppromote) && (piece == PAWN)) ?
-					-gain[d - 1] + v[QUEEN]
-						- v[PAWN] :
-					-gain[d - 1] + v[piece];
-		if (Max(-gain[d-1], gain[d]) < 0)
-			break;
+		if((ppromote) && (piece == PAWN)){
+			gain[d] += 	v[KING+1];
+			piece = QUEEN;
+		}
+		d++;
+// urcit o co prijdu, kdyz bude dalsi brani
+		gain[d] = -gain[d - 1] + v[piece];
+		if (Max(-gain[d-1], gain[d]) < 0) break;
 		side = Flip(side);
 		ignore ^= normmark[attacker];
 		attacker = GetLVA_to(b, to, side, ignore);
@@ -3749,7 +3752,7 @@ int SEEx(board *b, MOVESTORE m)
 }
 
 /*
- * SEE after piece moved to to
+ * SEE after piece moved to square to
  */
 
 /*
@@ -3757,13 +3760,11 @@ int SEEx(board *b, MOVESTORE m)
  x 5 3 1
 
  x -x+5 x-5+3 -x+2+1
-
-
  */
 
 int SEE0(board *b, int to, int side, int pp)
 {
-	int v[]={ 1000, 3250, 3250, 5000, 9750, 888888 };
+	int v[]={ 1000, 3250, 3250, 5000, 9750, 888888, 8750 };
 	int d, attacker, piece;
 	int gain[32];
 	int val=v[pp];
@@ -3780,12 +3781,13 @@ int SEE0(board *b, int to, int side, int pp)
 	attacker = GetLVA_to(b, to, side, ignore);
 	while (attacker != -1) {
 		piece = b->pieces[attacker] & PIECEMASK;
+		if((ppromote) && (piece == PAWN)){
+			gain[d] += 	v[KING+1];
+			piece = QUEEN;
+		}
 		d++;
-		gain[d] =
-				((ppromote) && (piece == PAWN)) ?
-					-gain[d - 1] + v[QUEEN]
-						- v[PAWN] :
-					-gain[d - 1] + v[piece];
+// urcit o co prijdu, kdyz bude dalsi brani
+		gain[d] = -gain[d - 1] + v[piece];
 		if (Max(-gain[d-1], gain[d]) < 0)
 			break;
 		side = Flip(side);

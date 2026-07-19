@@ -40,11 +40,11 @@ LDFLAGS = -lxml2 -lpthread -lz -lm -ldl -fopenmp -std=c99 -I/usr/lib64
 CFLAGS = -I. -I$(PATHS) -I/usr/include/libxml2 -fopenmp -DTEST
 
 ifeq ($(MAKECMDGOALS), normal)
-    CFLAGS += -Wall -O2 -DDEBUG1 -Finline-functions -Fwhole-program -Winline -pedantic -Funroll-loops -Wno-unused-variable
+    CFLAGS += -Wall -O2 -DDEBUG1 -Winline -pedantic -Funroll-loops -Wno-unused-variable
     LDFLAGS += -DDEBUG1 
 endif
 ifeq ($(MAKECMDGOALS), vnormal)
-    CFLAGS += -g -Wall -O2 -DDEBUG1 -Finline-functions -Fwhole-program -Winline -Funroll-loops -Wno-unused-variable
+    CFLAGS += -g -Wall -O3 -DDEBUG1 -Winline -Funroll-loops -Wno-unused-variable
     LDFLAGS += -DDEBUG1 
 endif
 ifeq ($(MAKECMDGOALS), sedebug)
@@ -72,8 +72,8 @@ ifeq ($(MAKECMDGOALS), covs)
     LDFLAGS += -DDEBUG1 -Wl,--gc-sections -Wl,--print-gc-sections
 endif
 ifeq ($(MAKECMDGOALS), debug)
-    CFLAGS += -DDEBUG3 -Og -g -pedantic -Wall -Wconversion -c -Wno-unused-label -Wno-unused-variable
-    LDFLAGS += -DDEBUG3 
+    CFLAGS += -DDEBUG1 -Og -g3 -pedantic -Wall -Wconversion -c -Wno-unused-label -Wno-unused-variable
+    LDFLAGS += -DDEBUG1 
 endif
 ifeq ($(MAKECMDGOALS), tune)
     CFLAGS += -DTUNING -DNDEBUG -O3 -Wall -Wno-unused-variable -Finline-functions -Funroll-loops -Fwhole-program  -Winline

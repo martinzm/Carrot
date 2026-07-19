@@ -535,7 +535,7 @@ typedef struct _score_type {
 #define MAXPLYHIST 2048
 #define SEARCH_HISTORY_DEPTH 100
 // hashsize and hashpawnsize in Mbytes
-#define HASHSIZE 32
+#define HASHSIZE 512
 #define HASHPOS 4
 #define HASHPAWNSIZE 32
 #define HASHPAWNPOS 4
