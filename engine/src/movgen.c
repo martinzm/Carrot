@@ -2406,7 +2406,7 @@ void ScoreNormal(board *b, attack_model *a, move_cont *mv, int side)
 		fromPos = UnPackFrom(t->move);
 		ToPos = UnPackTo(t->move);
 		piece = b->pieces[fromPos] & PIECEMASK;
-//		check = CheckingMove(b, a, side, t);
+		check = CheckingMove2(b, a, Flip(side), piece, fromPos, ToPos);
 
 		if(t->qorder < CS_K_OR) {
 
@@ -2427,7 +2427,7 @@ void ScoreNormal(board *b, attack_model *a, move_cont *mv, int side)
 			} else
 #endif
 			t->qorder = checkHHTable(b->hht, side, piece, ToPos) + MV_HH;
-//			if(check!=0) t->qorder=Min(t->qorder+10000, MV_HH_MAX);
+			if(check!=0) t->qorder=Min(t->qorder+10000, MV_HH_MAX);
 		}
 
 //		L0("HH table:%d\n", t->qorder);
@@ -2471,7 +2471,7 @@ void ScoreCaps(board *b, attack_model *a, move_cont *mv, int side)
 		if(t->qorder>= A_CA_PROM_Q) t->qorder +=10000000000;
 		else
 			if ((t->qorder < A_OR_MAX) && (t->qorder >= A_OR2)) {
-//				check = CheckingMove(b, a, side, t);
+				check = CheckingMove(b, a, side, t);
 //				if(check==0) {
 //					L0("SEE hit\n");
 					see = SEEx(b, t->move);
@@ -2481,7 +2481,7 @@ void ScoreCaps(board *b, attack_model *a, move_cont *mv, int side)
 //						L0("neg SEE %d\n", see);
 					} else {
 //						t->qorder = (A_OR + see/100);
-						t->qorder += see * 100000;
+						t->qorder += (see+check) * 100000;
 					}
 //				}
 		} 
