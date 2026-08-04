@@ -31,6 +31,7 @@
 //#include "randoms2.h"
 #include <assert.h>
 #include "inlines.h"
+#include <sys/random.h>
 
 kmoves kmove_store[MAXPLY * KMOVES_WIDTH];
 
@@ -38,25 +39,11 @@ kmoves kmove_store[MAXPLY * KMOVES_WIDTH];
 
 BITVAR getRandomX(BITVAR *i)
 {
-	BITVAR ret;
-	int l;
-	size_t r;
-	(*i)++;
-	int rd = open("/dev/urandom", O_RDONLY);
-	l = 0;
-	ret = 0;
-	while (l < sizeof(BITVAR)) {
-		ssize_t res = read(rd, &r, sizeof(uint8_t));
-		if (res < 0) {
-			// error, unable to read /dev/random
-		} else {
-			l += 1;
-			ret <<= 8;
-			ret += (uint8_t) r;
-		}
-	}
-	close(rd);
-	return ret;
+BITVAR y;
+BITVAR x;
+	size_t l=(getrandom(&x, sizeof(uint64_t), 0));
+	if(l == -1 || l< sizeof(uint64_t)) abort();
+	return x;
 }
 
 BITVAR getRandom(int *i)
@@ -72,8 +59,8 @@ BITVAR getRandom(int *i)
 
 void initRandom()
 {
-	int *y;
-	int sq, sd, pc, i;
+	int sq, sd, pc;
+	int *y,i;
 	y = &i;
 	i = -1;
 	for (sq = 0; sq < ER_SQUARE; sq++)
@@ -82,8 +69,8 @@ void initRandom()
 				randomTable[sd][sq][pc] = getRandom(y);
 			}
 		}
-//	sideKey = getRandom(y);
-	sideKey = 1ULL;
+	sideKey = getRandom(y);
+//	sideKey = 1ULL;
 	for (sq = A1; sq <= H1; sq++) {
 		epKey[sq] = getRandom(y);
 		epKey[sq + 8] = epKey[sq];
@@ -143,7 +130,7 @@ void setupRandom(board *b)
 void analyzeHash(hashStore *hs){
 unsigned long long used, notused, fused, fnotused, u_cur, u_old, u_not;
 
-	hashBucket *p;
+	hashBEntry *p;
 	int b_empty=0;
 	int b_empty_old=0;
 	int b_half=0;
@@ -187,7 +174,7 @@ void storeHashX(hashStore *hs, BITVAR key, BITVAR pld, BITVAR ver, struct _stati
 
 	int i, c, q, id;
 	BITVAR f, hi;
-	hashBucket *h;
+	hashBEntry *h;
 
 	int32_t val;  //3 17b
 	MOVESTORE bm;  //2 15b
@@ -250,12 +237,12 @@ void storeHashX(hashStore *hs, BITVAR key, BITVAR pld, BITVAR ver, struct _stati
 //	ag1 = hs->hashValidId >= age ? hs->hashValidId - age: hs->hashValidId + 0x3F - age;
 	ag1=0;
 //	scr1=1*de1 + (sc==EXACT_SC) ? 3:0;
-	scr1=1*de1 - (sc==EXACT_SC) ? 3:0 + (sc==FAILHIGH_SC) ? 1:0;
+	scr1=1*de1 + ((sc==EXACT_SC) ? 3:0) + ((sc==FAILHIGH_SC) ? 1:0);
 	
 	for (i = 0; i < HASHPOS; i+= 1) {
 		UNPACKHASH(h[i].pld, bm, val, dep, sc, age);
 		agt = hs->hashValidId >= age ? hs->hashValidId - age: hs->hashValidId + 0x3F - age;
-		scrt=1*dep - agt*4 + ((sc==EXACT_SC) ? 3:0) + ((sc==FAILHIGH_SC) ? 1:0);
+		scrt=1*dep - 3*agt + ((sc==EXACT_SC) ? 3:0) + ((sc==FAILHIGH_SC) ? 1:0);
 		if(scrt<=scr1) {
 			if(scrt==scr1) {
 				if(dep>de1) continue;
@@ -273,10 +260,12 @@ void storeHashX(hashStore *hs, BITVAR key, BITVAR pld, BITVAR ver, struct _stati
 		s->s[S_hashStoreColl]++;
 		return;
 	}
+#if 0
 	if(ag1==0 && de1 > det) {
 		s->s[S_hashStoreColl]++;
 		return;
 	}
+#endif
 	s->s[S_hashStoreMiss]++;
 replace:
 	h[c].key=hi;
@@ -289,7 +278,7 @@ void storeHash(hashStore *hs, hashEntry *hash, int side, int ply, int depth, BIT
 	int i, c, q, id;
 	BITVAR f, hi;
 	BITVAR pld;
-	hashBucket *h;
+	hashBEntry *h;
   
 	switch (isMATE(hash->value)) {
 	case -1:
@@ -391,7 +380,7 @@ int restoreExactPV(hashStore *hs, BITVAR key, BITVAR ver, int level, tree_store 
 
 int initHash(hashStore *hs)
 {
-	memset(hs->hash, 0, sizeof(hashBucket) * (hs->hashlen) * HASHPOS);
+	memset(hs->hash, 0, sizeof(hashBEntry) * (hs->hashlen) * HASHPOS);
 	memset(hs->pv, 0, sizeof(hashEntryPV_e) * hs->hashPVlen);
 	hs->hashValidId = 1;
 	return 0;
@@ -402,13 +391,17 @@ int initHash(hashStore *hs)
   hashMiss - cannot find, not fully occupied.
  */
 
-int retrieveHash(hashStore *hs, hashEntry *hash, int side, int ply, int depth, int use_previous, BITVAR ver,struct _statistics *s)
+int retrieveHashX(hashStore *hs, hashEntry *hash, int side, int ply, int depth, int use_previous, BITVAR ver,struct _statistics *s, int qs)
 {
+	int non[]= { S_hashAttempts, S_hashMiss, S_hashColls, S_hashHits };
+	int qsn[]= { S_QhashAttempts, S_QhashMiss, S_QhashColls, S_QhashHits };
+	
 	int i;
 	BITVAR f, hi, pld;
-	hashBucket *h;
+	hashBEntry *h;
 //	return 0;
-	s->s[S_hashAttempts]++;
+	int *c = (qs) ? qsn : non;
+	s->s[c[0]]++;
 	f = hash->key & (BITVAR) (hs->hashlen - 1);
 	hi = hash->key;
 	h=&(hs->hash[f*HASHPOS]);
@@ -430,20 +423,30 @@ int retrieveHash(hashStore *hs, hashEntry *hash, int side, int ply, int depth, i
 // if all used and full with actual info then it is collision, otherwise it is read miss
 	for (i = 0; i < HASHPOS; i+=1) {
 		if (UNPACKHASHAGE(h[i].pld)!=hs->hashValidId) {
-			s->s[S_hashMiss]++;
+			s->s[c[1]]++;
 			return 0;
 		}
 	}
-	s->s[S_hashColls]++;
+	s->s[c[2]]++;
 	return 0;
 
 finish:
 	pld=h[i].pld;
 	UNPACKHASH(pld, hash->bestmove, hash->value, hash->depth, hash->scoretype, hash->age);
 	UPDATEHASHAGE(h[i].pld, hs->hashValidId);
-	s->s[S_hashHits]++;
+	s->s[c[3]]++;
 	hash->value -= ply*(isMATE(hash->value));
 	return 1;
+}
+
+int retrieveHash(hashStore *hs, hashEntry *hash, int side, int ply, int depth, int use_previous, BITVAR ver,struct _statistics *s)
+{
+  return retrieveHashX(hs, hash, side, ply, depth, use_previous, ver, s, 0);
+}
+
+int retrieveHashQS(hashStore *hs, hashEntry *hash, int side, int ply, int depth, int use_previous, BITVAR ver,struct _statistics *s)
+{
+  return retrieveHashX(hs, hash, side, ply, depth, use_previous, ver, s, 1);
 }
 
 void dumpHash(board *b, hashStore *hs, hashEntry *hash, int side, int ply, int depth, int use_previous)
@@ -574,7 +577,7 @@ hashStore* allocateHashStore(size_t hashBytes, unsigned int hashPVLen)
 	BITVAR *tt;
 	
 //	hashLen = hashBytes / sizeof(hashEntry_e);
-	hashLen = hashBytes / (HASHPOS * sizeof(hashBucket));
+	hashLen = hashBytes / (HASHPOS * sizeof(hashBEntry));
 // just make sure hashLen is power of 2
 	while (msk < hashLen) {
 		msk <<= 1;
@@ -585,14 +588,14 @@ hashStore* allocateHashStore(size_t hashBytes, unsigned int hashPVLen)
 		l--;
 	}
 //	msk++;
-	LOGGER_0("Bytes: %d, hashEntry %d, bucket %d HASHLEN %d, msk %x, slots(%dx bucket) %d, mask len %d, masked bytes %d\n", hashBytes, sizeof(hashEntry_e), (HASHPOS * sizeof(hashBucket)), hashLen, msk, HASHPOS, msk, l, msk*((HASHPOS * sizeof(hashBucket))));
+	LOGGER_0("Bytes: %d, hashEntry %d, bucket %d HASHLEN %d, msk %x, slots(%dx bucket) %d, mask len %d, masked bytes %d\n", hashBytes, sizeof(hashEntry_e), (HASHPOS * sizeof(hashBEntry)), hashLen, msk, HASHPOS, msk, l, msk*((HASHPOS * sizeof(hashBEntry))));
 	hashLen = msk;
 
 	xx = ((sizeof(hashStore) * 2)/128+1)*128;
 	hs = (hashStore*) aligned_alloc(128,xx);
 	
-	xx = sizeof(hashBucket) * hashLen * HASHPOS;
-	hs->hash = (hashBucket*) aligned_alloc(128,xx);
+	xx = sizeof(hashBEntry) * hashLen * HASHPOS;
+	hs->hash = (hashBEntry*) aligned_alloc(128,xx);
 	hs->hashlen = (size_t) hashLen;
 	hs->llen=l;
 
@@ -833,21 +836,22 @@ int updateHHTable(board *b, hhTable *hh, move_entry *m, int cutoff, int side, in
 	int fromPos, toPos, piece;
 	int upd;
 
-	fromPos = UnPackFrom(m[cutoff].move);
-	toPos = UnPackTo(m[cutoff].move);
+	fromPos = UnPackFrom(m[0].move);
+	toPos = UnPackTo(m[0].move);
 	piece = b->pieces[fromPos] & PIECEMASK;
 	upd=Min(depth*depth, 1600);
 	hh->val[side][piece][toPos] += upd;
 	return 0;
 }
 
-int updateHHTable2(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int bonus)
+int updateHHTable2(board *b, hhTable *hh, move_entry *m, int corr, int side, int bonus)
 {
 	int fromPos, toPos, piece;
 	int upd;
+	int cbonus = bonus * (60-corr)/60.0;
 
-	fromPos = UnPackFrom(m[cutoff].move);
-	toPos = UnPackTo(m[cutoff].move);
+	fromPos = UnPackFrom(m->move);
+	toPos = UnPackTo(m->move);
 	piece = b->pieces[fromPos] & PIECEMASK;
 
 #if 0
@@ -857,21 +861,21 @@ int updateHHTable2(board *b, hhTable *hh, move_entry *m, int cutoff, int side, i
 	}
 #endif
 
-	int dec2=hh->val[side][piece][toPos] * abs(bonus);
+	int dec2=hh->val[side][piece][toPos] * abs(cbonus);
 	int dec = dec2/HHScale;
 
 #if 0
 	if(!(dec<=HHScale && dec>=-HHScale)) {
-		L0("side %d, piece %d, toPos %d, bonus %d, hh %d, dec %d\n", side, piece, toPos, bonus, hh->val[side][piece][toPos], dec);
+		L0("side %d, piece %d, toPos %d, bonus %d, hh %d, dec %d\n", side, piece, toPos, cbonus, hh->val[side][piece][toPos], dec);
 		assert(0);
 	}
 #endif
 	
-	hh->val[side][piece][toPos] += bonus - dec;
+	hh->val[side][piece][toPos] += cbonus - dec;
 
 #if 0
 	if(!(hh->val[side][piece][toPos]<=HHScale && hh->val[side][piece][toPos]>=-HHScale)) {
-		L0("side %d, piece %d, toPos %d, bonus %d, hh %d, dec %d, d2 %d\n", side, piece, toPos, bonus, hh->val[side][piece][toPos], dec, dec2);
+		L0("side %d, piece %d, toPos %d, bonus %d, hh %d, dec %d, d2 %d\n", side, piece, toPos, cbonus, hh->val[side][piece][toPos], dec, dec2);
 //		assert(0);
 	}
 #endif
@@ -879,11 +883,11 @@ int updateHHTable2(board *b, hhTable *hh, move_entry *m, int cutoff, int side, i
 	return 0;
 }
 
-int updateHHTableGood(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int depth, int ply){
-	return updateHHTable2(b, hh, m, cutoff, side, Min(20*depth, HHScale));
+int updateHHTableGood(board *b, hhTable *hh, move_entry *m, int corr, int side, int depth, int ply){
+	return updateHHTable2(b, hh, m, corr, side, Min(32*depth*depth, 15*HHScale/100.0));
 }
-int updateHHTableBad(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int depth, int ply){
-	return updateHHTable2(b, hh, m, cutoff, side, -Min(30*depth, HHScale));
+int updateHHTableBad(board *b, hhTable *hh, move_entry *m, int corr, int side, int depth, int ply){
+	return updateHHTable2(b, hh, m, corr, side, -Min(8*depth, 15*HHScale/100.0));
 }
 
 int checkHHTable(hhTable *hh, int side, int piece, int square)

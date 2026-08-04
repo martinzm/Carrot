@@ -118,13 +118,15 @@ int c=0;
 	LX(o,c,l,
 			"Info: Any Cutoffs: First move %lld (%.2f%% of cuts) , Any move cuts %lld (%.2f%% of tested), AvNFCut %.2f, Longest cut %lld\n",
 		s->s[S_firstcutoffs], 100 * s->s[S_firstcutoffs] / (s->s[S_cutoffs] + 1.0), s->s[S_cutoffs], 100 * s->s[S_cutoffs]/(s->s[S_movestested]+1.0), 
-		s->s[S_cutoff_cum]/(s->s[S_cutoffs]-s->s[S_firstcutoffs]-s->s[S_failhashhigh]+1.0), s->s[S_cutoff_long]);
+		s->s[S_cutoff_cum]/(s->s[S_cutoffs]-s->s[S_firstcutoffs]+1.0), s->s[S_cutoff_long]);
 
-#if 0
+#if 1
 	for(int f=1;f<=10;f++){
 	LX(o,c,l,
-			"Info: Cutoffs D%d: %lld, AvNFCut %.2f\n", f,
-		(s->s[S_cutoffs+f]), s->s[S_cutoff_cum+f]/(s->s[S_cutoffs+f]+1.0));
+			"Info: Cutoffs D%d: %lld, cum %lld, AvNFCut %.2f, Non cut pos %lld with zero moves %lld, Non cutoff Moves %lld (approx %.2f%%), AVG count %.2f\n", f,
+		(s->s[S_cutoffs+f]), s->s[S_cutoff_cum+f], s->s[S_cutoff_cum+f]/(s->s[S_cutoffs+f]+1.0), s->s[S_faillow+f], s->s[S_faillow_zero+f], 
+		s->s[S_non_cutoff_moves+f], 100 * s->s[S_non_cutoff_moves+f]/(s->s[S_cutoff_cum+f]+(s->s[S_cutoffs+f]+s->s[S_non_cutoff_moves+f]+1.0)),
+		s->s[S_non_cutoff_moves+f]/(s->s[S_faillow+f]-s->s[S_faillow_zero+f]+1.0));
 	}
 #endif
 
@@ -152,7 +154,7 @@ unsigned long long caps=s->s[S_cutoffs]-s->s[S_quiet_cuts];
 			/ (float )(s->s[S_elaps] + 1), s->s[S_nodes]);
 #endif
 	LX(o,c,l,
-	"HASH: Get:%lld, GHit:%lld (%.2f%%), GMiss:%lld, GCol: %lld\n",
+	"HASH: Main search: Get:%lld, GHit:%lld (%.2f%%), GMiss:%lld, GCol: %lld\n",
 		s->s[S_hashAttempts], s->s[S_hashHits],
 		s->s[S_hashHits] * 100 / (s->s[S_hashAttempts] + 1.0), s->s[S_hashMiss], s->s[S_hashColls]);
 	LX(o,c,l,

@@ -40,11 +40,11 @@ LDFLAGS = -lxml2 -lpthread -lz -lm -ldl -fopenmp -std=c99 -I/usr/lib64
 CFLAGS = -I. -I$(PATHS) -I/usr/include/libxml2 -fopenmp -DTEST
 
 ifeq ($(MAKECMDGOALS), normal)
-    CFLAGS += -Wall -O2 -DDEBUG1 -Winline -pedantic -Funroll-loops -Wno-unused-variable
+    CFLAGS += -Wall -O1 -DDEBUG1 -Winline -pedantic -Funroll-loops -Wno-unused-variable
     LDFLAGS += -DDEBUG1 
 endif
 ifeq ($(MAKECMDGOALS), vnormal)
-    CFLAGS += -g -Wall -O3 -DDEBUG1 -Winline -Funroll-loops -Wno-unused-variable
+    CFLAGS += -g -Wall -O1 -DDEBUG1 -Winline -Funroll-loops -Wno-unused-variable
     LDFLAGS += -DDEBUG1 
 endif
 ifeq ($(MAKECMDGOALS), sedebug)

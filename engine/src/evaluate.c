@@ -3687,6 +3687,7 @@ int SEE(board *b, MOVESTORE m)
 	ppromote = (RANK1 | RANK8) & bto;
 	side = (b->pieces[fr] & BLACKPIECE) != 0;
 
+	d=0;
 	if (bto & b->norm) {
 		piece = b->pieces[to] & PIECEMASK;
 		gain[d] =  v[piece];

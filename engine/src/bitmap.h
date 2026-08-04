@@ -160,6 +160,7 @@ typedef struct _move_cont {
 	int quiet_pr;
 	int cap_pr;
 	int lpcheck;
+	int bad_it;
 	move_entry *next;  // points at end of moves already offered, starts at move
 					   // it includes even moves that were considered but failed validity and/or were skipped then
 	move_entry *badp;  // points at end of bad moves, starts at bad
@@ -535,7 +536,7 @@ typedef struct _score_type {
 #define MAXPLYHIST 2048
 #define SEARCH_HISTORY_DEPTH 100
 // hashsize and hashpawnsize in Mbytes
-#define HASHSIZE 512
+#define HASHSIZE 256
 #define HASHPOS 4
 #define HASHPAWNSIZE 32
 #define HASHPAWNPOS 4
@@ -711,6 +712,7 @@ typedef struct {
 	BITVAR ver;
 	MOVESTORE move;
 	int score;
+	int lazy_ev;
 } tree_node;
 
 typedef struct _hashEntryPV {
@@ -724,19 +726,19 @@ typedef struct _hashEntryPV_e {
 	hashEntryPV e[16];
 } hashEntryPV_e;
 
-typedef struct _hashBucket {
+typedef struct _hashBEntry {
 	uint64_t key;
 	uint64_t pld;
 	uint64_t ver;
 //	uint64_t xxx;
-} hashBucket;
+} hashBEntry;
 
 typedef struct _hashStore {
 	unsigned int hashlen;
 	unsigned int hashPVlen;
 	unsigned int llen;
 	unsigned int lPVlen;
-	hashBucket *hash;
+	hashBEntry *hash;
 	hashEntryPV_e *pv;
 	uint8_t hashValidId;
 } hashStore;

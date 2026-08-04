@@ -1206,8 +1206,8 @@ while (uci_state != 0) {
 				LOGGER_1("INFO: UCI game new\n");
 				L0("** Running TOTALS **\n");
 				printSearchStat(&(STATS[MAXPLY]));
-//				L0("** HHT dump **\n");
-//				dumpHHTable(b->hht);
+				L0("** HHT dump **\n");
+				dumpHHTable(b->hht);
 				L0("** Analyze Hash **\n");
 				analyzeHash(b->hs);
 				handle_newgame(b);

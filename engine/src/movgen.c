@@ -1,4 +1,4 @@
-/*
+/*qge
  Carrot is a UCI chess playing engine by Martin Žampach.
  <https://github.com/martinzm/Carrot>     <martinzm@centrum.cz>
 
@@ -278,6 +278,7 @@ void mvsfromk22(const board *const b, attack_model *a, int side ) {
 BITVAR v;
 
 // !!!! att_by_side MUSI byt aktualni !!!!
+// includes generation of bitmap for castling, destination square of potential king castle move
 	int from = b->king[side];
 	v = (attack.maps[KING][from])
 		& (~attack.maps[KING][b->king[Flip(side)]])
@@ -669,10 +670,10 @@ void generateCapturesN3(board *const b, attack_model *a, move_entry **m, int gen
 // serialize captures
 void generateCapturesN2(board *const b, attack_model *a, move_entry **m, int gen_u)
 {
-	generateBitmaps(b, a, b->colormaps[b->side], b->side);
+//	generateBitmaps(b, a, b->colormaps[b->side], b->side);
 //	a->att_by_side[WHITE] = KingAvoidSQAlt(b, a, WHITE);
 //	a->att_by_side[BLACK] = KingAvoidSQAlt(b, a, BLACK);
-	mvsfromk22(b, a, b->side);
+//	mvsfromk22(b, a, b->side); //????
 	generateCapturesN3(b, a, m, gen_u);
 }
 
@@ -820,6 +821,7 @@ void generateMovesN2(board *const b, attack_model *a, move_entry **m)
 		ClrLO(mv);
 	}
 //incorporate castling
+// generuje se jako tah kralem a promotion na krale
 	mv = a->mvs[from] & (~b->norm) & (~attack.surr1[from]);
 	while (mv) {
 		to = LastOne(mv);
@@ -1762,14 +1764,18 @@ int MakeMoveNew(board *b, MOVESTORE move, int *pos, UNDO *ret)
 			if (((to > from) ? to - from : from - to) == 16) {
 // just make sure ep is real - ie there is opposing pawn able to deliver ep
 // otherwise leave it set to 0
+#if 1
 				if(attack.ep_mask[to] & b->maps[PAWN] & b->colormaps[opside]) {
 					b->ep = to;
 				}
+#else
+					b->ep = to;
+#endif
 			}
 			b->pawnkey ^= randomTable[b->side][from][PAWN];  //pawnhash
 			b->pawnkey ^= randomTable[b->side][to][PAWN];  //pawnhash
 			break;
-// king moved
+// king moved, castling is encoded as king move in bitmap and as promotion to KING
 		case KING:
 			b->king[b->side] = to;
 			if ((from == kingbase) && (b->castle[b->side] != NOCASTLE)) {
@@ -1796,34 +1802,35 @@ int MakeMoveNew(board *b, MOVESTORE move, int *pos, UNDO *ret)
  */
 
 	switch (prom) {
-
 		case KING:
-				b->castle[b->side] = NOCASTLE;
-				b->key ^= castleKey[b->side][ret->prev_castle[b->side]];
-				if (to > from) {
+//			b->castle[b->side] = NOCASTLE;
+//			b->key ^= castleKey[b->side][ret->prev_castle[b->side]];
+			if (to > from) {
 // kingside castling
-					ret->fRO  = from + 3;
-					ret->toRO = to - 1;
-				} else {
-					ret->fRO  = from - 4;
-					ret->toRO = to + 1;
-				}
+				ret->fRO  = from + 3;
+				ret->toRO = to - 1;
+			} else {
+				ret->fRO  = from - 4;
+				ret->toRO = to + 1;
+			}
 // update rook movement
-				MoveFromTo(ret->fRO, ret->toRO, b->side, ROOK, b);
+			MoveFromTo(ret->fRO, ret->toRO, b->side, ROOK, b);
+			b->key ^= randomTable[b->side][ret->fRO][ROOK];  //hash
+			b->key ^= randomTable[b->side][ret->toRO][ROOK];  //hash
 
-				b->key ^= randomTable[b->side][ret->fRO][ROOK];  //hash
-				b->key ^= randomTable[b->side][ret->toRO][ROOK];  //hash
-
-				b->psq_b -= (sidx * p->piecetosquare[MG][b->side][ROOK][ret->fRO]);
-				b->psq_e -= (sidx * p->piecetosquare[EG][b->side][ROOK][ret->fRO]);
-				b->psq_b += (sidx * p->piecetosquare[MG][b->side][ROOK][ret->toRO]);
-				b->psq_e += (sidx * p->piecetosquare[EG][b->side][ROOK][ret->toRO]);
+			b->psq_b -= (sidx * p->piecetosquare[MG][b->side][ROOK][ret->fRO]);
+			b->psq_e -= (sidx * p->piecetosquare[EG][b->side][ROOK][ret->fRO]);
+			b->psq_b += (sidx * p->piecetosquare[MG][b->side][ROOK][ret->toRO]);
+			b->psq_e += (sidx * p->piecetosquare[EG][b->side][ROOK][ret->toRO]);
+//			break;
 		case ER_PIECE:
 		case ER_PIECE+1:
 		case PAWN:
 			MoveFromTo(from, to, b->side, oldp, b);
 			break;
 		default:		
+// this is ordinary promotion move
+			assert(oldp==PAWN);
 			b->pawnkey ^= randomTable[b->side][from][PAWN];  //pawnhash
 			movp = prom;
 			b->rule50move = b->move;
@@ -2557,7 +2564,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 		mv->phase = CAPTUREA;
 		if (incheck == 1) {
 //			DEB_SE(L0("incheck GEN\n"));
-			generateInCheckMovesN(b, a, &(mv->lastp), 1);
+			generateInCheckMovesN2(b, a, &(mv->lastp), 1);
 			mv->quiet=mv->lastp;
 			mv->tgen=mv->lastp-mv->next;
 			SelectBestO(mv);
@@ -2568,7 +2575,7 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 			if(m>=mv->next && m>mv->lastp-1) mv->quiet=m+1;
 			goto rest_moves;
 		}
-		generateCapturesN2(b, a, &(mv->lastp), 1);
+		generateCapturesN3(b, a, &(mv->lastp), 1);
 		ScoreCaps(b, a, mv, side);
 //		move_cont_dump(b, a, mv);
 		
@@ -2716,21 +2723,25 @@ rest_moves:
 		mv->phase = OTHER_SET;
 	case OTHER_SET:
 		mv->phase = OTHER;
-		mv->next = mv->bad;
+//		mv->next = mv->bad;
+		mv->bad_it=0; // fix it for captures only as well
 	case OTHER:
-		while (mv->next < mv->badp) {
-			if (ExcludeMove(mv, mv->next->move)) {
-				mv->next++;
+		while (mv->bad + mv->bad_it < mv->badp) {
+			if (ExcludeMove(mv, mv->bad[mv->bad_it].move)) {
+				mv->bad_it++;
 				continue;
 			}
+			*(mv->next) = mv->bad[mv->bad_it];
 			mv->next->phase=OTHER;
 			*mm = mv->next;
 			mv->next->ord=mv->count;
 			mv->next++;
+			mv->bad_it++;
 			return ++mv->count;
 		}
 		mv->phase = DONE;
 	case DONE:
+		*mm = mv->next;
 		break;
 //	default:
 	}
@@ -2762,9 +2773,9 @@ int v;
 	mvs->lastp = mvs->move;
 	mvs->next = mvs->lastp;
 	if (incheck == 1) {
-		generateInCheckMovesN(b, a, &(mvs->lastp), 1);
+		generateInCheckMovesN2(b, a, &(mvs->lastp), 1);
 	} else {
-		generateCapturesN2(b, a, &(mvs->lastp), 1);
+		generateCapturesN3(b, a, &(mvs->lastp), 1);
 		generateMovesN2(b, a, &(mvs->lastp));
 	}
 

@@ -1734,7 +1734,7 @@ int timed_driver(int t, int d, int max, personality *pers_init, int sts_mode, st
 			strncpy(results[i].fen, tst[i], strcspn(tst[i],"\r\n"));
 			setup_FEN_board(&b, fen);
 
-			DEB_3(printBoardNice(&b);)
+			DEB_1(printBoardNice(&b);)
 			parseEDPMoves(&b, a, bans, bm, 10);
 			parseEDPMoves(&b, a, aans, am, 10);
 			parsePVMoves(&b, a, pv, pm, 10);

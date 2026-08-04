@@ -40,6 +40,7 @@ typedef struct _hashEntry {
 void analyzeHash(hashStore *hs);
 void storeHash(hashStore*, hashEntry *hash, int side, int ply, int depth, BITVAR ver, struct _statistics*);
 int retrieveHash(hashStore*, hashEntry *hash, int side, int ply, int depth, int use_previous, BITVAR ver, struct _statistics*);
+int retrieveHashQS(hashStore*, hashEntry *hash, int side, int ply, int depth, int use_previous, BITVAR ver, struct _statistics*);
 hashPawnEntry* storePawnHash(hashPawnStore*, hashPawnEntry *hash, BITVAR ver, struct _statistics*);
 hashPawnEntry* retrievePawnHash(hashPawnStore*, hashPawnEntry *hash, BITVAR ver, struct _statistics*);
 
@@ -72,8 +73,8 @@ int freeHHTable(hhTable*);
 int clearHHTable(hhTable*);
 int updateHHTable(board*, hhTable*, move_entry*, int, int, int, int);
 int checkHHTable(hhTable*, int, int, int);
-int updateHHTableGood(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int depth, int ply);
-int updateHHTableBad(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int depth, int ply);
+int updateHHTableGood(board *b, hhTable *hh, move_entry *m, int corr, int side, int depth, int ply);
+int updateHHTableBad(board *b, hhTable *hh, move_entry *m, int corr, int side, int depth, int ply);
 int reduceHHTable(hhTable*);
 int dumpHHTable(hhTable*);
 int clearHHTable2(hhTable*, _squares_p);
