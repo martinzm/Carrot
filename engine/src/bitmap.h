@@ -74,10 +74,13 @@ typedef enum _ENGINE_STATES {
 	MAKE_QUIT = 0, STOP_THINKING, STOPPED, START_THINKING, THINKING
 } ENGINE_STATES;
 
+// encode special meanings into move space
+// 15:1 SPEC, 12:3 prom, 6:6 to,0:6 from
+//
 typedef enum _SPECIAL_MOVES {
 	DRAW_M = 0x6000U, MATE_M = 0x6041, NA_MOVE = 0x6082,
 	WAS_HASH_MOVE = 0x60C3, ALL_NODE = 0x6104, BETA_CUT = 0x6145,
-	NULL_MOVE = 0x6186, ERR_NODE = 0x61C7
+	NULL_MOVE = 0x6FFF, ERR_NODE = 0x61C7
 } SPECIAL_MOVES;
 
 typedef enum _LVA_SORT {
@@ -118,6 +121,7 @@ typedef enum _RANKS {
 } RANKS;
 
 #define BLACKPIECE 8
+#define HHBLACKPIECE ER_PIECE
 #define PIECEMASK 7
 #define PAWNS_TOT 18
 
@@ -570,7 +574,7 @@ typedef struct _hashEntry_e {
 } hashEntry_e;
 
 typedef struct _hhTable {
-	int val[2][6][64];
+	int val[HHBLACKPIECE*2][64][HHBLACKPIECE *2][64];
 } hhTable;
 
 typedef enum _variants {
@@ -712,6 +716,7 @@ typedef struct {
 	BITVAR ver;
 	MOVESTORE move;
 	int score;
+	int piece;
 	int lazy_ev;
 } tree_node;
 

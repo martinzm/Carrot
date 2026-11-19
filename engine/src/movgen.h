@@ -62,6 +62,7 @@ typedef struct __changed {
 // 
 // spec|prom|to|from
 // 15:1|12:3|6:6|0:6
+// 
 #define PackMove(from,to,prom,spec)  ((MOVESTORE)((((from) & 0x3F) | (((to) & 0x3F) <<6) | (((prom) & 7) <<12))))
 #define PackMoveF(from,to,prom,spec)  ((MOVESTORE)((((from) & 0x3F) | (((to) & 0x3F) <<6)))|(ER_PIECE<<12))
 #define UnPackFrom(a)  ((int) ((a) & 0x3F))
@@ -70,15 +71,15 @@ typedef struct __changed {
 #define UnPackCheck(a) ((int) ((a>>15) & 1))
 #define UnPackPPos(a)  ((MOVESTORE) ((a) & 0xFFF)) //only from & to extracted
 
-int isMoveValid(board*, MOVESTORE, const attack_model*, int, tree_store*);
+int isMoveValid(board const *, MOVESTORE, attack_model const *, int, tree_store const *);
 
-BITVAR isInCheck_Eval(board *b, attack_model *a, int side);
-int CheckingMove(board *b, attack_model *a,int side, move_entry const * const m);
+BITVAR isInCheck_Eval(board const *b, attack_model const *a, int side);
+int CheckingMove(board const *b, attack_model const *a,int side, move_entry const * const m);
 
-void generateCapturesN(const board *const b, attack_model *a, move_entry **m, int gen_u);
-void generateMovesN(const board *const b, attack_model *a, move_entry **m);
+void generateCapturesN(board const *const b, attack_model *a, move_entry **m, int gen_u);
+void generateMovesN(board const *const b, attack_model *a, move_entry **m);
 void generateInCheckMovesN(const board *const b, attack_model *a, move_entry **m, int gen_u);
-void generateQuietCheckMovesN(const board *const b, attack_model *a, move_entry **m);
+void generateQuietCheckMovesN(const board *const b, attack_model const *a, move_entry **m);
 int alternateMovGen(board *b, MOVESTORE *filter);
 int MakeMove(board *b, MOVESTORE move, UNDO *ret);
 int MakeMoveNew(board *b, MOVESTORE move, int *pos , UNDO *ret);
@@ -94,20 +95,20 @@ void sprintfMove(board *b, MOVESTORE m, char *buf);
 int gradeMoveInRow(board*, attack_model*, MOVESTORE, move_entry*, int);
 
 void SelectBestO(move_cont *mv);
-int sortMoveListNew_Init(board *b, attack_model *a, move_cont *mv);
-int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store*);
-int getNextCap(board *b, attack_model *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store*);
+int sortMoveListNew_Init(board const *b, attack_model const *a, move_cont *mv);
+int getNextMove(board const *b, attack_model const *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store*);
+int getNextCap(board const *b, attack_model const *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store*);
 
 int simple_pre_movegen_n(board *b, attack_model *a, int side);
 int simple_pre_movegen_n2(board const *b, attack_model *a, int side);
 int simple_pre_movegen_n2check(const board * constb, attack_model *a, int side);
 
-int getNextCheckin(board*, attack_model*, move_cont*, int, int, int, move_entry**, tree_store*);
+int getNextCheckin(board const *, attack_model const *, move_cont*, int, int, int, move_entry**, tree_store*);
 
-void generateCapturesN2(board *const b, attack_model *a, move_entry **m, int gen_u);
-void generateCapturesN3(board *const b, attack_model *a, move_entry **m, int gen_u);
-void generateMovesN2(board *const b, attack_model *a, move_entry **m);
-void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **m, int gen_u);
+void generateCapturesN2(board const * const b, attack_model const *a, move_entry **m, int gen_u);
+void generateCapturesN3(board const * const b, attack_model const *a, move_entry **m, int gen_u);
+void generateMovesN2(board const * const b, attack_model const *a, move_entry **m);
+void generateInCheckMovesN2(const board *const b, attack_model const *a, move_entry **m, int gen_u);
 void mvsfrom2(const board * const, int const, int const, FuncAttacks, bmv **, BITVAR const, BITVAR const);
 void mvsfroma2(const board * const, attack_model *, int const, int const, bmv **, BITVAR const, BITVAR const);
 int generateBitmaps(board *const, attack_model *, BITVAR, int);
@@ -164,14 +165,14 @@ void mvsfromk22(const board *const, attack_model *, int);
 
 
 //BITVAR ChangedTo(board *b, int pos, BITVAR map, int side);
-BITVAR ChangedToN(board *b, attack_model *a, UNDO *u);
-BITVAR ChangesToMove(board *b, attack_model *a, UNDO *u);
+BITVAR ChangedToN(board const *b, attack_model const *a, UNDO *u);
+BITVAR ChangesToMove(board const *b, attack_model *a, UNDO *u);
 
 int eval_king_checks_extN(board const *b, king_eval *ke, personality const *p, int side, int from);
 int eval_king_checks_extU(board const *b, king_eval *ke, int side, int from);
-BITVAR regenerateSQAttacked(const board *const , attack_model *, int);
+BITVAR regenerateSQAttacked(const board *const , attack_model const *, int);
 int setup_root_moves(board *b, attack_model *a, int side, int incheck, tree_store *tree);
-int getNextRootMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store *tree);
+int getNextRootMove(board const *b, attack_model const *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store *tree);
 
 int is_quiet_move(board const * const b, attack_model const * const a, move_entry const * const m);
 

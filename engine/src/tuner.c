@@ -181,9 +181,9 @@ DEB_X(MAT_DUO(mat[i], mat[i+1], p, rook_on_open[0], rook_on_open[1], i, map); i+
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, rook_on_semiopen[0], rook_on_semiopen[1], i, map); i+=2;)
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, pawn_weak_onopen_penalty[0], pawn_weak_onopen_penalty[1], i, map); i+=2;)
 DEB_X(MAT_DUO(mat[i], mat[i+1], p, pawn_weak_center_penalty[0], pawn_weak_center_penalty[1], i, map); i+=2;)
-DEB_X(MAT_DUO(mat[i], mat[i+1], p, king_castle_pot_bonus[0], king_castle_pot_bonus[1], i, map);
+DEB_0(MAT_DUO(mat[i], mat[i+1], p, king_castle_pot_bonus[0], king_castle_pot_bonus[1], i, map);
   mat[i+1].tunable=0; i+=2;)
-DEB_X(MAT_DUO(mat[i], mat[i+1], p, king_moved_away_bonus[0], king_moved_away_bonus[1], i, map);
+DEB_0(MAT_DUO(mat[i], mat[i+1], p, king_moved_away_bonus[0], king_moved_away_bonus[1], i, map);
   mat[i+1].tunable=0; i+=2;)
 DEB_0(MAT_DUO(mat[i], mat[i+1], p, pawn_iso_center_penalty[0], pawn_iso_center_penalty[1], i, map); i+=2;)
 DEB_0(MAT_DUO(mat[i], mat[i+1], p, pawn_iso_onopen_penalty[0], pawn_iso_onopen_penalty[1], i, map); i+=2;)
@@ -265,7 +265,6 @@ DEB_0(
 		 MAT_DUO_ADD(mat[i], mat[i+1], p, outpost_knight[0][BLACK][Square_Swap[sq]], outpost_knight[1][BLACK][Square_Swap[sq]], map); 
 		 i+=2; }
 		 )
-
 
 DEB_0(
 		for(pi=0;pi<=5;pi++) { for(sq=0;sq<mob_lengths[pi];sq++){ MAT_DUO(mat[i], mat[i+1], p, mob_val[0][WHITE][pi][sq], mob_val[1][WHITE][pi][sq], i, map); MAT_DUO_ADD(mat[i], mat[i+1], p, mob_val[0][BLACK][pi][sq], mob_val[1][BLACK][pi][sq], map); i+=2; } })

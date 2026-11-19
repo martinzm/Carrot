@@ -3714,7 +3714,7 @@ int SEE(board *b, MOVESTORE m)
 }
 
 // for move to be performed
-int SEEx(board *b, MOVESTORE m)
+int SEEx(board const *b, MOVESTORE m)
 {
 	int v[]={ 1000, 3250, 3250, 5000, 9750, 44444, 8750 };
 	int gain[32];
@@ -3921,8 +3921,8 @@ int d, m;
 			continue;
 		  }
 //		  table[d][m] = (int) (0.5 + log(d)*log(m) / 2.3);
-		  table[d][m] = (int) (0.5 + log(d)*log(m));
-//		  L0("%d:%d = %d\n", d,m, table[d][m]);
+		  table[d][m] = (int) (( log(d)*log(m))*1000.0);
+		  L0("%d:%d = %d\n", d,m, table[d][m]);
 		}
 }
 

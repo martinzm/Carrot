@@ -608,6 +608,7 @@ int QuiesceCheckN(board *b, int talfa, int tbeta, int depth, int ply, int side, 
 
 		tree->tree[ply][ply].move = m->move;
 		MakeMoveNew(b, m->move, pos, &u);
+		tree->tree[ply][ply].piece= (int8_t)(u.old + BLACKPIECE * side);
 		rr = ChangesToMove(b, att, &u);
 		generateBitmaps(b, att, rr, BLACK);
 		generateBitmaps(b, att, rr, WHITE);
@@ -863,6 +864,7 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 // check if capture can help us at all
 		
 		MakeMoveNew(b, m->move, pos, &u);
+		tree->tree[ply][ply].piece= (int8_t)(u.old + BLACKPIECE * side);
 		rr = ChangesToMove(b, att, &u);
 		generateBitmaps(b, att, rr, BLACK);
 		generateBitmaps(b, att, rr, WHITE);
@@ -980,6 +982,7 @@ int QuiesceNew(board *b, int alfa, int beta, int depth, int ply, int side, tree_
 //			sprintfMoveSimple(m->move, b3);
 //			L0("Qcheck MOVE %s\n", b3);
 			MakeMoveNew(b, m->move, pos, &u);
+			tree->tree[ply][ply].piece= (int8_t)(u.old + BLACKPIECE * side);
 			rr = ChangesToMove(b, att, &u);
 			generateBitmaps(b, att, rr, BLACK);
 			generateBitmaps(b, att, rr, WHITE);
@@ -1048,6 +1051,12 @@ ABFINISH2:
 	return mb->real_score;
 }
 
+/*
+ * 3 scenare, 
+ * talfa == ttbeta - 1, ttbeta == tbeta, closed nonPV, not possible to open window
+ * talfa == ttbeta - 1, ttbeta <  tbeta, closed PV, possible to open
+ * talfa != ttbeta - 1, ttbeta == tbeta, open PV, already open
+ */
 // ttbeta 
 int SearchMoveNew(board *b, int talfa, int tbeta, int ttbeta, int depth, int ply, int extend, int reduce, int check, int side, tree_store *tree, int nulls, const attack_model *att)
 {
@@ -1065,15 +1074,19 @@ int SearchMoveNew(board *b, int talfa, int tbeta, int ttbeta, int depth, int ply
 	val = talfa;
 //	int check_depth = isPV ? b->pers->quiesce_check_depth_limit : 0;
 	int check_depth = b->pers->quiesce_check_depth_limit;
+
+	if(reduce>0) b->stats->s[S_lmrtotal]++;
 	if (((ext > 0) && (ply < MAXPLY))|| (check && depth>-5)) {
 		val = -ABNew(b, -ttbeta, -talfa, ext, ply + 1, opside, tree,
 			nulls, att);
+//		if(reduce>extend) LOGGER_0("XXX depth %d, extend %d, reduce %d, talfa %d, tbeta %d, val %d\n", depth, extend, reduce, talfa, tbeta, val);
+
 //	unexpected over alpha? - rerun as it might be because of reduced depth
 		if ((val > talfa) && (reduce>0)) {
 			b->stats->s[S_lmrrerun]++;
 //			if(depth>=2){
 				lmrrmoves=b->stats->s[S_movestested];
-				val = -ABNew(b, -ttbeta, -talfa, depth - 1,
+				val = -ABNew(b, -ttbeta, -talfa, depth - 1 + extend,
 					ply + 1, opside, tree, nulls, att);
 				if (val <= talfa)
 					b->stats->s[S_fhflcount]++;
@@ -1144,16 +1157,19 @@ int can_do_NullMove(board *b, attack_model *a, int alfa, int beta, int depth, in
 	return 1;
 }
 
-int can_do_LMP(board *b, attack_model *a, int alfa, int beta, int depth, int isPV, move_entry *m, move_cont *MVS, int ply, int side, uint8_t phase)
+int can_do_LMP(board *b, attack_model *a, int alfa, int beta, int depth, int isPV, move_entry *m, move_cont *MVS, int ply, int side, uint8_t phase, tree_store *tree)
 {
 	int8_t from, to, rank;
-	int prio, reduce;
+	int prio, reduce, pfrom;
 	int see;
+	int tqhh=0;
 	
+#if 0
 // dealing with in check moves before QS
-//	if(depth<=0) {
-//	   if (is_quiet_move(b,a,m) && !isPV && m->ord>4) return 1; else return 0;
-//	}
+	if(depth<=0) {
+	   if (is_quiet_move(b,a,m) && !isPV && m->ord>4) return 1; else return 0;
+	}
+#endif
 	// move is giving check
 	if(CheckingMove(b, a, side, m)) return 0;
 
@@ -1167,48 +1183,70 @@ int can_do_LMP(board *b, attack_model *a, int alfa, int beta, int depth, int isP
 
 // promotion
 	rank=getRank(from);
+	pfrom = b->pieces[from]&PIECEMASK;
 #if 1
-	if ((b->pieces[from]&PIECEMASK) == PAWN) {
-//		if((((side==WHITE)&&(rank==RANKi7||rank==RANKi6))
-//		||((side==BLACK)&&(rank==RANKi2||rank==RANKi3)))) return 0;
-		if((((side==WHITE)&&(rank==RANKi6))
-		||((side==BLACK)&&(rank==RANKi3)))) return 0;
+	if (pfrom == PAWN) {
+		if((((side==WHITE)&&(rank==RANKi7||rank==RANKi6))
+		||((side==BLACK)&&(rank==RANKi2||rank==RANKi3)))) return 0;
+//		if((((side==WHITE)&&(rank==RANKi6))
+//		||((side==BLACK)&&(rank==RANKi3)))) return 0;
 	}
 #endif
-// no captures so far, not even BAD or neutral captures, yet
-	if(depth<=0) return 0;
-	if ((b->pieces[to]) != ER_PIECE) return 0;
-	prio = checkHHTable(b->hht, side, from, to);
-#if 0
-	see = SEEx(b, m->move);
-	if(see == 0) {
-		if(prio<0) return 1;
+	if ((b->pieces[to]) != ER_PIECE) {
+//		if(MVS->cap_pr>depth) return 1;
+		return 0;
 	}
-//	if(see<0) return 1;
-#endif
+	if (!(is_quiet_move(b,a,m))) return 0;
 
-	double current_lmp_start = b->pers->LMP_start_move;
+	prio = checkHHTable(b->hht, side, pfrom, to, BLACK, PAWN, H8);
+	double current_lmp_start = CLAMP(b->pers->LMP_start_move + 1.0*depth*depth, 1, 200);
+
+	if(ply>0) {
+		tqhh = checkHHTable(b->hht, side, pfrom, to, Flip(side), (tree->tree[ply-1][ply-1].piece) & PIECEMASK,
+			UnPackTo(tree->tree[ply-1][ply-1].move));
+	}
+
+// protect some moves
+	if (prio >= (3*HHScale/4.0)) return 0;
+	if (tqhh > 0) return 0;
+
+#if 1
+	see = SEEx(b, m->move);
+	if(see <= (-500*depth+500)) {
+		if(prio<0) {
+//			current_lmp_start--;
+			return 1;
+		}
+	}
+//	if(see<-1000) return 1;
+//	if(see>1000) return 0;
+#endif
 #if 0
 	if (phase < 153) {
 		current_lmp_start = (current_lmp_start * (phase + 75)) / 228.0;
-		if (current_lmp_start < 2) current_lmp_start = 2;
+//		if (current_lmp_start < 2) current_lmp_start = 2;
 	}
 #endif
-//	current_lmp_start = 100;
 //	if ((MVS->quiet_pr > (b->pers->LMP_start_move + 2*depth)))
-	current_lmp_start += 3.0*(depth)*depth;
-	if (prio < -(1*HHScale/2.0)) current_lmp_start--;
+//	current_lmp_start += 0.0*(depth);
+//	if (prio < -(1*HHScale/2.0)) current_lmp_start--;
 //	if (prio > (1*HHScale/2.0)) current_lmp_start++;
 
 //	if(depth>2) current_lmp_start += depth;
 
-// 3 6 10 15
-// 0 3 6 9 
-// 3 6 9 12 
-// 0 2 4 6 
-// 2 4 6 8 
 
+// force LMP on some moves
+	if (prio <= -(3*HHScale/4.0)) return 1;
+	if (MVS->cap_pr > 0) current_lmp_start=1;
+//	if (MVS->cap_pr > 0) return 1;
+
+//!!!!	
+	if (current_lmp_start < 1) current_lmp_start = 1;
+	
+//	current_lmp_start = 1;
+	
 	if (((MVS->quiet_pr) > current_lmp_start))
+//	if (((m->ord) > current_lmp_start))
 /*
 	if ((MVS->quiet_pr > 3 && depth==1)  || (MVS->quiet_pr > 16 && depth==2)
 	|| (MVS->quiet_pr > 10 && depth==3)  || (MVS->quiet_pr > 15 && depth==4)
@@ -1217,12 +1255,8 @@ int can_do_LMP(board *b, attack_model *a, int alfa, int beta, int depth, int isP
 	|| (MVS->quiet_pr > 8 && depth==9)   || (MVS->quiet_pr > 7 && depth==10))
 */
 	{
-		if (prio >= (3*HHScale/4.0)) return 0;
-
 		return 1;
-	}
-//	if(m->ord>(10+2*depth)) return 1;
-	
+	}	
 	return 0;
 }
 
@@ -1272,27 +1306,29 @@ int can_do_LMR(board *b, attack_model *a, int alfa, int beta, int depth, int isP
 		endg=Min(3,(128-phase)/40.0 + (8-pwn)/3.0);
 	}
 
-	double dynamic_divisor = 2.3 + (double)(255 - phase) / 500.0;
-	prio = checkHHTable(b->hht, side, u->old, u->to);
+//	double dynamic_divisor = (2.3 + (double)(255 - phase) / 500.0)*1000;
+	double dynamic_divisor = 1000.0;
+	prio = checkHHTable(b->hht, side, u->old, u->to, BLACK, PAWN, H8);
 
 	if(u->whereCa != -1) {
-		reduce = b->pers->lmr_table[Min(64,depth)][Min(64,move->ord+endg)] / (dynamic_divisor + 0.5);
+		reduce = b->pers->lmr_table[Min(64,depth)][Min(64,move->ord+endg)] / (dynamic_divisor + 500) + 0.5;
 		sval = SEE0(b, u->to, side, u->captured);
-		if(sval<0) reduce+=1;
-		if((sval==0) && (prio<0)) reduce++;
-		if(MVS->cap_pr<3) reduce--;
+//		if(sval<0) reduce+=1;
+//		if((sval==0) && (prio<0)) reduce++;
+//		if(MVS->cap_pr<3) reduce--;
 	} else {
-		reduce = b->pers->lmr_table[Min(64,depth)][Min(64,MVS->quiet_pr+endg)] / dynamic_divisor;
-		if (prio > (HHScale/2.0)) reduce--;
-		if (prio > (4*HHScale/5.0)) reduce--;
-		if (prio < -(HHScale/4.0)) reduce++;
+		reduce = b->pers->lmr_table[Min(64,depth)][Min(64,MVS->quiet_pr+endg)] / dynamic_divisor + 0.5;
+//		if (prio > (HHScale/2.0)) reduce--;
+//		if (prio > (4*HHScale/5.0)) reduce--;
+//		if (prio < -(HHScale/2.0)) reduce++;
 	}
 // scaled value of PAWN
 	int pvalue = b->pers->matval[PAWN][phase];
-	if(seval < (beta - pvalue/5)) reduce--;
+//	if(seval < (beta - pvalue/5)) reduce--;
 
 //	if(isPV) reduce-=2;
 
+//	reduce=2;
 	if(move->phase==OTHER)	return CLAMP(reduce, 0, depth-1 );
 //	if(depth>=6) return CLAMP(reduce, 0, depth-3);
 	return CLAMP(reduce, 0, depth-2);
@@ -1517,10 +1553,10 @@ uint8_t phase=eval_phase(b, b->pers);
 // reverse futility pruning
 // asi necutovat kdyz mam jen pesce
 	float improving=1.0;
-	int imp_temp=0;
+	int improve_temp=0;
 	if(ply>=2) {
-		imp_temp = (tree->tree[ply][ply].lazy_ev - tree->tree[ply-2][ply-2].lazy_ev);
-		improving = imp_temp > 0 ? 1.0 : 1.0;
+		improve_temp = (tree->tree[ply][ply].lazy_ev - tree->tree[ply-2][ply-2].lazy_ev);
+		improving = improve_temp > 0 ? 0.7 : 1.0;
 	}
 	int pstatef = ((GT_M0(b, b->pers, side, PIECES) == 0) && (GT_M0(b, b->pers, side, PAWN) > 0));
 		if (
@@ -1532,6 +1568,7 @@ uint8_t phase=eval_phase(b, b->pers);
 			&& (isMATE2(tbeta) == 0)
 			&& (depth>0)
 //			&& (tbeta<20000) && (tbeta>-20000)
+//			&& (sco<30000) && (sco>-30000)
 			)
 			{
 #if 1
@@ -1541,7 +1578,7 @@ uint8_t phase=eval_phase(b, b->pers);
 				}
 #endif
 //				if(sco >= ( tbeta + b->pers->futility_cut[depth] )) {
-				int rsco = (int)((depth)*pvalue * b->pers->futility_cut[depth]/100.0 * improving);
+				int rsco = (int)((depth)*pvalue * b->pers->futility_cut[depth]/100.0*improving);
 				if(sco >= ( tbeta + rsco )) {
 					b->stats->s[S_FUT_cuts]++;
 					if(b->pers->futility_sim==1) {
@@ -1653,6 +1690,15 @@ uint8_t phase=eval_phase(b, b->pers);
 	} else if ((nulls <= 0) && (b->pers->NMP_allowed > 0))
 		nulls = b->pers->NMP_allowed;
 
+#if 1
+// IIR
+	if (hresult==0) {
+// no hash, try IIR
+		if (depth >= b->pers->IID_remain_depth) {
+			depth--;
+		}
+	}
+#endif
 
 #if 0
 	if (hresult==0) {
@@ -1744,19 +1790,22 @@ uint8_t phase=eval_phase(b, b->pers);
 // !extended !incheck !isPV !first_move use_lmp move mvs.actph >= NORMAL !MATEd
 // check after move is done in can_do_LMP as well as promotion
 
-//		  assert(b->stats->s[S_lmpcount]==0);
 		int LMPpot = (sco > tbeta) || (hresult!=0 && hash.scoretype == FAILHIGH_SC);
 		if ((b->pers->LMP_enable > 0)
 			&& (depth <= b->pers->LMP_depth)
+//			&& (tbeta<20000) && (tbeta>-20000)
+			&& (isMATE2(tbeta) == 0) && (isMATE2(talfa) == 0)
 			&& (!isPV)
-			&& (!LMPpot)
+//			&& (!LMPpot)
 			&& (
 				((depth > 0) // depth <= 0 is happenning only when incheck
-					&& (incheck == 0) && (m->phase>KILLER4)) //aka quiet and bad SEE moves
-				|| ((depth <= 0) && (m->ord>4))
+					&& (incheck == 0) 
+					&& (m->phase>KILLER4)
+				) //aka quiet and bad SEE moves
+//				|| ((depth <= 0) && (m->ord>4))
 			  )
 			) {
-			int lmp_red = can_do_LMP(b, att, talfa, ttbeta, depth, isPV, m, MVS, ply, side, phase);
+			int lmp_red = can_do_LMP(b, att, talfa, ttbeta, depth, isPV, m, MVS, ply, side, phase, tree);
 				if(lmp_red>0) {
 					b->stats->s[S_lmpcount]++;
 					goto bypass2;
@@ -1765,8 +1814,12 @@ uint8_t phase=eval_phase(b, b->pers);
 //		  assert(b->stats->s[S_lmpcount]==0);
 
 // perform move & setup node counting
-
 		MakeMoveNew(b, m->move, pos, &u);
+		tree->tree[ply][ply].piece= (int8_t)(u.old + BLACKPIECE * side);
+
+// get info about HH in context of move to search
+//		dumpHHTableX(b->hht, u.old, u.side, u.to);
+
 		m->nodes = -(b->stats->s[S_movestested]+b->stats->s[S_qmovestested]);
 		
 // makemove switches board sides, b->side changes during makemove, now b->side==opside
@@ -1810,32 +1863,9 @@ uint8_t phase=eval_phase(b, b->pers);
 				LOGGER_0("%*d, +S , %s, amove ch:%d, depth %d, talfa %d, tbeta %d, incheck:%d, best %d, m ord:%d, m phase:%d\n", 2+ply, ply, b2, aftermovecheck, depth, talfa, tbeta, incheck, mb->real_score, m->ord, m->phase);
 		)
 
-/*
-// check for LMP conditions based on depth
-// !extended !incheck !isPV !first_move use_lmp move mvs.actph >= NORMAL !MATEd
-
-//		if ((MVS->count > (b->pers->LMP_start_move + 2*depth*depth))
-		if (((MVS->quiet_pr) > b->pers->LMP_start_move + 2*depth*depth)
-			&& (b->pers->LMP_enable > 0)
-			&& (depth <= b->pers->LMP_depth)
-			&& (incheck == 0) 
-			&& (aftermovecheck == 0)
-//			&& (extend == extend_o)
-			&& (m->phase>KILLER4)
-			&& !isPV
-			&& (u.whereCa == -1)
-			){
-			int lmp_red = can_do_LMP(b, att, talfa, ttbeta, depth, m, ply, side, phase, &u);
-				if(lmp_red>0) {
-					b->stats->s[S_lmpcount]++;
-					goto bypass;
-				}
-		}
-*/
-
-int lmr_a=talfa;
-int lmr_b=tbeta;
-int lmr_s=m->real_score;
+		int lmr_a=talfa;
+		int lmr_b=tbeta;
+		int lmr_s=m->real_score;
 // setup LMR reductions, not extended, normal moves, not in check, no PV, not giving check, no captures except those ordered behind killers (bad SEE)
 // reduce based 
 		if ((MVS->count > b->pers->LMR_start_move)
@@ -1863,7 +1893,7 @@ int lmr_s=m->real_score;
 					} else {
 						lmr_sim_flag=1;
 					}
-					b->stats->s[S_lmrtotal]++;
+//					b->stats->s[S_lmrtotal]++;
 				}
 		}
 
@@ -1886,7 +1916,7 @@ bypass:
 		mvsfromk22(b, att, opside);
 		m->nodes+=(b->stats->s[S_movestested]+b->stats->s[S_qmovestested]);
 
-bypass2:
+bypassX2:
 		if (b->search_abort != 0)
 			goto ABFINISH;
 
@@ -1904,8 +1934,9 @@ bypass2:
 			}
 			b->stats->s[S_cutoffs]++;
 			b->stats->s[S_cutoff_cum]+=m->ord;
-			b->stats->s[S_cutoffs+ddepth]++;
-			b->stats->s[S_cutoff_cum+ddepth]+=m->ord;
+//			b->stats->s[S_cutoffs+ddepth]++;
+//			b->stats->s[S_cutoff_cum+ddepth]+=m->ord;
+//			if(m->ord> (CLAMP(5-depth,0,4) + 2*depth)) b->stats->s[S_cutoffs_more+ddepth]++;
 
 #if 0
 			if(b->stats->s[S_cutoff_long] < m->ord) {
@@ -1921,24 +1952,64 @@ bypass2:
 			}
 			if (is_quiet_move(b, att, m)) {
 				b->stats->s[S_quiet_cuts]++;
+
+// just statistics for longer quiet cutoffs (LMP!)
+				if ((!isPV)
+//					&& (!LMPpot)
+					&& (
+						((depth > 0) // depth <= 0 is happenning only when incheck
+						&& (incheck == 0) && (m->phase>KILLER4)) //aka quiet and bad SEE moves
+//						|| ((depth <= 0) && (m->ord>4))
+					)) {
+							b->stats->s[S_cutoffs+ddepth]++;
+							if(MVS->quiet_pr<= (CLAMP((b->pers->LMP_start_move + 1*depth*depth)/2, 0, 200))) {
+								b->stats->s[S_cutoff_cum+ddepth]+=MVS->quiet_pr;
+								b->stats->s[S_cutoffs_more+ddepth]++;
+							}
+				}
 				if(MVS->cap_pr!=0) b->stats->s[S_quiet_cuts_cap]++;
-				if((MVS->quiet_pr==1)||(m->ord==0)) b->stats->s[S_first_quiet_cuts]++;
+// if first generated quiet move or 
+//				if((MVS->quiet_pr==1)||(m->ord==0)) b->stats->s[S_first_quiet_cuts]++;
+				if((m->ord==0)) b->stats->s[S_first_quiet_cuts]++;
 				
 				if ((b->pers->use_killer >= 1)) {
 					if ((m->phase>=KILLER1 && m->phase<OTHER && depth>0 && incheck==0)) {
 							update_killer_move(b->kmove, ply, m->move, b->stats);
 					}
 // update history when over beta
-					if ((m->phase>=KILLER1 && m->phase<OTHER)||(m->phase==HASHMOVE)) {
-						updateHHTableGood(b, b->hht, m, 0, side, depth, ply);
+					if ((m->phase>KILLER4 && m->phase<OTHER)) {
+// board, HH, move, pmove, corr, side, ppiece, pside, depth, ply, magic movestore 0xFFF
+						updateHHTableGood(b, b->hht, m->move, 0xFFF, 0, side, PAWN, BLACK, depth, ply);
 						// cb means number of 1/60 that are deduced from bonus/malus, ie corrected bonus is bonus*(60-cb)/60
 						int cb;
-						if(MVS->quiet!=NULL) for(cb=0, mn=MVS->quiet; mn<(m-1); mn++, cb++) updateHHTableBad(b, b->hht, mn, cb, side, depth, ply);
+						if(MVS->quiet!=NULL) for(cb=0, mn=MVS->quiet; mn<(m-1); mn++) {
+							if(mn->ord != -1) {
+								updateHHTableBad(b, b->hht, mn->move, 0xFFF, Min(cb,60), side, PAWN, BLACK, depth, ply);
+								cb++;
+							}
+						}
+#if 1
+// update with context ply-1
+						if(ply>1 && tree->tree[ply-1][ply-1].move != NULL_MOVE) {
+							updateHHTableGood(b, b->hht, m->move, 
+								tree->tree[ply-1][ply-1].move, 0, side, tree->tree[ply-1][ply-1].piece & PIECEMASK,
+								opside, depth, ply);
+						  if((MVS->quiet!=NULL))
+							for(cb=0, mn=MVS->quiet; mn<(m-1); mn++) {
+								if(mn->ord != -1) {
+									updateHHTableBad(b, b->hht, mn->move, tree->tree[ply-1][ply-1].move, Min(cb,60), side,
+									tree->tree[ply-1][ply-1].piece & PIECEMASK, opside, depth, ply);
+									cb++;
+								}
+							}
+						}
+#endif
 					}
 				}
 			} else {
 // not quiet move yet not cap_pr? It is capturing/promoting hashmove!
-				if(MVS->cap_pr==1 || m->ord==0) b->stats->s[S_first_cap_cuts]++;
+//				if(MVS->cap_pr==1 || m->ord==0) b->stats->s[S_first_cap_cuts]++;
+				if(m->ord==0) b->stats->s[S_first_cap_cuts]++;
 			}
 			mb = m;
 //				copyTree(tree, ply);
@@ -1961,17 +2032,15 @@ bypass2:
 		} else if ((ply==1) && (MVS->count==1) && (b->pers->use_aspiration!=0)) {
 			goto ABFINISH;
 		}
+bypass2:
 	}
-
+// loop end
 	if (MVS->count <= 0) {
 		if (incheck == 0) {
 // no moves found, not in check => draw, if incheck means mated - default setting for mb
 			mb->real_score = 0;
 			mb->move = DRAW_M;
 		} 
-//		else {
-//			assert(mb->move == MATE_M);
-//		}
 	}
 	// update stats & store Hash
 
@@ -1998,9 +2067,14 @@ bypass2:
 		} else {
 			b->stats->s[S_faillow]++;
 			b->stats->s[S_faillow+ddepth]++;
-// malus for fail low moves
+// faillow node HH maluses, by design Bad applies half than Good update, cb modifies that further
 			int cb;
-			if(MVS->quiet!=NULL) for(cb=0, mn=m-1; mn>=MVS->quiet; mn--, cb++) updateHHTableBad(b, b->hht, mn, cb, side, depth, ply);
+			if(MVS->quiet!=NULL) for(cb=30, mn=MVS->quiet; mn<(m-1); mn++) {
+				if(mn->ord != -1) {
+					updateHHTableBad(b, b->hht, mn->move, 0xFFF, Min(cb,60), side, PAWN, BLACK, depth, ply);
+					cb++;
+				}
+			}
 			hash.scoretype = FAILLOW_SC;
 // poresit statistiku
 			b->stats->s[S_non_cutoff_moves]+=mov_test;

@@ -91,7 +91,7 @@ void initRandom()
 	}
 }
 
-BITVAR getKey(board *b)
+BITVAR getKey(board const *b)
 {
 	BITVAR x;
 	BITVAR key;
@@ -127,7 +127,7 @@ void setupRandom(board *b)
 	b->posnorm[b->move - b->move_start] = b->norm;
 }
 
-void analyzeHash(hashStore *hs){
+void analyzeHash(hashStore const *hs){
 unsigned long long used, notused, fused, fnotused, u_cur, u_old, u_not;
 
 	hashBEntry *p;
@@ -397,6 +397,9 @@ int retrieveHashX(hashStore *hs, hashEntry *hash, int side, int ply, int depth, 
 	int qsn[]= { S_QhashAttempts, S_QhashMiss, S_QhashColls, S_QhashHits };
 	
 	int i;
+	
+//	return 0;
+	
 	BITVAR f, hi, pld;
 	hashBEntry *h;
 //	return 0;
@@ -540,9 +543,11 @@ int update_killer_move(kmoves *km, int ply, MOVESTORE move, struct _statistics *
 
 int get_killer_move(kmoves *km, int ply, int id, MOVESTORE *move)
 {
-
-	assert(id < KMOVES_WIDTH);
-	assert(ply < MAXPLY);
+//	assert(id < KMOVES_WIDTH);
+//	assert(ply < MAXPLY);
+	
+//	return 0;
+	
 	*move = (km + ply * KMOVES_WIDTH + id)->move;
 	if (*move == NA_MOVE)
 		return 0;
@@ -552,6 +557,7 @@ int get_killer_move(kmoves *km, int ply, int id, MOVESTORE *move)
 kmoves* allocateKillerStore(void)
 {
 	kmoves *m;
+//	printf("%d %d %lu", KMOVES_WIDTH, MAXPLY, sizeof(kmoves));
 	m = (kmoves*) malloc(sizeof(kmoves) * KMOVES_WIDTH * MAXPLY);
 	if (m == NULL)
 		abort();
@@ -605,6 +611,14 @@ hashStore* allocateHashStore(size_t hashBytes, unsigned int hashPVLen)
 
 	initHash(hs);
 	return hs;
+}
+
+hashStore* reallocateHashStore(size_t hashBytes, unsigned int hashPVLen, hashStore* hs)
+{
+	if(hs!=NULL) {
+		free(hs->hash);
+	}
+	return allocateHashStore(hashBytes, hashPVLen);
 }
 
 hashPawnStore* allocateHashPawnStore(size_t hashBytes)
@@ -737,7 +751,7 @@ int initPawnHash(hashPawnStore *hs)
 	return 0;
 }
 
-hashPawnEntry* retrievePawnHash(hashPawnStore *hs, hashPawnEntry *hash, BITVAR ver, struct _statistics *s)
+hashPawnEntry* retrievePawnHash(hashPawnStore const *hs, hashPawnEntry *hash, BITVAR ver, struct _statistics *s)
 {
 	int i;
 	BITVAR f, hi;
@@ -811,10 +825,11 @@ int clearHHTable(hhTable *hh)
 	v[KING] = 0;
 
 	int f, q;
-	for (q = PAWN; q < ER_PIECE; q++) {
-		for (f = 0; f < 64; f++)
-			hh->val[0][q][f] = hh->val[1][q][f] = v[q];
-	}
+	for(int pq=0; pq< ER_PIECE*2; pq++)
+		for(int pf=0; pf<64;pf++)
+			for (q = PAWN; q < ER_PIECE; q++)
+				for (f = 0; f < 64; f++)
+					hh->val[pq][pf][q][f] = hh->val[pq][pf][q+HHBLACKPIECE][f] = v[q];
 	return 0;
 }
 
@@ -822,97 +837,94 @@ int clearHHTable(hhTable *hh)
 int clearHHTable2(hhTable *hh, _squares_p v)
 {
 	int f, q;
-	for (q = PAWN; q < ER_PIECE; q++) {
-		for (f = 0; f < 64; f++) {
-			hh->val[0][q][f] = v[0][0][q][f];
-			hh->val[1][q][f] = v[0][1][q][f];
-		}
-	}
+	for(int pq=0; pq< ER_PIECE*2; pq++)
+		for(int pf=0; pf<64;pf++)
+			for (q = PAWN; q < ER_PIECE; q++)
+				for (f = 0; f < 64; f++) {
+//					hh->val[pq][pf][q][f] = v[0][0][q][f] / 10;
+//					hh->val[pq][pf][q+HHBLACKPIECE][f] = v[0][1][q][f] / 10;
+					hh->val[pq][pf][q][f] = 0;
+					hh->val[pq][pf][q+HHBLACKPIECE][f] = 0;
+				}
 	return 0;
 }
 
-int updateHHTable(board *b, hhTable *hh, move_entry *m, int cutoff, int side, int depth, int ply)
+int updateHHTable(board const *b, hhTable *hh, MOVESTORE m, MOVESTORE pm, int cutoff, int side,int ppiece, int pside, int depth, int ply)
 {
 	int fromPos, toPos, piece;
 	int upd;
+	int ptoPos;
 
-	fromPos = UnPackFrom(m[0].move);
-	toPos = UnPackTo(m[0].move);
+	fromPos = UnPackFrom(m);
+	toPos = UnPackTo(m);
+	ptoPos= UnPackTo(pm);
+	
 	piece = b->pieces[fromPos] & PIECEMASK;
 	upd=Min(depth*depth, 1600);
-	hh->val[side][piece][toPos] += upd;
+	hh->val[ppiece+HHBLACKPIECE*pside][ptoPos][piece+HHBLACKPIECE*side][toPos] += upd;
 	return 0;
 }
 
-int updateHHTable2(board *b, hhTable *hh, move_entry *m, int corr, int side, int bonus)
+int updateHHTable2(board const *b, hhTable *hh, MOVESTORE m, MOVESTORE pm, int corr, int side, int ppiece, int pside, int bonus)
 {
 	int fromPos, toPos, piece;
+	int ptoPos;
 	int upd;
 	int cbonus = bonus * (60-corr)/60.0;
 
-	fromPos = UnPackFrom(m->move);
-	toPos = UnPackTo(m->move);
+	fromPos = UnPackFrom(m);
+	toPos = UnPackTo(m);
 	piece = b->pieces[fromPos] & PIECEMASK;
+	ptoPos= UnPackTo(pm);
 
-#if 0
-	if(!(hh->val[side][piece][toPos]<=HHScale && hh->val[side][piece][toPos]>=-HHScale)) {
-		L0("side %d, piece %d, hh %d\n", side, piece, hh->val[side][piece][toPos]);
-		assert(0);
-	}
-#endif
+//	assert(ppiece>=0 && ppiece<6);
+//	assert(pside==0 || pside == 1);
+//	assert(ptoPos < 64 && ptoPos >= 0);
 
-	int dec2=hh->val[side][piece][toPos] * abs(cbonus);
+	ppiece &= PIECEMASK;
+	pside &= 1;
+
+//	L0("D %d:%d\n", ppiece, ptoPos);
+
+	int dec2=hh->val[ppiece+HHBLACKPIECE*pside][ptoPos][piece+HHBLACKPIECE*side][toPos] * abs(cbonus);
 	int dec = dec2/HHScale;
 
-#if 0
-	if(!(dec<=HHScale && dec>=-HHScale)) {
-		L0("side %d, piece %d, toPos %d, bonus %d, hh %d, dec %d\n", side, piece, toPos, cbonus, hh->val[side][piece][toPos], dec);
-		assert(0);
-	}
-#endif
-	
-	hh->val[side][piece][toPos] += cbonus - dec;
-
-#if 0
-	if(!(hh->val[side][piece][toPos]<=HHScale && hh->val[side][piece][toPos]>=-HHScale)) {
-		L0("side %d, piece %d, toPos %d, bonus %d, hh %d, dec %d, d2 %d\n", side, piece, toPos, cbonus, hh->val[side][piece][toPos], dec, dec2);
-//		assert(0);
-	}
-#endif
-
+	hh->val[ppiece+HHBLACKPIECE*pside][ptoPos][piece+HHBLACKPIECE*side][toPos] += cbonus - dec;
 	return 0;
 }
 
-int updateHHTableGood(board *b, hhTable *hh, move_entry *m, int corr, int side, int depth, int ply){
-	return updateHHTable2(b, hh, m, corr, side, Min(32*depth*depth, 15*HHScale/100.0));
+int updateHHTableGood(board const *b, hhTable *hh, MOVESTORE m, MOVESTORE pm, int corr, int side, int ppiece, int pside, int depth, int ply){
+	return updateHHTable2(b, hh, m, pm, corr, side, ppiece, pside, Min(32*depth*depth, 13*HHScale/100.0));
 }
-int updateHHTableBad(board *b, hhTable *hh, move_entry *m, int corr, int side, int depth, int ply){
-	return updateHHTable2(b, hh, m, corr, side, -Min(8*depth, 15*HHScale/100.0));
+int updateHHTableBad(board const *b, hhTable *hh, MOVESTORE m, MOVESTORE pm, int corr, int side, int ppiece, int pside, int depth, int ply){
+	return updateHHTable2(b, hh, m, pm, corr, side, ppiece, pside, -Min(8*depth*depth, 13*HHScale/100.0));
 }
 
-int checkHHTable(hhTable *hh, int side, int piece, int square)
+int checkHHTable(hhTable const *hh, int side, int piece, int square, int pside, int ppiece, int psquare)
 {
-#if 0
-	if(!(hh->val[side][piece][square]<=HHScale && hh->val[side][piece][square]>=-HHScale)) {
-		L0("side %d, piece %d, hh %d\n", side, piece, hh->val[side][piece][square]);
-		assert(0);
-	}
-#endif 
-
-	return hh->val[side][piece][square];
+//	assert(ppiece>=0 && ppiece<6);
+//	assert(pside==0 || pside == 1);
+//	assert(psquare < 64 && psquare >= 0);
+	return hh->val[ppiece+HHBLACKPIECE*pside][psquare][piece+HHBLACKPIECE*side][square];
 }
 
 int reduceHHTable(hhTable *hh)
 {
 	int f, q;
-	for (int s=0;s<=1;s++)
-		for (q = PAWN; q < ER_PIECE; q++) 
-			for (f = 0; f < 64; f++)
-				hh->val[s][q][f] /=2;
+//	for(int pq=0; pq< ER_PIECE*2; pq++)
+//		for(int pf=0; pf<64;pf++)
+// we reduce only HH, ie PQ= Black Pawn at Pf H8
+			int pq= HHBLACKPIECE+PAWN;
+			int pf= H8;
+			for (q = PAWN; q < ER_PIECE; q++) 
+				for (f = 0; f < 64; f++) {
+					hh->val[pq][pf][q+HHBLACKPIECE][f] /=2;
+					hh->val[pq][pf][q][f] /=2;
+				}
 	return 0;
 }
 
-int dumpHHTable2(hhTable *hh)
+int dumpHHTable2X(hhTable const *hh, int ppiece, int pside, int pto)
 {
 char buf[2048];
 char bf2[2048];
@@ -921,7 +933,7 @@ char bf2[2048];
 		for (q = PAWN; q < ER_PIECE; q++) { 
 			sprintf(buf,"Side: %d, Piece %d, Vals=",s, q);
 			for (f = 0; f < 64; f++) {
-				sprintf(bf2, "%4d ",hh->val[s][q][f]);
+				sprintf(bf2, "%4d ",hh->val[ppiece+HHBLACKPIECE*pside][pto][q+HHBLACKPIECE*s][f]);
 				strcat(buf, bf2);
 			}
 			L0("%s\n", buf);
@@ -929,7 +941,7 @@ char bf2[2048];
 	return 0;
 }
 
-int dumpHHTable(hhTable *hh)
+int dumpHHTableX(hhTable const *hh, int ppiece, int pside, int pto)
 {
 #define TTOP 5
 char buf[10000];
@@ -937,40 +949,55 @@ char bf2[10000];
 int b[TTOP],w[TTOP];
 int bv[TTOP],wv[TTOP];
 	int f, q, x, r;
-	dumpHHTable2(hh);
+//	dumpHHTable2X(hh, ppiece, pside, pto);
+
 	
+	L0("HHt context side: %d, piece: %d, square: %c%c\n", pside,ppiece, getFile(pto)+'A', getRank(pto)+'1');
 	for (int s=0;s<=1;s++)
 		for (q = PAWN; q < ER_PIECE; q++) { 
 			for(f=0;f<TTOP;f++) { b[f]=f; w[f]=f; bv[f]=-999999; wv[f]=999999; }
 			
-			sprintf(buf,"Side: %d, Piece %d ",s, q);
+			sprintf(buf,"Side: %d, Piece: %d ",s, q);
 			for (f = 0; f < 64; f++) {
 			// best update
-				for (x=TTOP-1; x>=0; x--) if(hh->val[s][q][f]< bv[x]) break;
+				for (x=TTOP-1; x>=0; x--) if(hh->val[ppiece+HHBLACKPIECE*pside][pto][q+HHBLACKPIECE*s][f]< bv[x]) break;
 				x++;
 				for (r=TTOP-1; r>x; r--) {b[r]=b[r-1]; bv[r]=bv[r-1];}
-				if(x<TTOP) { b[x]=f; bv[x]=hh->val[s][q][f]; }
+				if(x<TTOP) { b[x]=f; bv[x]=hh->val[ppiece+HHBLACKPIECE*pside][pto][q+HHBLACKPIECE*s][f]; }
 			
 			// worst update
-				for (x=TTOP-1; x>=0; x--) if(hh->val[s][q][f]> wv[x]) break;
+				for (x=TTOP-1; x>=0; x--) if(hh->val[ppiece+HHBLACKPIECE*pside][pto][q+HHBLACKPIECE*s][f]> wv[x]) break;
 				x++;
 				for (r=TTOP-1; r>x; r--) {w[r]=w[r-1]; wv[r]=wv[r-1];}
-				if(x<TTOP) { w[x]=f; wv[x]=hh->val[s][q][f]; }
-				
+				if(x<TTOP) { w[x]=f; wv[x]=hh->val[ppiece+HHBLACKPIECE*pside][pto][q+HHBLACKPIECE*s][f]; }
 			}
 			sprintf(bf2, "Best ");
 			strcat(buf, bf2);
 			for(x=0;x<TTOP;x++) {
-				sprintf(bf2, "%c%c: %6d ",getFile(b[x])+'A', getRank(b[x])+'1',hh->val[s][q][ b[x] ]);
+				sprintf(bf2, "%c%c: %6d ",getFile(b[x])+'A', getRank(b[x])+'1',hh->val[ppiece+HHBLACKPIECE*pside][pto][q+HHBLACKPIECE*s][ b[x] ]);
 				strcat(buf, bf2);
 			}
 			sprintf(bf2, "   Worst ");
 			strcat(buf, bf2);
 			for(x=0;x<TTOP;x++) {
-				sprintf(bf2, "%c%c: %6d ",getFile(w[x])+'A', getRank(w[x])+'1',hh->val[s][q][ w[x] ]);
+				sprintf(bf2, "%c%c: %6d ",getFile(w[x])+'A', getRank(w[x])+'1',hh->val[ppiece+HHBLACKPIECE*pside][pto][q+HHBLACKPIECE*s][ w[x] ]);
 				strcat(buf, bf2);
 			}
 			L0("%s\n", buf);
 		}
+	return 0;
+}
+
+// board, HH, move, pmove, corr, side, ppiece, pside, depth, ply, magic movestore 0xFFF
+//updateHHTableGood(b, b->hht, m->move, 0xFFF, 0, side, PAWN, BLACK, depth, ply);
+// contextless is encoded as BLACK PAWN at H8 
+
+int dumpHHTable2(hhTable const *hh) {
+	dumpHHTable2X(hh, PAWN, BLACK, H8);
+	return 0;
+}
+
+int dumpHHTable(hhTable const *hh) {
+	dumpHHTableX(hh, PAWN, BLACK, H8);
 	return 0;
 }

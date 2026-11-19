@@ -24,7 +24,7 @@ void setupPawnRandom(board *b);
 void setupRandom(board *b);
 void initRandom();
 BITVAR getPawnKey(board *b);
-BITVAR getKey(board *b);
+BITVAR getKey(board const *b);
 
 /*
 typedef struct _hashEntry {
@@ -37,12 +37,12 @@ typedef struct _hashEntry {
 } hashEntry;
 */
 
-void analyzeHash(hashStore *hs);
+void analyzeHash(hashStore const *hs);
 void storeHash(hashStore*, hashEntry *hash, int side, int ply, int depth, BITVAR ver, struct _statistics*);
 int retrieveHash(hashStore*, hashEntry *hash, int side, int ply, int depth, int use_previous, BITVAR ver, struct _statistics*);
 int retrieveHashQS(hashStore*, hashEntry *hash, int side, int ply, int depth, int use_previous, BITVAR ver, struct _statistics*);
 hashPawnEntry* storePawnHash(hashPawnStore*, hashPawnEntry *hash, BITVAR ver, struct _statistics*);
-hashPawnEntry* retrievePawnHash(hashPawnStore*, hashPawnEntry *hash, BITVAR ver, struct _statistics*);
+hashPawnEntry* retrievePawnHash(hashPawnStore const *, hashPawnEntry *hash, BITVAR ver, struct _statistics*);
 
 void storeHashX(hashStore*, BITVAR key, BITVAR pld, BITVAR ver, struct _statistics*);
 int initHash(hashStore*);
@@ -71,13 +71,15 @@ int generateRandomFile(char *n);
 hhTable* allocateHHTable(void);
 int freeHHTable(hhTable*);
 int clearHHTable(hhTable*);
-int updateHHTable(board*, hhTable*, move_entry*, int, int, int, int);
-int checkHHTable(hhTable*, int, int, int);
-int updateHHTableGood(board *b, hhTable *hh, move_entry *m, int corr, int side, int depth, int ply);
-int updateHHTableBad(board *b, hhTable *hh, move_entry *m, int corr, int side, int depth, int ply);
+int updateHHTable(board const *b, hhTable *hh, MOVESTORE m, MOVESTORE pm, int corr, int side, int ppiece, int pside, int depth, int ply);
+int checkHHTable(hhTable const *hh, int side, int piece, int square, int pside, int ppiece, int psquare);
+
+int updateHHTableGood(board const *b, hhTable *hh, MOVESTORE m, MOVESTORE pm, int corr, int side, int ppiece, int pside, int depth, int ply);
+int updateHHTableBad(board const *b, hhTable *hh, MOVESTORE m, MOVESTORE pm, int corr, int side, int ppiece, int pside, int depth, int ply); 
 int reduceHHTable(hhTable*);
-int dumpHHTable(hhTable*);
-int clearHHTable2(hhTable*, _squares_p);
+int dumpHHTable(hhTable const *);
+int dumpHHTableX(hhTable const *hh, int ppiece, int pside, int pto);
+int clearHHTable2(hhTable *, _squares_p);
 
 
 

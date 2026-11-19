@@ -47,7 +47,7 @@ BITVAR DiagAttacks_2(board *b, int pos);
 BITVAR NormAttacks_2(board *b, int pos);
 
 BITVAR AttackedTo(board *b, int pos);
-int GetLVA_to(board *b, int to, int side, BITVAR ignore);
+int GetLVA_to(board const *b, int to, int side, BITVAR ignore);
 
 BITVAR FillNorth(BITVAR, BITVAR, BITVAR);
 BITVAR FillSouth(BITVAR, BITVAR, BITVAR);

@@ -123,10 +123,10 @@ int c=0;
 #if 1
 	for(int f=1;f<=10;f++){
 	LX(o,c,l,
-			"Info: Cutoffs D%d: %lld, cum %lld, AvNFCut %.2f, Non cut pos %lld with zero moves %lld, Non cutoff Moves %lld (approx %.2f%%), AVG count %.2f\n", f,
-		(s->s[S_cutoffs+f]), s->s[S_cutoff_cum+f], s->s[S_cutoff_cum+f]/(s->s[S_cutoffs+f]+1.0), s->s[S_faillow+f], s->s[S_faillow_zero+f], 
+			"Info: Cutoffs D%d: %lld, cum NoFi %lld, AvNoFiCut %.2f, Non cut pos %lld with zero moves %lld, Non cutoff Moves %lld (approx %.2f%%), AVG count %.2f, shorter XX %lld  (%.2f%% of cuts)\n", f,
+		(s->s[S_cutoffs+f]), s->s[S_cutoff_cum+f], s->s[S_cutoff_cum+f]/(s->s[S_cutoffs_more+f]+1.0), s->s[S_faillow+f], s->s[S_faillow_zero+f], 
 		s->s[S_non_cutoff_moves+f], 100 * s->s[S_non_cutoff_moves+f]/(s->s[S_cutoff_cum+f]+(s->s[S_cutoffs+f]+s->s[S_non_cutoff_moves+f]+1.0)),
-		s->s[S_non_cutoff_moves+f]/(s->s[S_faillow+f]-s->s[S_faillow_zero+f]+1.0));
+		s->s[S_non_cutoff_moves+f]/(s->s[S_faillow+f]-s->s[S_faillow_zero+f]+1.0), s->s[S_cutoffs_more+f], 100.0 * s->s[S_cutoffs_more+f]/s->s[S_cutoffs+f]);
 	}
 #endif
 

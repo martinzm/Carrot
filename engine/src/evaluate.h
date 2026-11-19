@@ -60,7 +60,7 @@ void init_lmr_table(int table[64][64]);
 int init_mat_phase_val(int t[ER_PIECE][256], _values Values);
 
 int SEE(board *b, MOVESTORE m);
-int SEEx(board *b, MOVESTORE m);
+int SEEx(board const *b, MOVESTORE m);
 int SEE0(board *b, int to, int side, int pp);
 int PSQSearch(int, int, int, int, int, personality*);
 

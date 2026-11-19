@@ -60,7 +60,7 @@ BITVAR NormAttacks_2(board *b, int pos)
 }
 
 // get LVA attacker to square to from side
-int GetLVA_to(board *b, int to, int side, BITVAR ignore)
+int GetLVA_to(board const *b, int to, int side, BITVAR ignore)
 {
 	BITVAR cr, di, kn_a, pn_a, ki_a, norm, ns;
 	int s, ff;
@@ -286,7 +286,7 @@ BITVAR KingAvoidSQAlt(board const *b, attack_model *a, int side)
 
 	ky = getRank(b->king[opside]);
 	kx = getFile(b->king[opside]);
-	ClearAll(b->king[opside], opside, KING, b);
+//	ClearAll(b->king[opside], opside, KING, b);
 	for(int f=-1;f<=1;f++) {
 		for(int n=-1;n<=1;n++) {
 			if(getOneSquare(b, kx+n, ky+f, side, &ca, &da)) {
@@ -323,7 +323,7 @@ BITVAR KingAvoidSQAlt(board const *b, attack_model *a, int side)
 	}
 // fold in my king as purpose is to cover all squares opside king cannot step on
 	ret |= (attack.maps[KING][b->king[side]]);
-	SetAll(b->king[opside], opside, KING, b);
+//	SetAll(b->king[opside], opside, KING, b);
 	return ret;
 }
 

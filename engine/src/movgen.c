@@ -34,12 +34,12 @@
 #define MOVE_TEST_SETUP BITVAR mv2=mv
 #define MOVE_TEST(x) if(*(move-1)==x) { printf("Move from:%d to:%d triggered file:%s, line:%d\n", from, to, __FILE__, __LINE__ );printmask(mv2,"rook"); printboard(b);  dumpit(b, from); }
 
-BITVAR isInCheck_Eval(board *b, attack_model *a, int side)
+BITVAR isInCheck_Eval(board const *b, attack_model const *a, int side)
 {
 	return a->ke[side].attackers;
 }
 
-int CheckingMove2(board *b, attack_model *a,int opside, int piece, int from, int to){
+int CheckingMove2(board const *b, attack_model const *a,int opside, int piece, int from, int to){
 
 	int rank;
 	BITVAR map;
@@ -69,7 +69,7 @@ int CheckingMove2(board *b, attack_model *a,int opside, int piece, int from, int
 
 
 // is move to be played delivering a check?
-int CheckingMove(board *b, attack_model *a,int side, move_entry const * const m){
+int CheckingMove(board const *b, attack_model const *a,int side, move_entry const * const m){
 
 	int to, from, prom;
 	int rank;
@@ -158,7 +158,7 @@ int is_quiet_move(board const * const b, attack_model const * const a, move_entr
 		TP = attack.pawn_att[SI][FR];\
 		RES = ((PIN & TQ) ? TP&attack.rays_dir[BO->king[SI]][FR] : TP) & BO->colormaps[OSI];
 
-void mvsfroma2(const board * const b, attack_model *a, int piece, int side, bmv **ii, BITVAR mask, BITVAR lim) {
+void mvsfroma2(board const * const b, attack_model *a, int piece, int side, bmv **ii, BITVAR mask, BITVAR lim) {
 BITVAR v;
 	v = b->maps[piece] & (lim);
 	while (v) {
@@ -171,7 +171,7 @@ BITVAR v;
 	}
 }
 
-void mvsfromp2(const board *const b, attack_model *a, int side, bmv **ii, BITVAR mask, BITVAR lim) {
+void mvsfromp2(board const  * const b, attack_model *a, int side, bmv **ii, BITVAR mask, BITVAR lim) {
 BITVAR v;
 	v = b->maps[PAWN]&(lim);
 	while (v) {
@@ -184,7 +184,7 @@ BITVAR v;
 	}
 }
 
-inline void mvsfromp21(const board *const b, attack_model *a, int side, bmv **ii, BITVAR mask, BITVAR lim, BITVAR pins) {
+inline void mvsfromp21(board const * const b, attack_model *a, int side, bmv **ii, BITVAR mask, BITVAR lim, BITVAR pins) {
 BITVAR v;
 	v = b->maps[PAWN]&(lim);
 	while (v) {
@@ -198,7 +198,7 @@ BITVAR v;
 	}
 }
 
-inline void mvsfromk21(const board *const b, attack_model *a, int side, bmv **ii) {
+inline void mvsfromk21(board const * const b, attack_model *a, int side, bmv **ii) {
 BITVAR v;
 
 	int from = b->king[side];
@@ -236,7 +236,7 @@ BITVAR v;
 };
 
 /**** CURRENT bitmap generators ****/
-void mvsfroma21(const board * const b, attack_model *a, int piece, int side, bmv **ii, BITVAR mask, BITVAR lim, BITVAR pins) {
+void mvsfroma21(board const * const b, attack_model *a, int piece, int side, bmv **ii, BITVAR mask, BITVAR lim, BITVAR pins) {
 BITVAR v;
 	v = b->maps[piece] & (lim);
 	while (v) {
@@ -249,7 +249,7 @@ BITVAR v;
 	}
 }
 
-void mvsfroma21N(const board * const b, attack_model *a, int piece, int side, BITVAR mask, BITVAR lim, BITVAR pins) {
+void mvsfroma21N(board const * const b, attack_model *a, int piece, int side, BITVAR mask, BITVAR lim, BITVAR pins) {
 BITVAR v;
 	v = b->maps[piece] & (lim);
 	for(int i=BitCount(v);i>0;i--){
@@ -274,7 +274,7 @@ BITVAR v;
 	}
 }
 
-void mvsfromk22(const board *const b, attack_model *a, int side ) {
+void mvsfromk22(board const * const b, attack_model *a, int side ) {
 BITVAR v;
 
 // !!!! att_by_side MUSI byt aktualni !!!!
@@ -387,7 +387,7 @@ BITVAR epbmp, dir, tmp;
 	return 0;
 }
 
-BITVAR regenerateSQAttacked(const board *const b, attack_model *a, int side){
+BITVAR regenerateSQAttacked(board const * const b, attack_model const *a, int side){
 int opside;
 BITVAR att=0, pmap;
 	int ptype[] = { QUEEN, ROOK, BISHOP, KNIGHT, PAWN };
@@ -441,7 +441,7 @@ unsigned char opside;
 	MVSFROM21(b, a, BISHOP, side, BishopAttacks, 0, FULLBITMAP, t, pins) ;
 	mvsfroma21N(b, a, KNIGHT, side, FULLBITMAP, t, pins) ;
 //	mvsfroma21N(b, a, KNIGHT, side, FULLBITMAP, b->colormaps[side], pins) ;
-// generate pawn info
+//	generate pawn info
 
 //	if(t & b->maps[PAWN]) {
 		b->ep_val=1;
@@ -463,7 +463,7 @@ return 0;
 }
 
 // serialize captures
-void generateCapturesN3(board *const b, attack_model *a, move_entry **m, int gen_u)
+void generateCapturesN3(board const *const b, attack_model const *a, move_entry **m, int gen_u)
 {
 	int from, to, epn, get_rank;
 	int ptype[] = { QUEEN, ROOK, BISHOP, KNIGHT, PAWN };
@@ -471,7 +471,7 @@ void generateCapturesN3(board *const b, attack_model *a, move_entry **m, int gen
 	bmv mm[64];
 	bmv *ipp,*ib,*in,*ir,*iq,*ik,*ii, *ix, *ipc, *ipa;
 	
-	BITVAR *pset;
+	BITVAR const *pset;
 
 	move_entry *move;
 	int ep_add;
@@ -668,7 +668,7 @@ void generateCapturesN3(board *const b, attack_model *a, move_entry **m, int gen
 }
 
 // serialize captures
-void generateCapturesN2(board *const b, attack_model *a, move_entry **m, int gen_u)
+void generateCapturesN2(board const *const b, attack_model const *a, move_entry **m, int gen_u)
 {
 //	generateBitmaps(b, a, b->colormaps[b->side], b->side);
 //	a->att_by_side[WHITE] = KingAvoidSQAlt(b, a, WHITE);
@@ -730,13 +730,14 @@ run_in RR[] = { { ER_PIECE, PAWN, 0, BLACK, 0 }, { ER_PIECE | BLACKPIECE, PAWN
 		RES = ((PIN & TQ) ? TP&attack.rays_dir[BO->king[SI]][FR] : TP);
 
 // serialize all non captures, moves bitmaps already generated
-void generateMovesN2(board *const b, attack_model *a, move_entry **m)
+void generateMovesN2(board const *const b, attack_model const *a, move_entry **m)
 {
 	int from, to, get_rank;
 	int ptype[] = { QUEEN, ROOK, BISHOP, KNIGHT, PAWN };
 	BITVAR mv, rank, brank, piece, bran2;
 	BITVAR epbmp, pins, tp, tq, kpin, nmf, tmp, tmp2, tx, tx2, dir;
-	BITVAR *pset, pmap;
+	BITVAR const *pset;
+	BITVAR pmap;
 	bmv mm[64];
 	bmv *ip,*ib,*in,*ir,*iq,*ik,*ii, *ix;
 
@@ -853,7 +854,7 @@ void generateMovesN2(board *const b, attack_model *a, move_entry **m)
  * or placing knight on proper square
  */
 
-void generateQuietCheckMovesN(const board *const b, attack_model *a, move_entry **m)
+void generateQuietCheckMovesN(const board *const b, attack_model const *a, move_entry **m)
 {
 	int from, to, get_rank, piece;
 	int ptype[] = { QUEEN, ROOK, BISHOP, KNIGHT, PAWN };
@@ -862,7 +863,8 @@ void generateQuietCheckMovesN(const board *const b, attack_model *a, move_entry 
 
 	BITVAR mv, rank, brank, bran2;
 	BITVAR epbmp, pins, tp, tq, kpin, nmf, tmp, tmp2, tx, tx2, dir, opK;
-	BITVAR *pset, pmap, opins;
+	BITVAR const *pset;
+	BITVAR pmap, opins;
 	bmv mm[64];
 	bmv *ip,*ib,*in,*ir,*iq,*ik,*ii, *ix;
 
@@ -1116,7 +1118,7 @@ void generateQuietCheckMovesN(const board *const b, attack_model *a, move_entry 
 	int8_t whereCa; //where capture took place == -1 => no capture
  */
 
-void getChanges(board *b, int pos, BITVAR v[4], BITVAR w[4], BITVAR s[4], BITVAR *pp){
+void getChanges(board const *b, int pos, BITVAR v[4], BITVAR w[4], BITVAR s[4], BITVAR *pp){
 BITVAR rw,rb, t;
 
 // attack vectors
@@ -1149,7 +1151,7 @@ BITVAR rw,rb, t;
  * working with board after move, UNDO containing pieces/position before & after move
  */
 
-BITVAR ChangedToN(board *b, attack_model *a, UNDO *u)
+BITVAR ChangedToN(board const *b, attack_model const *a, UNDO *u)
 {
 BITVAR rr, rb, rw;
 BITVAR king;
@@ -1331,7 +1333,7 @@ int eval_king_checks_extN(board const *b, king_eval *ke, personality const *p, i
  * as side effect all attackers and pins for both sides are updated
  */
 
-BITVAR ChangesToMove(board *b, attack_model *a, UNDO *u)
+BITVAR ChangesToMove(board const *b, attack_model *a, UNDO *u)
 {
 
 king_eval kk[2];
@@ -1356,7 +1358,7 @@ BITVAR changed, pin[2], t[2];
 	return changed;
 }
 
-int isMoveValid(board *b, MOVESTORE move, const attack_model *a, int side, tree_store *tree)
+int isMoveValid(board const *b, MOVESTORE move, attack_model const *a, int side, tree_store const *tree)
 {
 	int from, to, prom, movp, opside, pside, tot, prank, pfile;
 	BITVAR bfrom, bto, m, path, path2, npins;
@@ -1506,7 +1508,7 @@ int isMoveValid(board *b, MOVESTORE move, const attack_model *a, int side, tree_
 	case KING:
 		m = attack.maps[KING][from];
 		path = attack.rays[from][to];
-		eval_king_checks_oth(b, &kee, NULL, side, to);
+		eval_king_checks_extU(b, &kee, side, to);
 		if (((kee.attackers) & (~bto)) != 0) {
 //			L0("Kee attackers %o\n", from);
 			return 0;
@@ -1903,20 +1905,12 @@ int MakeNullMove(board *b, UNDO *ret)
 
 	ret->move = NULL_MOVE;
 	ret->side = b->side;
-//	ret->prev_castle[WHITE] = b->castle[WHITE];
-//	ret->prev_castle[BLACK] = b->castle[BLACK];
 	ret->rule50move = b->rule50move;
 	ret->prev_ep = b->ep;
 	ret->ep_val_prev = b->ep_val;
-//	ret->prev_mindex= b->mindex;
-//	ret->captured=ER_PIECE;
 	ret->key = b->key;
-//	ret->pawnkey = b->pawnkey;
 	ret->mindex_validity = b->mindex_validity;
 	b->rule50move = b->move;
-
-//	ret->psq_b = b->psq_b;
-//	ret->psq_e = b->psq_e;
 
 // set it only if ep move is real
 	b->key ^= epKey[b->ep];
@@ -1935,15 +1929,9 @@ void UnMakeNullMove(board *b, UNDO *u)
 	b->ep_val = u->ep_val_prev;
 	b->move--;
 	b->rule50move = u->rule50move;
-//	b->castle[WHITE] = u->prev_castle[WHITE];
-//	b->castle[BLACK] = u->prev_castle[BLACK];
 	b->side = u->side;
 	b->key = u->key;
 	b->mindex_validity = u->mindex_validity;
-//	b->mindex = u->prev_mindex;
-//	b->pawnkey = u->pawnkey;
-//	b->psq_b = u->psq_b;
-//	b->psq_e = u->psq_e;
 }
 
 int MakeMove(board *b, MOVESTORE move, UNDO *u){
@@ -1995,11 +1983,12 @@ int pos[4];
 }
 
 // predelat pomoci generace capture a normal
-void generateInCheckMovesN2(const board *const b, attack_model *a, move_entry **m, int gen_u)
+void generateInCheckMovesN2(const board *const b, attack_model const *a, move_entry **m, int gen_u)
 {
 	int from, to, ff, orank;
 	BITVAR mv, rank, brank, bran2, piece, epbmp, pins, tmp, tmp1, tmp2, tmp3, tx2, nmf, kpin, tx, x, all, pmap;
-	BITVAR *pset, attacker;
+	BITVAR const *pset;
+	BITVAR attacker;
 	move_entry *move, *mi;
 	int ep_add, epn;
 	unsigned char side, opside;
@@ -2402,12 +2391,13 @@ void SelectBest(move_cont *mv)
 }
 
 // score generate normal quiet moves with HH
-void ScoreNormal(board *b, attack_model *a, move_cont *mv, int side)
+void ScoreNormal(board const *b, attack_model const *a, move_cont *mv, int side, int ply, tree_store *tree)
 {
 	move_entry *t;
 	int fromPos, ToPos, piece, opside, dist, check;
 	uint8_t phase = eval_phase(b, b->pers);
 
+//return ;
 	opside = Flip(side);
 	for (t = mv->lastp - 1; t >= mv->next; t--) {
 		fromPos = UnPackFrom(t->move);
@@ -2416,46 +2406,23 @@ void ScoreNormal(board *b, attack_model *a, move_cont *mv, int side)
 		check = CheckingMove2(b, a, Flip(side), piece, fromPos, ToPos);
 
 		if(t->qorder < CS_K_OR) {
-
-#if 0
-			int be = b->pers->piecetosquare[MG][side][piece][ToPos]
-				- b->pers->piecetosquare[MG][side][piece][fromPos];
-			int en = b->pers->piecetosquare[EG][side][piece][ToPos]
-				- b->pers->piecetosquare[EG][side][piece][fromPos];
-			int val = PVAL(be, en, phase, 255);
-			t->qorder = checkHHTable(b->hht, side, piece, ToPos) + MV_HH + val*32;
-#endif
-#if 0
-			int see = SEEx(b, t->move);
-			if(see < 0) {
-//					t->qorder += (MV_BAD-A_OR2);
-				t->qorder = (MV_OR);
-//					L0("neg SEE %d\n", see);
-			} else
-#endif
-			t->qorder = checkHHTable(b->hht, side, piece, ToPos) + MV_HH;
+// HH, side, piece, square, pside, ppiece, psquare 
+// - ordinary table is mapped into previous space of BLACK PAWN to H8
+			int tq = checkHHTable(b->hht, side, piece, ToPos, BLACK, PAWN, H8);
+			if(ply>0) {
+				int tqhh = checkHHTable(b->hht, side, piece, ToPos, Flip(side), (tree->tree[ply-1][ply-1].piece) & PIECEMASK,
+				UnPackTo(tree->tree[ply-1][ply-1].move));
+//				L0("ply %d, tq %d, tqhh %d\n", ply, tq, tqhh);
+				tq = (1*tq+2*tqhh)/3;
+			}
+			t->qorder = tq + MV_HH;
 			if(check!=0) t->qorder=Min(t->qorder+10000, MV_HH_MAX);
 		}
-
-//		L0("HH table:%d\n", t->qorder);
-// assign priority based on distance to enemy king or promotion
-#if 0
-		if (piece == PAWN) {
-			dist = side == WHITE ? 7 - getRank(ToPos) :
-				getRank(ToPos);
-			t->qorder += (7 - dist);
-		} 
-		else {
-			dist = attack.distance[ToPos][b->king[opside]];
-			t->qorder += (7 - dist);
-		}
-#endif
-//		L0("HH after:%d\n", t->qorder);
 	}
 }
 
 // score / test captures with SEE. SEE return is in miliPawns
-void ScoreCaps(board *b, attack_model *a, move_cont *mv, int side)
+void ScoreCaps(board const *b, attack_model const *a, move_cont *mv, int side)
 {
 	int see;
 	move_entry *t;
@@ -2520,7 +2487,7 @@ void invalidDump(board *b, MOVESTORE m, int side)
 	return;
 }
 
-int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store *tree)
+int getNextMove(board const *b, attack_model const *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store *tree)
 {
 	MOVESTORE pot;
 	int r;
@@ -2613,10 +2580,11 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 		mv->phase = CAPTURES;
 	case CAPTURES:
 		while (mv->next < mv->lastp) {
+			mv->next->ord=-1;
 			if (isMoveValid(b, mv->next->move, a, side, tree) && !ExcludeMove(mv, mv->next->move)) {
 			  if ((mv->next->qorder < MV_OR)
 			  ) {
-				mv->next->ord=-1;
+//				mv->next->ord=-1;
 				mv->next->phase=OTHER;
 				*(mv->badp) = *(mv->next);
 				mv->badp++;
@@ -2703,13 +2671,14 @@ int getNextMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int
 		mv->tgen+=(mv->lastp-mv->next);
 		DEB_S2(m=mv->lastp-1;for(;m>=mv->next; m--) m->state=0; )
 		// get HH values and sort
-		ScoreNormal(b, a, mv, side);
+		ScoreNormal(b, a, mv, side, ply, tree);
 		SelectBestO(mv);
 rest_moves:
 		mv->phase = NORMAL;
 	case NORMAL:
 		while (mv->next < mv->lastp) {
 			if (ExcludeMove(mv, mv->next->move)) {
+				mv->next->ord=-1;
 				mv->next++;
 				continue;
 			}
@@ -2816,7 +2785,7 @@ return 0;
 }
 
 // special treatment for ply==1 / root 
-int getNextRootMove(board *b, attack_model *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store *tree){
+int getNextRootMove(board const *b, attack_model const *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store *tree){
 
 	move_entry *m;
 	
@@ -2847,7 +2816,7 @@ int getNextRootMove(board *b, attack_model *a, move_cont *mv, int ply, int side,
 	return 0;
 }
 
-int getNextCheckin(board *b, attack_model *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store *tree)
+int getNextCheckin(board const *b, attack_model const *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store *tree)
 {
 char b2[512];
 	move_entry *m;
@@ -2896,7 +2865,7 @@ char b2[512];
 	return 0;
 }
 
-int getNextCap(board *b, attack_model *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store *tree)
+int getNextCap(board const *b, attack_model const *a, move_cont *mv, int ply, int side, int incheck, move_entry **mm, tree_store *tree)
 {
 	move_entry M, *m=&M;
 int fromPos, piece;
@@ -2987,8 +2956,8 @@ int fromPos, piece;
 //			LOGGER_SE("CAPTUREA\n");
 			return ++mv->count;
 			}
+			mv->next->ord=-1;
 			mv->next++;
-
 		}
 		mv->phase = SORT_CAPTURES;
 	case SORT_CAPTURES:
@@ -3025,6 +2994,7 @@ int fromPos, piece;
 //			LOGGER_SE("CAPTURES\n");
 			return ++mv->count;
 			}
+			mv->next->ord=-1;
 			mv->next++;
 		}
 		mv->phase = DONE;
@@ -3035,7 +3005,7 @@ int fromPos, piece;
 	return 0;
 }
 
-int sortMoveListNew_Init(board *b, attack_model *a, move_cont *mv)
+int sortMoveListNew_Init(board const *b, attack_model const *a, move_cont *mv)
 {
 	mv->phase = INIT;
 	mv->hash.move = DRAW_M;
